@@ -1,0 +1,16 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="kernel_deriche_kernel_2_0", size="4320", offset="0,0", pattern="4,1080", color = black];
+Input1[opcode = "Input", ref_name="kernel_deriche_kernel_2_1", size="4320", offset="0,0", pattern="4,1080", color = black];
+FADD322[opcode = "FADD32", color = black];
+Output3[opcode = "Output", ref_name="kernel_deriche_kernel_2_2", size="4320", offset="0,0", pattern="4,1080", color = black];
+Input5[opcode = "Input", ref_name="kernel_deriche_kernel_2_3", size="4320", offset="0,0", pattern="4,1080", color = black];
+Input6[opcode = "Input", ref_name="kernel_deriche_kernel_2_4", size="4320", offset="0,0", pattern="4,1080", color = black];
+FADD327[opcode = "FADD32", color = black];
+Output8[opcode = "Output", ref_name="kernel_deriche_kernel_2_5", size="4320", offset="0,0", pattern="4,1080", color = black];
+Input0 -> FADD322[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> FADD322[color = black, style = bold, operand = 1, label = "Op=1"];
+FADD322 -> Output3[color = black, style = bold, operand = 0, label = "Op=0"];
+Input5 -> FADD327[color = black, style = bold, operand = 0, label = "Op=0"];
+Input6 -> FADD327[color = black, style = bold, operand = 1, label = "Op=1"];
+FADD327 -> Output8[color = black, style = bold, operand = 0, label = "Op=0"];
+}

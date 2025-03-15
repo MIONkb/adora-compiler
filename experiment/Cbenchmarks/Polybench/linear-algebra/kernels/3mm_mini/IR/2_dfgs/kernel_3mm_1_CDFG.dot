@@ -1,0 +1,11 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="kernel_3mm_1_0", size="1728", offset="0,0", pattern="4,24,-92,22,4,18", color = black];
+Input1[opcode = "Input", ref_name="kernel_3mm_1_1", size="2112", offset="0,0", pattern="88,24,-2020,22,-2108,18", color = black];
+FMUL322[opcode = "FMUL32", color = black];
+FACC323[opcode = "FACC32", acc_params="0,24,1,1", acc_first=1, color = black];
+Output6[opcode = "Output", ref_name="kernel_3mm_1_2", size="1584", offset="0,0", pattern="0,24,4,22,4,18", color = purple];
+Input0 -> FMUL322[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> FMUL322[color = black, style = bold, operand = 1, label = "Op=1"];
+FMUL322 -> FACC323[color = black, style = bold, operand = 0, label = "Op=0"];
+FACC323 -> Output6[color = black, style = bold, operand = 0, label = "Op=0"];
+}

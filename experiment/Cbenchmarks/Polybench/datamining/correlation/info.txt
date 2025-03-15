@@ -1,0 +1,108 @@
+In file included from /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:15:
+In file included from /home/jhlou/chipyard/.conda-env/riscv-tools/riscv64-unknown-elf/include/math.h:6:
+/home/jhlou/chipyard/.conda-env/riscv-tools/riscv64-unknown-elf/include/sys/cdefs.h:380:9: warning: '__always_inline' macro redefined [-Wmacro-redefined]
+  380 | #define __always_inline __inline__ __attribute__((__always_inline__))
+      |         ^
+/home/jhlou/chipyard/.conda-env/riscv-tools/sysroot/usr/include/linux/stddef.h:5:9: note: previous definition is here
+    5 | #define __always_inline __inline__
+      |         ^
+In file included from /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:19:
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities/rocket_polybench.h:89:5: error: invalid preprocessing directive
+   89 | #   void free((void*));
+      |     ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities/rocket_polybench.h:95:3: error: #else after #else
+   95 | # else
+      |   ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities/rocket_polybench.h:27:2: error: unterminated conditional directive
+   27 | #ifndef POLYBENCH_H
+      |  ^
+In file included from /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:23:
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/cgrv_test.h:3:6: warning: declaration of built-in function 'fprintf' requires inclusion of the header <stdio.h> [-Wbuiltin-requires-header]
+    3 | void fprintf();
+      |      ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/cgrv_test.h:4:5: warning: incompatible redeclaration of library function 'printf' [-Wincompatible-library-redeclaration]
+    4 | int printf();
+      |     ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/cgrv_test.h:4:5: note: 'printf' is a builtin with type 'int (const char *, ...)'
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:25:9: warning: 'ROCKET_TARGET' macro redefined [-Wmacro-redefined]
+   25 | #define ROCKET_TARGET
+      |         ^
+<command line>:3:9: note: previous definition is here
+    3 | #define ROCKET_TARGET 1
+      |         ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:55:3: warning: passing arguments to 'printf' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   55 |   POLYBENCH_DUMP_START;
+      |   ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities/rocket_polybench.h:169:39: note: expanded from macro 'POLYBENCH_DUMP_START'
+  169 | #define POLYBENCH_DUMP_START    printf("==BEGIN DUMP_ARRAYS==\n")
+      |                                       ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:56:3: warning: passing arguments to 'printf' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   56 |   POLYBENCH_DUMP_BEGIN("corr");
+      |   ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities/rocket_polybench.h:171:39: note: expanded from macro 'POLYBENCH_DUMP_BEGIN'
+  171 | #define POLYBENCH_DUMP_BEGIN(s) printf("begin dump: %s", s)
+      |                                       ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:61:41: warning: passing arguments to 'printf' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   61 |       if ((i * m + j) % 20 == 0) printf ("\n");
+      |                                         ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:62:14: warning: passing arguments to 'printf' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   62 |       printf (DATA_PRINTF_MODIFIER, corr[i][j]);
+      |              ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:64:3: warning: passing arguments to 'printf' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   64 |   POLYBENCH_DUMP_END("corr");
+      |   ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities/rocket_polybench.h:172:39: note: expanded from macro 'POLYBENCH_DUMP_END'
+  172 | #define POLYBENCH_DUMP_END(s)   printf("\nend   dump: %s\n", s) 
+      |                                       ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:65:3: warning: passing arguments to 'printf' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   65 |   POLYBENCH_DUMP_FINISH;
+      |   ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities/rocket_polybench.h:170:39: note: expanded from macro 'POLYBENCH_DUMP_FINISH'
+  170 | #define POLYBENCH_DUMP_FINISH   printf("==END   DUMP_ARRAYS==\n")
+      |                                       ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:169:3: error: call to undeclared library function 'free' with type 'void (void *)'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+  169 |   POLYBENCH_FREE_ARRAY(data);
+      |   ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities/rocket_polybench.h:90:36: note: expanded from macro 'POLYBENCH_FREE_ARRAY'
+   90 | #   define POLYBENCH_FREE_ARRAY(x) free((void*)x);
+      |                                    ^
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c:169:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'free'
+/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities/rocket_polybench.h:90:36: note: expanded from macro 'POLYBENCH_FREE_ARRAY'
+   90 | #   define POLYBENCH_FREE_ARRAY(x) free((void*)x);
+      |                                    ^
+CallExpr 0xca14e10 'int'
+|-ImplicitCastExpr 0xca14df8 'int (*)()' <FunctionToPointerDecay>
+| `-DeclRefExpr 0xca14d40 'int ()' Function 0xca12620 'printf' 'int ()'
+`-ImplicitCastExpr 0xca14e38 'char *' <ArrayToPointerDecay>
+  `-StringLiteral 0xca14d98 'char[23]' lvalue "==BEGIN DUMP_ARRAYS==\n"
+func.func private @printf() -> i32 attributes {llvm.linkage = #llvm.linkage<external>}
+() -> i32
+ImplicitCastExpr 0xca14e38 'char *' <ArrayToPointerDecay>
+`-StringLiteral 0xca14d98 'char[23]' lvalue "==BEGIN DUMP_ARRAYS==\n"
+too many arguments in calls
+UNREACHABLE executed at /home/jhlou/CGRVOPT/Polygeist/tools/cgeist/Lib/CGCall.cc:120!
+PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace.
+Stack dump:
+0.	Program arguments: cgeist -O2 -D size_t=int -D wint_t=int -D ROCKET_TARGET -I /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation -I /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities -I /home/jhlou/chipyard/.conda-env/riscv-tools/riscv64-unknown-elf/include/machine/ -I /home/jhlou/chipyard/.conda-env/riscv-tools/riscv64-unknown-elf/include/ -I /home/jhlou/chipyard/.conda-env/riscv-tools/sysroot/usr/include/linux/ -I /home/jhlou/chipyard/.conda-env/riscv-tools/lib/gcc/riscv64-unknown-elf/12.2.0/include -I /home/tianyi/chipyard/generators/fdra/software/tests/riscv-tests -I /home/tianyi/chipyard/generators/fdra/software/tests/riscv-tests/env -I /home/tianyi/chipyard/generators/fdra/software/tests/ -I /home/tianyi/chipyard/generators/fdra/software/tests/riscv-tests/benchmarks/common /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/datamining/correlation/correlation.c -S
+1.	<eof> parser at end of file
+ #0 0x0000000001a3e275 llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) /home/jhlou/CGRVOPT/llvm-project-Polygeist/llvm/lib/Support/Unix/Signals.inc:727:3
+ #1 0x0000000001a3bf1c llvm::sys::RunSignalHandlers() /home/jhlou/CGRVOPT/llvm-project-Polygeist/llvm/lib/Support/Signals.cpp:105:20
+ #2 0x0000000001a3ca3d SignalHandler(int) /home/jhlou/CGRVOPT/llvm-project-Polygeist/llvm/lib/Support/Unix/Signals.inc:403:31
+ #3 0x00007f0837608980 __restore_rt (/lib/x86_64-linux-gnu/libpthread.so.0+0x12980)
+ #4 0x00007f08366bbe87 raise /build/glibc-CVJwZb/glibc-2.27/signal/../sysdeps/unix/sysv/linux/raise.c:51:0
+ #5 0x00007f08366bd7f1 abort /build/glibc-CVJwZb/glibc-2.27/stdlib/abort.c:81:0
+ #6 0x00000000019ad0da (/home/jhlou/CGRVOPT/Polygeist/build/bin/cgeist+0x19ad0da)
+ #7 0x00000000006353f9 MLIRScanner::CallHelper(mlir::func::FuncOp, clang::QualType, llvm::ArrayRef<std::pair<ValueCategory, clang::Expr*>>, clang::QualType, bool, clang::Expr*) /home/jhlou/CGRVOPT/Polygeist/tools/cgeist/Lib/CGCall.cc:123:51
+ #8 0x00000000006451f0 MLIRScanner::VisitCallExpr(clang::CallExpr*) /home/jhlou/CGRVOPT/Polygeist/tools/cgeist/Lib/CGCall.cc:1966:63
+ #9 0x000000000054980e clang::StmtVisitorBase<std::add_pointer, MLIRScanner, ValueCategory>::Visit(clang::Stmt*) /home/jhlou/CGRVOPT/llvm-project-Polygeist/build/include/clang/AST/StmtNodes.inc:950:0
+#10 0x00000000005f4d63 MLIRScanner::VisitCompoundStmt(clang::CompoundStmt*) /home/jhlou/CGRVOPT/Polygeist/tools/cgeist/Lib/CGStmt.cc:1052:24
+#11 0x0000000000548b4e clang::StmtVisitorBase<std::add_pointer, MLIRScanner, ValueCategory>::Visit(clang::Stmt*) /home/jhlou/CGRVOPT/llvm-project-Polygeist/build/include/clang/AST/StmtNodes.inc:74:0
+#12 0x00000000004ed353 MLIRScanner::init(mlir::func::FuncOp, clang::FunctionDecl const*) /home/jhlou/CGRVOPT/Polygeist/tools/cgeist/Lib/clang-mlir.cc:457:0
+#13 0x00000000005104ee MLIRASTConsumer::run() /home/jhlou/CGRVOPT/Polygeist/tools/cgeist/Lib/clang-mlir.cc:5244:0
+#14 0x000000000051137a MLIRASTConsumer::HandleTranslationUnit(clang::ASTContext&) /home/jhlou/CGRVOPT/Polygeist/tools/cgeist/Lib/clang-mlir.cc:5400:0
+#15 0x0000000006c47469 clang::ParseAST(clang::Sema&, bool, bool) /home/jhlou/CGRVOPT/llvm-project-Polygeist/clang/lib/Parse/ParseAST.cpp:176:34
+#16 0x000000000355d719 clang::FrontendAction::Execute() /home/jhlou/CGRVOPT/llvm-project-Polygeist/clang/lib/Frontend/FrontendAction.cpp:1070:21
+#17 0x00000000005160c4 parseMLIR(char const*, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>>>, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>>>, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>>>, mlir::OwningOpRef<mlir::ModuleOp>&, llvm::Triple&, llvm::DataLayout&, llvm::Triple&, llvm::DataLayout&) /home/jhlou/CGRVOPT/Polygeist/tools/cgeist/Lib/clang-mlir.cc:6134:0
+#18 0x0000000000517673 main /home/jhlou/CGRVOPT/Polygeist/tools/cgeist/driver.cc:584:0
+#19 0x00007f083669ec87 __libc_start_main /build/glibc-CVJwZb/glibc-2.27/csu/../csu/libc-start.c:344:0
+#20 0x00000000004e97da _start (/home/jhlou/CGRVOPT/Polygeist/build/bin/cgeist+0x4e97da)

@@ -1,0 +1,18 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="_0", size="1640", offset="0,0", pattern="4,410", color = black];
+Input1[opcode = "Input", ref_name="_1", size="1640", offset="0,0", pattern="4,410", color = black];
+FMUL322[opcode = "FMUL32", color = black];
+FADD323[opcode = "FADD32", color = black];
+yield4[opcode = "yield", color = black];
+for5[opcode = "for", color = purple];
+Output6[opcode = "Output", ref_name="_2", size="8", offset="0,0", pattern="0,410", color = purple];
+CONST7[opcode = "CONST", value="0x00000000", color = black];
+Input0 -> FMUL322[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> FMUL322[color = black, style = bold, operand = 1, label = "Op=1"];
+FMUL322 -> FADD323[color = black, style = bold, operand = 0, label = "Op=0"];
+for5 -> FADD323[color = black, style = dashed, operand = 1, label = "Op=1"];
+FADD323 -> yield4[color = black, style = bold, operand = 0, label = "Op=0"];
+CONST7 -> for5[color = black, style = bold, operand = 0, label = "Op=0"];
+for5 -> Output6[color = black, style = bold, operand = 0, label = "Op=0"];
+yield4 -> for5[color = black, style = dashed, operand = 1, label = "Op=1"];
+}

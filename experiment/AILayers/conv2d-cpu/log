@@ -1,0 +1,2 @@
+conv2d_nomemset: wrong result
+conv2d_nofence :  CPU do first part, CGRA do second part. with no fence

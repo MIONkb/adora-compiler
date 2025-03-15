@@ -1,0 +1,9 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="kernel_deriche_5_0", size="8192", offset="0,0", pattern="4,64,4,32", color = black];
+Input1[opcode = "Input", ref_name="kernel_deriche_5_1", size="8192", offset="0,0", pattern="4,64,4,32", color = black];
+FADD322[opcode = "FADD32", color = black];
+Output3[opcode = "Output", ref_name="kernel_deriche_5_2", size="8192", offset="0,0", pattern="4,64,4,32", color = black];
+Input0 -> FADD322[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> FADD322[color = black, style = bold, operand = 1, label = "Op=1"];
+FADD322 -> Output3[color = black, style = bold, operand = 0, label = "Op=0"];
+}

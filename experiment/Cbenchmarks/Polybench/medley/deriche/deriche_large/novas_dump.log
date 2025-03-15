@@ -1,0 +1,396 @@
+#######################################################################################
+# log primitive debug message of FSDB dumping                                         #
+# This is for R&D to analyze when there are issues happening when FSDB dump           #
+#######################################################################################
+ANF: vcsd_get_serial_mode_status('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vcsd_get_serial_mode_status')
+ANF: vcsd_enable_sva_success_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vcsd_enable_sva_success_callback')
+ANF: vcsd_disable_sva_success_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vcsd_disable_sva_success_callback')
+ANF: vcsd_get_power_scope_name('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vcsd_get_power_scope_name')
+ANF: vcsd_begin_no_value_var_info('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vcsd_begin_no_value_var_info')
+ANF: vcsd_end_no_value_var_info('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vcsd_end_no_value_var_info')
+ANF: vcsd_remove_xprop_merge_mode_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vcsd_remove_xprop_merge_mode_callback')
+ANF: vhpi_get_cb_info('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhpi_get_cb_info')
+ANF: vhpi_free_handle('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhpi_free_handle')
+ANF: vhpi_fetch_vcsd_handle('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhpi_fetch_vcsd_handle')
+ANF: vhpi_fetch_vpi_handle('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhpi_fetch_vpi_handle')
+ANF: vhpi_has_verilog_parent('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhpi_has_verilog_parent')
+ANF: vhpi_is_verilog_scope('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhpi_is_verilog_scope')
+ANF: scsd_xprop_is_enabled('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_xprop_is_enabled')
+ANF: scsd_xprop_sig_is_promoted('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_xprop_sig_is_promoted')
+ANF: scsd_xprop_int_xvalue('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_xprop_int_xvalue')
+ANF: scsd_xprop_bool_xvalue('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_xprop_bool_xvalue')
+ANF: scsd_xprop_enum_xvalue('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_xprop_enum_xvalue')
+ANF: scsd_xprop_register_merge_mode_cb('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_xprop_register_merge_mode_cb')
+ANF: scsd_xprop_delete_merge_mode_cb('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_xprop_delete_merge_mode_cb')
+ANF: scsd_xprop_get_merge_mode('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_xprop_get_merge_mode')
+ANF: scsd_thread_get_info('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_thread_get_info')
+ANF: scsd_thread_vc_init('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_thread_vc_init')
+ANF: scsd_master_set_delta_sync_cbk('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_master_set_delta_sync_cbk')
+ANF: scsd_fgp_get_fsdb_cores('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: scsd_fgp_get_fsdb_cores')
+ANF: msvEnableDumpingMode('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvEnableDumpingMode')
+ANF: msvGetVersion('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvGetVersion')
+ANF: msvGetInstProp('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvGetInstProp')
+ANF: msvIsSpiceEngineReady('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvIsSpiceEngineReady')
+ANF: msvSetAddProbeCallback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvSetAddProbeCallback')
+ANF: msvGetInstHandle('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvGetInstHandle')
+ANF: msvGetProbeByInst('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvGetProbeByInst')
+ANF: msvGetSigHandle('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvGetSigHandle')
+ANF: msvGetProbeBySig('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvGetProbeBySig')
+ANF: msvGetProbeInfo('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvGetProbeInfo')
+ANF: msvRelease('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvRelease')
+ANF: msvSetVcCallbackFunc('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvSetVcCallbackFunc')
+ANF: msvCheckVcCallback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvCheckVcCallback')
+ANF: msvAddVcCallback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvAddVcCallback')
+ANF: msvRemoveVcCallback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvRemoveVcCallback')
+ANF: msvGetLatestValue('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvGetLatestValue')
+ANF: msvSetEndofSimCallback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvSetEndofSimCallback')
+ANF: msvIgnoredProbe('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvIgnoredProbe')
+ANF: msvGetThruNetInfo('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvGetThruNetInfo')
+ANF: msvFreeThruNetInfo('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvFreeThruNetInfo')
+ANF: PI_ace_get_output_time_unit('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: PI_ace_get_output_time_unit')
+ANF: PI_ace_sim_sync('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: PI_ace_sim_sync')
+ANF: msvGetRereadInitFile('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvGetRereadInitFile')
+ANF: msvSetBeforeRereadCallback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvSetBeforeRereadCallback')
+ANF: msvSetAfterRereadCallback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvSetAfterRereadCallback')
+ANF: msvSetForceCallback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvSetForceCallback')
+ANF: msvSetReleaseCallback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvSetReleaseCallback')
+ANF: msvGetForceStatus('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: msvGetForceStatus')
+ANF: vhdi_dt_get_type('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_dt_get_type')
+ANF: vhdi_dt_get_key('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_dt_get_key')
+ANF: vhdi_dt_get_vhdl_enum_info('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_dt_get_vhdl_enum_info')
+ANF: vhdi_dt_get_vhdl_physical_info('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_dt_get_vhdl_physical_info')
+ANF: vhdi_dt_get_vhdl_array_info('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_dt_get_vhdl_array_info')
+ANF: vhdi_dt_get_vhdl_record_info('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_dt_get_vhdl_record_info')
+ANF: vhdi_def_traverse_module('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_def_traverse_module')
+ANF: vhdi_def_traverse_scope('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_def_traverse_scope')
+ANF: vhdi_def_traverse_variable('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_def_traverse_variable')
+ANF: vhdi_def_get_module_id_by_vhpi('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_def_get_module_id_by_vhpi')
+ANF: vhdi_def_get_handle_by_module_id('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_def_get_handle_by_module_id')
+ANF: vhdi_def_get_variable_info_by_vhpi('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_def_get_variable_info_by_vhpi')
+ANF: vhdi_def_free('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_def_free')
+ANF: vhdi_ist_traverse_scope('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_traverse_scope')
+ANF: vhdi_ist_traverse_variable('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_traverse_variable')
+ANF: vhdi_ist_convert_by_vhpi('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_convert_by_vhpi')
+ANF: vhdi_ist_clone('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_clone')
+ANF: vhdi_ist_free('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_free')
+ANF: vhdi_ist_hash_key('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_hash_key')
+ANF: vhdi_ist_compare('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_compare')
+ANF: vhdi_ist_get_value_addr('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_get_value_addr')
+ANF: vhdi_set_scsd_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_set_scsd_callback')
+ANF: vhdi_cbk_set_force_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_cbk_set_force_callback')
+ANF: vhdi_trigger_init_force('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_trigger_init_force')
+ANF: vhdi_ist_check_scsd_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_check_scsd_callback')
+ANF: vhdi_ist_add_scsd_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_add_scsd_callback')
+ANF: vhdi_ist_remove_scsd_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_remove_scsd_callback')
+ANF: vhdi_ist_get_scsd_user_data('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_get_scsd_user_data')
+ANF: vhdi_add_time_change_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_add_time_change_callback')
+ANF: vhdi_get_real_value_by_value_addr('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_get_real_value_by_value_addr')
+ANF: vhdi_get_64_value_by_value_addr('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_get_64_value_by_value_addr')
+ANF: vhdi_xprop_inst_is_promoted('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_xprop_inst_is_promoted')
+ANF: vdi_ist_convert_by_vhdi('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vdi_ist_convert_by_vhdi')
+ANF: vhdi_ist_get_module_id('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_ist_get_module_id')
+ANF: vhdi_refine_foreign_scope_type('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_refine_foreign_scope_type')
+ANF: vhdi_flush_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_flush_callback')
+ANF: vhdi_set_orig_name('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_set_orig_name')
+ANF: vhdi_set_dump_pt('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_set_dump_pt')
+ANF: vhdi_get_fsdb_option('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_get_fsdb_option')
+ANF: vhdi_fgp_get_mode('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_fgp_get_mode')
+ANF: vhdi_node_register_composite_var('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_node_register_composite_var')
+ANF: vhdi_node_analysis('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_node_analysis')
+ANF: vhdi_node_id('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_node_id')
+ANF: vhdi_node_ist_check_scsd_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_node_ist_check_scsd_callback')
+ANF: vhdi_node_ist_add_scsd_callback('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_node_ist_add_scsd_callback')
+ANF: vhdi_node_ist_get_value_addr('/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug: undefined symbol: vhdi_node_ist_get_value_addr')
+VCS compile option:
+ option[0]: /home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug
+ option[1]: --help
+ option[2]: /home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/linux64/bin/vcs1
+ option[3]: -Mcc=/home/jhlou/chipyard/.conda-env/bin/g++
+ option[4]: -Mcplusplus=g++
+ option[5]: -Masflags=
+ option[6]: -Mcfl= -pipe -fPIC -std=c++17 -fPIE -I/home/jhlou/chipyard/.conda-env/riscv-tools/include -I/home/jhlou/chipyard/tools/DRAMSim2 -I/home/jhlou/chipyard/sims/vcs/generated-src/chipyard.TestHarness.TramSoCConfig/gen-collateral -O3 -I/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/include 
+ option[7]: -Mxcflags= -pipe -fPIC -I/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/include
+ option[8]: -Mldflags= -L/home/jhlou/chipyard/.conda-env/riscv-tools/lib -Wl,-rpath,/home/jhlou/chipyard/.conda-env/riscv-tools/lib -L/home/jhlou/chipyard/sims/vcs -L/home/jhlou/chipyard/tools/DRAMSim2 -rdynamic -Wl,-E 
+ option[9]: -Mout=/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug
+ option[10]: -Mamsrun=
+ option[11]: -Mvcsaceobjs=
+ option[12]: -Mobjects= /home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/linux64/lib/libvirsim.so /home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/linux64/lib/liberrorinf.so /home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/linux64/lib/libsnpsmalloc.so /home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/linux64/lib/libvfs.so -lriscv -lfesvr -ldramsim 
+ option[13]: -Mexternalobj=
+ option[14]: -Msaverestoreobj=/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/linux64/lib/vcs_save_restore_new.o
+ option[15]: -Mcrt0=
+ option[16]: -Mcrtn=
+ option[17]: -Mcsrc=
+ option[18]: -Mdir=/home/jhlou/chipyard/sims/vcs/generated-src/chipyard.TestHarness.TramSoCConfig/chipyard.TestHarness.TramSoCConfig.debug
+ option[19]: -Msyslibs=/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/PLI/VCS/LINUX64/pli.a -ldl 
+ option[20]: -full64
+ option[21]: -Xnotice=1
+ option[22]: -line
+ option[23]: +lint=all,noVCDE,noONGS,noUI
+ option[24]: -error=PCWM-L
+ option[25]: -error=noZMMCM
+ option[26]: -timescale=1ns/10ps
+ option[27]: -q
+ option[28]: -q
+ option[29]: +vcs+lic+wait
+ option[30]: +vc+list
+ option[31]: +systemverilogext+.sv+.svi+.svh+.svt
+ option[32]: 
+ option[33]: 
+ option[34]: +libext+.sv
+ option[35]: +v2k
+ option[36]: +verilog2001ext+.v95+.vt+.vp
+ option[37]: +libext+.v
+ option[38]: -Xcbug=0x1
+ option[39]: +define+VCS
+ option[40]: +define+CLOCK_PERIOD=1.0
+ option[41]: +define+RESET_DELAY=777.7
+ option[42]: +define+PRINTF_COND=TestDriver.printf_cond
+ option[43]: +define+STOP_COND=!TestDriver.reset
+ option[44]: +define+MODEL=TestHarness
+ option[45]: +define+RANDOMIZE_MEM_INIT
+ option[46]: +define+RANDOMIZE_REG_INIT
+ option[47]: +define+RANDOMIZE_GARBAGE_ASSIGN
+ option[48]: +define+RANDOMIZE_INVALID_ASSIGN
+ option[49]: +define+FSDB
+ option[50]: -o
+ option[51]: /home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug
+ option[52]: +define+DEBUG
+ option[53]: -debug_access+all
+ option[54]: +vpi
+ option[55]: +vcsd1
+ option[56]: +itf+/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/linux64/lib/vcsdp_lite.tab
+ option[57]: -kdb
+ option[58]: -Xufe=2steps
+ option[59]: -lca
+ option[60]: -picarchive
+ option[61]: +cli+1
+ option[62]: -debug=4
+ option[63]: +memcbk
+ option[64]: -P
+ option[65]: /home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/PLI/VCS/LINUX64/verdi.tab
+ option[66]: -fsdb
+ option[67]: +rad
+ option[68]: -sverilog
+ option[69]: +vpi
+ option[70]: -gen_obj
+ option[71]: -f
+ option[72]: /home/jhlou/chipyard/sims/vcs/generated-src/chipyard.TestHarness.TramSoCConfig/sim_files.common.f
+ option[73]: +incdir+/home/jhlou/chipyard/sims/vcs/generated-src/chipyard.TestHarness.TramSoCConfig/gen-collateral
+ option[74]: -load
+ option[75]: /home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/PLI/VCS/LINUX64/libnovas.so:FSDBDumpCmd
+ option[76]: timescale=1ns/10ps
+Chronologic Simulation VCS Release O-2018.09-SP2_Full64
+Linux 5.4.0-81-generic #91~18.04.1-Ubuntu SMP Fri Jul 23 13:36:29 UTC 2021 x86_64
+CPU cores: 32
+Limit information:
+======================================
+cputime		unlimited
+filesize		unlimited
+datasize		unlimited
+stacksize		8200 kbytes
+coredumpsize		0 kbytes
+memoryuse		unlimited
+vmemoryuse		unlimited
+descriptors		1048576
+memorylocked		65536 kbytes
+maxproc		708144
+======================================
+(Special)Runtime environment variables:
+
+Runtime environment variables:
+CONDA_SHLVL=2
+VCS_TARGET_ARCH=amd64
+NPI_PLATFORM=LINUX64_GNU_472
+LD_LIBRARY_PATH=/home/jhlou/chipyard/.conda-env/riscv-tools/lib:/home/jhlou/CUDA/CUDA/lib64/:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/NPI/lib/LINUX64_GNU_520:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/PLI/lib/LINUX64:/home/jhlou/Database/ODVCdriver/unixODBC-2.3.1/build/lib/:/home/jhlou/chipyard/.conda-env/lib/:/home/jhlou/chipyard/.conda-env/riscv-tools/lib/:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib64/:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib/:/home/jhlou/CGRVOPT/llvm-project-Polygeist/build/lib/:/home/jhlou/CUDA/CUDA/lib64/:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/NPI/lib/LINUX64_GNU_520:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/PLI/lib/LINUX64:/home/jhlou/Database/ODVCdriver/unixODBC-2.3.1/build/lib/:/home/jhlou/chipyard/.conda-env/lib/:/home/jhlou/chipyard/.conda-env/riscv-tools/lib/:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib64/:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib/:/home/jhlou/CGRVOPT/llvm-project-Polygeist/build/lib/::/opt/synopsys/verdi-2017.12-SP2/share/PLI/lib/LINUX64:/opt/synopsys/verdi-2017.12-SP2/share/PLI/lib/LINUX64
+LS_COLORS=rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:
+CONDA_EXE=/home/jhlou/anaconda3/bin/conda
+DVE_HOME=/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/gui/dve
+CGRVOPT_PROJECT_PATH=/home/jhlou/CGRVOPT/cgra-opt
+LC_MEASUREMENT=en_US.UTF-8
+CONDA_BACKUP_PATH=/home/jhlou/chipyard/.conda-env/bin:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/CGRVOPT/cgra-opt/build/bin:/opt/synopsys/scl-2018.06/linux64/bin:/home/jhlou/Database/ODVCdriver/unixODBC-2.3.1/build/bin:/home/jhlou/CUDA/CUDA/bin:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/bin:/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/bin:/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/gui/dve/bin:/home/jhlou/CGRVOPT/Polygeist/build/bin:/home/jhlou/CGRVOPT/llvm-project-Polygeist/build/bin:/home/jhlou/CGRVOPT/cgra-opt/build/bin:/opt/Xilinx/Vivado/2021.2/bin:/home/jhlou/CGRA-FLOW/CGRA-Flow-master/mlir-cgra/build/bin:/home/jhlou/Tools/cmake-3.26.5/build/bin:/home/jhlou/Tools/verilator-4.226/build/bin:/home/jhlou/Tools/xz-5.2.12/build/bin:/home/jhlou/Tools/verilator-depend/help2man-1.40.2/build/bin:/home/jhlou/Tools/gperf-3.1/build/bin:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/bin:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib64:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib:/home/edaserver/EDA/vera_vI-2014.03-1/Vera/vera_vI-2014.03-1_amd64/bin:/opt/synopsys/verdi-2017.12-SP2/bin:/opt/synopsys/vcs-2017.12-SP2/gui/dve/bin:/opt/synopsys/vcs-2017.12-SP2/bin:/opt/synopsys/syn-2018.06-SP1/linux64/syn/bin:/home/jhlou/.vscode-server/cli/servers/Stable-e8653663e8840adaf45af01eab5c627a5af81807/server/bin/remote-cli:/home/jhlou/.local/bin:/home/jhlou/chipyard/.conda-env/bin:/home/jhlou/anaconda3/condabin:/opt/synopsys/scl-2018.06/linux64/bin:/home/jhlou/Database/ODVCdriver/unixODBC-2.3.1/build/bin:/home/jhlou/CUDA/CUDA/bin:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/bin:/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/bin:/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/gui/dve/bin:/home/jhlou/CGRVOPT/Polygeist/build/bin:/home/jhlou/CGRVOPT/llvm-project-Polygeist/build/bin:/home/jhlou/CGRVOPT/cgra-opt/build/bin:/opt/Xilinx/Vivado/2021.2/bin:/home/jhlou/CGRA-FLOW/CGRA-Flow-master/mlir-cgra/build/bin:/home/jhlou/Tools/cmake-3.26.5/build/bin:/home/jhlou/Tools/verilator-4.226/build/bin:/home/jhlou/Tools/xz-5.2.12/build/bin:/home/jhlou/Tools/verilator-depend/help2man-1.40.2/build/bin:/home/jhlou/Tools/gperf-3.1/build/bin:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/bin:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib64:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib:/home/edaserver/EDA/vera_vI-2014.03-1/Vera/vera_vI-2014.03-1_amd64/bin:/opt/synopsys/verdi-2017.12-SP2/bin:/opt/synopsys/vcs-2017.12-SP2/gui/dve/bin:/opt/synopsys/vcs-2017.12-SP2/bin:/opt/synopsys/syn-2018.06-SP1/linux64/syn/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/opt/anaconda3/bin:/opt/anaconda3/bin
+HTTP_PROXY=http://192.168.64.195:808
+SSH_CONNECTION=192.168.64.112 33372 192.168.64.114 22
+LESSCLOSE=/usr/bin/lesspipe %s %s
+LC_PAPER=en_US.UTF-8
+LC_MONETARY=en_US.UTF-8
+LANG=en_US.UTF-8
+JAVA_LD_LIBRARY_PATH=/home/jhlou/chipyard/.conda-env/lib/jvm/lib/server
+VERDI_DIR=/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2
+CHIPYARD_SOURCE_ENV=/home/jhlou/chipyard/env.sh
+COLORTERM=truecolor
+SYNOPSYS_HOME=/opt/synopsys
+GSETTINGS_SCHEMA_DIR_CONDA_BACKUP=
+SNPSLMD_LICENSE_FILE=27000@localhost:27007@localhost
+CONDA_PREFIX=/home/jhlou/chipyard/.conda-env
+JAVA_HOME=/home/jhlou/chipyard/.conda-env/lib/jvm
+VSCODE_GIT_ASKPASS_EXTRA_ARGS=
+RISCV=/home/jhlou/chipyard/.conda-env/riscv-tools
+GeneralOpNameFile=/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt
+CONDA_BACKUP_LD_LIBRARY_PATH=/home/jhlou/CUDA/CUDA/lib64/:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/NPI/lib/LINUX64_GNU_520:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/PLI/lib/LINUX64:/home/jhlou/Database/ODVCdriver/unixODBC-2.3.1/build/lib/:/home/jhlou/chipyard/.conda-env/lib/:/home/jhlou/chipyard/.conda-env/riscv-tools/lib/:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib64/:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib/:/home/jhlou/CGRVOPT/llvm-project-Polygeist/build/lib/:/home/jhlou/CUDA/CUDA/lib64/:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/NPI/lib/LINUX64_GNU_520:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/PLI/lib/LINUX64:/home/jhlou/Database/ODVCdriver/unixODBC-2.3.1/build/lib/:/home/jhlou/chipyard/.conda-env/lib/:/home/jhlou/chipyard/.conda-env/riscv-tools/lib/:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib64/:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib/:/home/jhlou/CGRVOPT/llvm-project-Polygeist/build/lib/::/opt/synopsys/verdi-2017.12-SP2/share/PLI/lib/LINUX64:/opt/synopsys/verdi-2017.12-SP2/share/PLI/lib/LINUX64
+S_COLORS=auto
+_CE_M=
+LC_NAME=en_US.UTF-8
+MODULES_CMD=/usr/lib/x86_64-linux-gnu/modulecmd.tcl
+USER=jhlou
+ENV=/usr/share/modules/init/profile.sh
+CONDA_PREFIX_1=/home/jhlou/anaconda3
+PWD=/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/medley/deriche
+HOME=/home/jhlou
+CONDA_PYTHON_EXE=/home/jhlou/anaconda3/bin/python
+BROWSER=/home/jhlou/.vscode-server/cli/servers/Stable-e8653663e8840adaf45af01eab5c627a5af81807/server/bin/helpers/browser.sh
+VSCODE_GIT_ASKPASS_NODE=/home/jhlou/.vscode-server/cli/servers/Stable-e8653663e8840adaf45af01eab5c627a5af81807/server/node
+TERM_PROGRAM=vscode
+SSH_CLIENT=192.168.64.112 33372 22
+TERM_PROGRAM_VERSION=1.95.2
+VCS_CC=/home/jhlou/chipyard/.conda-env/bin/g++
+https_proxy=https://192.168.64.195:808
+BASH_ENV=/usr/share/modules/init/bash
+XDG_DATA_DIRS=/usr/local/share:/usr/share:/var/lib/snapd/desktop
+SSL_CERT_FILE=/usr/lib/ssl/certs/ca-certificates.crt
+NOVAS_INST_DIR=/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2
+http_proxy=http://192.168.64.195:808
+_CE_CONDA=
+GSETTINGS_SCHEMA_DIR=/home/jhlou/chipyard/.conda-env/share/glib-2.0/schemas
+VCS_ARCH_OVERRIDE=linux
+VSCODE_IPC_HOOK_CLI=/tmp/vscode-ipc-e8f331f3-adb1-4d57-93c5-38c20e1c5bd9.sock
+CGRA_OP_FILE_PATH=/home/jhlou/chipyard/generators/fdra/cgra-mg/src/main/resources
+ODBC_LIBRARIES_PATHS=/home/jhlou/Database/ODVCdriver/unixODBC-2.3.1/build/
+LC_ADDRESS=en_US.UTF-8
+LC_NUMERIC=en_US.UTF-8
+LOADEDMODULES=
+no_proxy=192.168.64.111,192.168.64.112,192.168.64.113,192.168.64.114,192.168.64.115
+NOVAS_HOME=/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2
+CONDA_PROMPT_MODIFIER=(/home/jhlou/chipyard/.conda-env) 
+NO_PROXY=192.168.64.111,192.168.64.112,192.168.64.113,192.168.64.114,192.168.64.115
+MAIL=/var/mail/jhlou
+SYNOPSYS=/opt/synopsys
+HTTPS_PROXY=https://192.168.64.195:808
+VSCODE_GIT_ASKPASS_MAIN=/home/jhlou/.vscode-server/cli/servers/Stable-e8653663e8840adaf45af01eab5c627a5af81807/server/extensions/git/dist/askpass-main.js
+TERM=xterm-256color
+SHELL=/bin/bash
+VERA_HOME=/home/edaserver/EDA/vera_vI-2014.03-1/Vera/vera_vI-2014.03-1_amd64/
+CHIPYARD_DIR=/home/jhlou/chipyard
+CGRA_ADG_PATH=/home/jhlou/chipyard/generators/fdra/cgra-mg/src/main/resources
+OPENSSL_ROOT_DIR=/home/jhlou/Tools/openssl-3.1.2/
+VERDI_HOME=/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2
+SHLVL=5
+VSCODE_GIT_IPC_HANDLE=/tmp/vscode-git-77f09fc9ad.sock
+LC_TELEPHONE=en_US.UTF-8
+MODULEPATH=/etc/environment-modules/modules:/opt/modulefiles
+SSL_CERT_DIR=/usr/lib/ssl/certs
+LOGNAME=jhlou
+JAVA_HOME_CONDA_BACKUP=
+GIT_ASKPASS=/home/jhlou/.vscode-server/cli/servers/Stable-e8653663e8840adaf45af01eab5c627a5af81807/server/extensions/git/dist/askpass.sh
+MODULEPATH_modshare=/etc/environment-modules/modules:1:/opt/modulefiles:1
+PATH=/home/jhlou/chipyard/.conda-env/riscv-tools/bin:/home/jhlou/chipyard/.conda-env/bin:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/chipyard/software/firemarshal:/home/jhlou/CGRVOPT/cgra-opt/build/bin:/opt/synopsys/scl-2018.06/linux64/bin:/home/jhlou/Database/ODVCdriver/unixODBC-2.3.1/build/bin:/home/jhlou/CUDA/CUDA/bin:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/bin:/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/bin:/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/gui/dve/bin:/home/jhlou/CGRVOPT/Polygeist/build/bin:/home/jhlou/CGRVOPT/llvm-project-Polygeist/build/bin:/home/jhlou/CGRVOPT/cgra-opt/build/bin:/opt/Xilinx/Vivado/2021.2/bin:/home/jhlou/CGRA-FLOW/CGRA-Flow-master/mlir-cgra/build/bin:/home/jhlou/Tools/cmake-3.26.5/build/bin:/home/jhlou/Tools/verilator-4.226/build/bin:/home/jhlou/Tools/xz-5.2.12/build/bin:/home/jhlou/Tools/verilator-depend/help2man-1.40.2/build/bin:/home/jhlou/Tools/gperf-3.1/build/bin:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/bin:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib64:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib:/home/edaserver/EDA/vera_vI-2014.03-1/Vera/vera_vI-2014.03-1_amd64/bin:/opt/synopsys/verdi-2017.12-SP2/bin:/opt/synopsys/vcs-2017.12-SP2/gui/dve/bin:/opt/synopsys/vcs-2017.12-SP2/bin:/opt/synopsys/syn-2018.06-SP1/linux64/syn/bin:/home/jhlou/.vscode-server/cli/servers/Stable-e8653663e8840adaf45af01eab5c627a5af81807/server/bin/remote-cli:/home/jhlou/.local/bin:/home/jhlou/chipyard/.conda-env/bin:/home/jhlou/anaconda3/condabin:/opt/synopsys/scl-2018.06/linux64/bin:/home/jhlou/Database/ODVCdriver/unixODBC-2.3.1/build/bin:/home/jhlou/CUDA/CUDA/bin:/home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/bin:/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/bin:/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/gui/dve/bin:/home/jhlou/CGRVOPT/Polygeist/build/bin:/home/jhlou/CGRVOPT/llvm-project-Polygeist/build/bin:/home/jhlou/CGRVOPT/cgra-opt/build/bin:/opt/Xilinx/Vivado/2021.2/bin:/home/jhlou/CGRA-FLOW/CGRA-Flow-master/mlir-cgra/build/bin:/home/jhlou/Tools/cmake-3.26.5/build/bin:/home/jhlou/Tools/verilator-4.226/build/bin:/home/jhlou/Tools/xz-5.2.12/build/bin:/home/jhlou/Tools/verilator-depend/help2man-1.40.2/build/bin:/home/jhlou/Tools/gperf-3.1/build/bin:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/bin:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib64:/home/jhlou/Tools/gcc-releases-gcc-9.4.0/build/lib:/home/edaserver/EDA/vera_vI-2014.03-1/Vera/vera_vI-2014.03-1_amd64/bin:/opt/synopsys/verdi-2017.12-SP2/bin:/opt/synopsys/vcs-2017.12-SP2/gui/dve/bin:/opt/synopsys/vcs-2017.12-SP2/bin:/opt/synopsys/syn-2018.06-SP1/linux64/syn/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/opt/anaconda3/bin:/opt/anaconda3/bin
+LC_IDENTIFICATION=en_US.UTF-8
+VCS_HOME=/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2
+MODULESHOME=/usr/share/modules
+CONDA_DEFAULT_ENV=/home/jhlou/chipyard/.conda-env
+XML_CATALOG_FILES=file:///home/jhlou/chipyard/.conda-env/etc/xml/catalog file:///etc/xml/catalog
+LESSOPEN=| /usr/bin/lesspipe %s
+JAVA_LD_LIBRARY_PATH_BACKUP=
+LC_TIME=en_US.UTF-8
+BASH_FUNC_module%%=() {  _moduleraw "$*" 2>&1
+}
+BASH_FUNC_switchml%%=() {  typeset swfound=1;
+ if [ "${MODULES_USE_COMPAT_VERSION:-0}" = '1' ]; then
+ typeset swname='main';
+ if [ -e /usr/lib/x86_64-linux-gnu/modulecmd.tcl ]; then
+ typeset swfound=0;
+ unset MODULES_USE_COMPAT_VERSION;
+ fi;
+ else
+ typeset swname='compatibility';
+ if [ -e /usr/lib/x86_64-linux-gnu/modulecmd-compat ]; then
+ typeset swfound=0;
+ MODULES_USE_COMPAT_VERSION=1;
+ export MODULES_USE_COMPAT_VERSION;
+ fi;
+ fi;
+ if [ $swfound -eq 0 ]; then
+ echo "Switching to Modules $swname version";
+ source /usr/share/modules/init/bash;
+ else
+ echo "Cannot switch to Modules $swname version, command not found";
+ return 1;
+ fi
+}
+BASH_FUNC__moduleraw%%=() {  unset _mlre _mlIFS _mlshdbg;
+ if [ "${MODULES_SILENT_SHELL_DEBUG:-0}" = '1' ]; then
+ case "$-" in 
+ *v*x*)
+ set +vx;
+ _mlshdbg='vx'
+ ;;
+ *v*)
+ set +v;
+ _mlshdbg='v'
+ ;;
+ *x*)
+ set +x;
+ _mlshdbg='x'
+ ;;
+ *)
+ _mlshdbg=''
+ ;;
+ esac;
+ fi;
+ if [ -n "${IFS+x}" ]; then
+ _mlIFS=$IFS;
+ fi;
+ IFS=' ';
+ for _mlv in ${MODULES_RUN_QUARANTINE:-};
+ do
+ if [ "${_mlv}" = "${_mlv##*[!A-Za-z0-9_]}" -a "${_mlv}" = "${_mlv#[0-9]}" ]; then
+ if [ -n "`eval 'echo ${'$_mlv'+x}'`" ]; then
+ _mlre="${_mlre:-}${_mlv}_modquar='`eval 'echo ${'$_mlv'}'`' ";
+ fi;
+ _mlrv="MODULES_RUNENV_${_mlv}";
+ _mlre="${_mlre:-}${_mlv}='`eval 'echo ${'$_mlrv':-}'`' ";
+ fi;
+ done;
+ if [ -n "${_mlre:-}" ]; then
+ _mlre="eval ${_mlre}";
+ fi;
+ eval `${_mlre:-}/usr/bin/tclsh /usr/lib/x86_64-linux-gnu/modulecmd.tcl bash $*`;
+ _mlstatus=$?;
+ if [ -n "${_mlIFS+x}" ]; then
+ IFS=$_mlIFS;
+ else
+ unset IFS;
+ fi;
+ if [ -n "${_mlshdbg:-}" ]; then
+ set -$_mlshdbg;
+ fi;
+ unset _mlre _mlv _mlrv _mlIFS _mlshdbg;
+ return $_mlstatus
+}
+_=/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug
+OLDPWD=/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/medley/deriche/0_kernels_before_opt
+VCS_HEAP_EXEC=true
+VCS_PATHMAP_PRELOAD_DONE=1
+VCS_STACK_EXEC=true
+VCS_EXEC_DONE=1
+LC_ALL=C
+DVE=/home/jhlou/Tools/VCS2018/VCS_build/vcs/O-2018.09-SP2/gui/dve
+SPECMAN_OUTPUT_TO_TTY=1
+Runtime command line arguments:
+argv[0]=/home/jhlou/chipyard/sims/vcs/simv-chipyard-TramSoCConfig-debug
+argv[1]=--help
+308 profile - 100
+          CPU/Mem usage: 0.080 sys,  0.330 user,  358.93M mem
+309 Thu Nov 14 02:04:33 2024
+310 pliAppInit
+311 FSDB_GATE is set.
+312 FSDB_RTL is set.
+313 Enable Parallel Dumping.
+314 pliAppMiscSet: New Sim Round
+315 pliEntryInit
+316 LIBSSCORE=found /home/jhlou/Tools/VCS2018/verdi_build/verdi/Verdi_O-2018.09-SP2/share/PLI/lib/LINUXAMD64/libsscore_vcs201809.so through $NOVAS_HOME setting.
+317 FSDB Dumper for VCS, Release Verdi_O-2018.09-SP2, Linux x86_64/64bit, 02/21/2019
+318 (C) 1996 - 2019 by Synopsys, Inc.
+319 FSDB_VCS_ENABLE_FAST_VC is enable
+320 sps_call_fsdbDumpon_vd_main at 0 : /home/jhlou/chipyard/sims/vcs/generated-src/chipyard.TestHarness.TramSoCConfig/gen-collateral/TestDriver.v(106)
+321 *Verdi* WARNING: fsdbDumpon - The FSDB file has not been created.
+322 Sim process exit

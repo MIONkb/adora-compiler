@@ -1,0 +1,11 @@
+Digraph G {
+"Input1"[label = "\N\nlat=3"];
+"Input2"[label = "\N\nlat=3"];
+"FMUL323"[label = "\N\nlat=6"];
+"Input1"->"FMUL323"[label = "lat=0\nop=0"];
+"Input2"->"FMUL323"[label = "lat=1\nop=1"];
+"FACC324"[label = "\N\nlat=7"];
+"FMUL323"->"FACC324"[label = "lat=0\nop=0"];
+"Output7"[label = "\N\nlat=8"];
+"FACC324"->"Output7"[label = "lat=0\nop=0"];
+}

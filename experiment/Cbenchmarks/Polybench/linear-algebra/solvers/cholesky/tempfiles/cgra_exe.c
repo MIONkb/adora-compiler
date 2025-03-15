@@ -1,0 +1,99 @@
+
+//===----------------------------------------------------------------------===//
+//
+// Automatically generated file for CGRA call function in cgrv-opt.
+//
+//===----------------------------------------------------------------------===//
+
+#include "include/ISA.h"
+
+void kernel_deriche_kernel_0(void* arg_0 ,void* arg_1 ,void* arg_2 ,void* arg_3 ,void* arg_4){
+    for (int int_5 = 0; int_5 < 4096; int_5 = int_5 + 1){
+      for (int int_6 = 0; int_6 < 2160; int_6 = int_6 + 1080){
+        /// %0 = ADORA.BlockLoad %arg2 [] : memref<f32> -> memref<2xf32>  {Id = "0", KernelName = ""}
+        load_data(arg_2 + dramoffset_0 + roffset_0, 0x18000 + spadoffset_0, 8, 0, 0, 0);
+        /// %1 = ADORA.BlockLoad %arg1 [] : memref<f32> -> memref<2xf32>  {Id = "1", KernelName = ""}
+        load_data(arg_1 + dramoffset_1 + roffset_1, 0x8000 + spadoffset_1, 8, 0, 0, 0);
+        /// %2 = ADORA.BlockLoad %arg0 [] : memref<f32> -> memref<2xf32>  {Id = "3", KernelName = ""}
+        load_data(arg_0 + dramoffset_3 + roffset_3, 0x0 + spadoffset_3, 8, 0, 0, 0);
+        /// %3 = ADORA.BlockLoad %arg3 [%arg5, %arg6] : memref<4096x2160xf32> -> memref<1x1080xf32>  {Id = "6", KernelName = ""}
+        uint64_t dramoffset_6 = 8640 * int_5 + 4 * int_6;
+        uint64_t spadoffset_6 = 0;
+        for(int idx_0 = 0; idx_0 < 1; idx_0++){
+          uint64_t roffset_6 =  8640*idx_0 ;
+          load_data(arg_3 + dramoffset_6 + roffset_6, 0x1a000 + spadoffset_6, 4320, 0, 0, 0);
+          spadoffset_6 = spadoffset_6 + 4320;
+        } 
+        volatile unsigned short cin[66][3] __attribute__((aligned(8))) = {
+        		{0x0800, 0xe000, 0x0010},
+        		{0x0010, 0x0000, 0x0011},
+        		{0x0000, 0x9100, 0x0012},
+        		{0x0200, 0x0000, 0x0013},
+        		{0x0000, 0xe000, 0x0018},
+        		{0x0010, 0x0000, 0x0019},
+        		{0x0000, 0x0100, 0x001a},
+        		{0x0000, 0x0000, 0x001b},
+        		{0x2800, 0xe000, 0x0028},
+        		{0x0010, 0x0000, 0x0029},
+        		{0x0000, 0x9500, 0x002a},
+        		{0x0200, 0x0000, 0x002b},
+        		{0x1000, 0xe000, 0x0038},
+        		{0x0010, 0x0000, 0x0039},
+        		{0x0000, 0x9500, 0x003a},
+        		{0x0000, 0x0000, 0x003b},
+        		{0x0000, 0xe000, 0x0040},
+        		{0x0010, 0x0000, 0x0041},
+        		{0x0000, 0x0100, 0x0042},
+        		{0x0000, 0x0000, 0x0043},
+        		{0x0002, 0x0010, 0x0060},
+        		{0x0000, 0x0002, 0x0068},
+        		{0x0000, 0x0002, 0x0070},
+        		{0x0000, 0x0002, 0x0078},
+        		{0x4010, 0x0002, 0x0080},
+        		{0x0000, 0x0003, 0x0088},
+        		{0x44fd, 0x3f57, 0x00b0},
+        		{0x000d, 0x0002, 0x00b1},
+        		{0x080e, 0x0026, 0x00c1},
+        		{0x4598, 0xbf1b, 0x00c8},
+        		{0x000d, 0x0004, 0x00c9},
+        		{0x0003, 0x0000, 0x00f1},
+        		{0x0000, 0x0000, 0x0100},
+        		{0x0040, 0x0000, 0x0108},
+        		{0x0000, 0x1000, 0x0118},
+        		{0x060e, 0x0018, 0x0149},
+        		{0x0003, 0x0000, 0x0181},
+        		{0x0000, 0x8000, 0x0190},
+        		{0x0002, 0x0000, 0x0198},
+        		{0x0002, 0x0000, 0x0199},
+        		{0x0000, 0x1000, 0x01a8},
+        		{0x0003, 0x0000, 0x0211},
+        		{0x0000, 0x0000, 0x0220},
+        		{0xc000, 0x0000, 0x0228},
+        		{0x0000, 0x0004, 0x0230},
+        		{0x0000, 0x1000, 0x0238},
+        		{0xb54c, 0x3de1, 0x0268},
+        		{0x000d, 0x0040, 0x0269},
+        		{0x004e, 0x0014, 0x0271},
+        		{0x35c4, 0xbe41, 0x0278},
+        		{0x000d, 0x0008, 0x0279},
+        		{0x2000, 0x0000, 0x02a0},
+        		{0x0002, 0x0000, 0x02b8},
+        		{0x0000, 0x0000, 0x02c8},
+        		{0x0000, 0xe000, 0x02e0},
+        		{0x0010, 0x0000, 0x02e1},
+        		{0x0000, 0x8b00, 0x02e2},
+        		{0x0200, 0x0000, 0x02e3},
+        		{0x0000, 0xe000, 0x02f8},
+        		{0x0010, 0x0000, 0x02f9},
+        		{0x0000, 0x0100, 0x02fa},
+        		{0x0000, 0x0000, 0x02fb},
+        		{0x2800, 0xe000, 0x0310},
+        		{0x0010, 0x0000, 0x0311},
+        		{0x0000, 0x0100, 0x0312},
+        		{0x0000, 0x0000, 0x0313},
+        	};
+        
+        load_cfg((void*)cin, 0x20000, 396, 0, 0);
+        config(0x0, 66, 0, 0);
+        execute(0x92d6, 0, 0);
+  

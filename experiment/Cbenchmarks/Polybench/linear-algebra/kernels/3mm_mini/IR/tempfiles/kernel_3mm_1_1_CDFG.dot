@@ -1,0 +1,20 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="kernel_3mm_1_0", size="1728", offset="0,0", pattern="4,24,-92,22,4,18", color = black];
+Input1[opcode = "Input", ref_name="kernel_3mm_1_1", size="2112", offset="0,0", pattern="88,24,-2020,22,-2108,18", color = black];
+FMUL322[opcode = "FMUL32", color = black];
+FADD323[opcode = "FADD32", color = black];
+yield4[opcode = "yield", color = black];
+for5[opcode = "for", color = purple];
+Output6[opcode = "Output", ref_name="kernel_3mm_1_2", size="1584", offset="0,0", pattern="0,24,4,22,4,18", color = purple];
+for8[opcode = "for", color = blue];
+for10[opcode = "for", color = yellow];
+CONST11[opcode = "CONST", value="0x00000000", color = black];
+Input0 -> FMUL322[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> FMUL322[color = black, style = bold, operand = 1, label = "Op=1"];
+FMUL322 -> FADD323[color = black, style = bold, operand = 0, label = "Op=0"];
+for5 -> FADD323[color = black, style = dashed, operand = 1, iterdist = 0, label = "Op=1, IterDist = 0"];
+FADD323 -> yield4[color = black, style = bold, operand = 0, label = "Op=0"];
+CONST11 -> for5[color = black, style = bold, operand = 0, label = "Op=0"];
+for5 -> Output6[color = black, style = bold, operand = 0, label = "Op=0"];
+yield4 -> for5[color = black, style = dashed, operand = 1, iterdist = 0, label = "Op=1, IterDist = 0"];
+}

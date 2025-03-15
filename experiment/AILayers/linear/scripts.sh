@@ -1,0 +1,15 @@
+mlir-opt \
+    --eliminate-empty-tensors \
+    --empty-tensor-to-alloc-tensor \
+     --arith-bufferize \
+    --tensor-bufferize \
+    --func-bufferize \
+    --linalg-bufferize  \
+    --finalizing-bufferize \
+    --convert-bufferization-to-memref  \
+    --convert-linalg-to-affine-loops \
+    --affine-scalrep \
+    --affine-simplify-structures  \
+    --canonicalize \
+    linalg_linear.mlir \
+    -o affine.mlir

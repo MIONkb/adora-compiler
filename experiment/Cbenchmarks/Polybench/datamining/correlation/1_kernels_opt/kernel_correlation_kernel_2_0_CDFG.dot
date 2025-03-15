@@ -1,0 +1,18 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="kernel_correlation_kernel_2_0", size="4800", offset="0,0", pattern="4, 1200", color = black];
+Input1[opcode = "Input", ref_name="kernel_correlation_kernel_2_1", size="4800", offset="0,0", pattern="4, 1200", color = black];
+FSUB322[opcode = "FSUB32", color = black];
+Input3[opcode = "Input", ref_name="kernel_correlation_kernel_2_2", size="4800", offset="0,0", pattern="4, 1200", color = black];
+FMUL324[opcode = "FMUL32", color = black];
+FDIV325[opcode = "FDIV32", color = black];
+Output6[opcode = "Output", ref_name="kernel_correlation_kernel_2_3", size="4800", offset="0,0", pattern="4, 1200", color = black];
+yield7[opcode = "yield", color = black];
+CONST8[opcode = "CONST", value="0x4215AA92", color = black];
+Input1 -> FSUB322[color = black, style = bold, operand = 0, label = "Op=0"];
+Input0 -> FSUB322[color = black, style = bold, operand = 1, label = "Op=1"];
+Input3 -> FMUL324[color = black, style = bold, operand = 0, label = "Op=0"];
+CONST8 -> FMUL324[color = black, style = bold, operand = 1, label = "Op=1"];
+FSUB322 -> FDIV325[color = black, style = bold, operand = 0, label = "Op=0"];
+FMUL324 -> FDIV325[color = black, style = bold, operand = 1, label = "Op=1"];
+FDIV325 -> Output6[color = black, style = bold, operand = 0, label = "Op=0"];
+}
