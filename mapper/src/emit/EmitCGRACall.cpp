@@ -271,7 +271,8 @@ public:
               <<", 0" /*Task id*/ << ", 0" /*Task dep*/
               <<");\n";
       indent() << load_data.str();
-
+      _os << "\n";
+      indent() << "}\n";
       return true;
     }
 
@@ -460,6 +461,8 @@ public:
               <<");\n";
       indent() << store_data.str();
 
+      _os << "\n";
+      indent() << "}\n";
       return true;
     }
 

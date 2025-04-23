@@ -70,7 +70,8 @@ void print_array(int w, int h,
     //   if ((i * h + j) % 20 == 0) fprintf(POLYBENCH_DUMP_TARGET, "\n");
     //   fprintf(POLYBENCH_DUMP_TARGET, DATA_PRINTF_MODIFIER, imgOut[i][j]);
       if ((i * h + j) % 20 == 0) printf("\n");
-      printf(DATA_PRINTF_MODIFIER, imgOut[i][j]);
+      // printf(DATA_PRINTF_MODIFIER, imgOut[i][j]);
+      printf("%ld, ", 10000 * imgOut[i][j]);
     }
   POLYBENCH_DUMP_END("imgOut");
   POLYBENCH_DUMP_FINISH;
@@ -107,8 +108,8 @@ int main(int argc, char** argv)
   DATA_TYPE y2[W][H];
 
   /* Initialize array(s). */
-//   init_array (w, h, &alpha, POLYBENCH_ARRAY(imgIn), POLYBENCH_ARRAY(imgOut));
-
+  // init_array (w, h, &alpha, POLYBENCH_ARRAY(imgIn), POLYBENCH_ARRAY(imgOut));
+  init_array (w, h, imgIn, imgOut);
   /* Start timer. */
 //   polybench_start_instruments;
 
@@ -117,7 +118,6 @@ int main(int argc, char** argv)
   printf("\nstart kernel\n");
   start = rdcycle();
   kernel_deriche(imgIn, imgOut, y1, y2);
-  fence(1);
   end = rdcycle();
 
   printf("It takes %llu cycles for CPU to finish the task.\n", end - start);

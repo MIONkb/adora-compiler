@@ -2,21 +2,19 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a series of misc passes that dont modify the MLIR code.
-// These passes include printing operation nesting or generating test vectors
-// in XML targeting bambu simulation.
-//
-// Test vector generation works for algorithms with no dynamic behaviour based
-// on the input data. It supports regular memref call convetion and bareptr call
-// convention.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Support/FileUtilities.h"
+
 #include "RAAA/Dialect/ADORA/IR/ADORA.h"
 #include "RAAA/Misc/Passes.h"
 
-#include "mlir/Support/FileUtilities.h"
+
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
@@ -25,6 +23,7 @@
 
 using namespace mlir;
 using namespace ADORA;
+using namespace mlir::affine;
 
 namespace {
 
@@ -98,6 +97,8 @@ class TestPrintOpNestingPass
     return llvm::outs();
   }
 };
+
+
 
 } // end anonymous namespace
 

@@ -27,7 +27,7 @@ using namespace mlir::affine;
 //===----------------------------------------------------------------------===//
 // AffineToKERNEL
 //===----------------------------------------------------------------------===//
-#define DEBUG_TYPE "ADORA-extract-for-to-kernel"
+#define DEBUG_TYPE "adora-extract-for-to-kernel"
 
 namespace {
   

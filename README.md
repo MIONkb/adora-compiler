@@ -63,7 +63,7 @@ xxxxxxxxxxxxxxxxxxxxx
 ##### For AI Benchmarks: `torch-mlir`
 
 Download and install `torch-mlir`.  
-Our supported version is **`torch_mlir_20240823`**.
+Our supported version is **`torch-mlir_20250127.357`**. (Corresponding torch-vision version: 0.1.6.dev0)
 
 You can find the official repository here:  
 [Torch MLIR GitHub Repository](https://github.com/llvm/torch-mlir)

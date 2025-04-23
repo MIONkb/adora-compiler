@@ -44,7 +44,7 @@ using namespace mlir;
 using namespace mlir::affine;
 using namespace mlir::ADORA;
 
-#define DEBUG_TYPE "ADORA-dfg-gen"
+#define DEBUG_TYPE "adora-dfg-gen"
 
 namespace
 {
@@ -55,7 +55,10 @@ namespace
 } // namespace
 
 
-
+/// @brief 
+/// @param yieldop 
+/// @param value 
+/// @return the value must be in yieldop's operands
 static int GetYieldIndexFromValue(affine::AffineYieldOp yield, mlir::Value v){
   int outidx;
   for(outidx = 0; outidx < yield.getOperands().size(); outidx++){
@@ -285,6 +288,7 @@ static bool checkAccumulationChain(affine::AffineForOp forop, mlir::Value tochec
   }
   else {
     mlir::Operation* use = uses[0];
+    use->dump();
     if(isa<AccT>(use))
       return checkAccumulationChain<AccT>(forop, dyn_cast<AccT>(use).getResult(), yieldidx);
 
@@ -296,15 +300,15 @@ static bool checkAccumulationChain(affine::AffineForOp forop, mlir::Value tochec
         return false;
     }
 
-    // else if(isa<affine::AffineForOp>(use)){
-    //   affine::AffineForOp innerforop = dyn_cast<affine::AffineForOp>(use);
-    //   int index = getInitIndexOfValue(innerforop, tocheck);
-    //   assert(index != -1);
+    else if(isa<affine::AffineForOp>(use)){
+      affine::AffineForOp innerforop = dyn_cast<affine::AffineForOp>(use);
+      int index = getInitIndexOfValue(innerforop, tocheck);
+      assert(index != -1);
 
-    //   mlir::Value carry_v = innerforop.getRegionIterArgs()[index];
-    //   carry_v.dump();
-    //   return checkAccumulationChain<AccT>(innerforop, carry_v, index);
-    // }
+      mlir::Value carry_v = innerforop.getRegionIterArgs()[index];
+      carry_v.dump();
+      return checkAccumulationChain<AccT>(innerforop, carry_v, index);
+    }
 
     else 
       return false;
@@ -877,7 +881,11 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
       mlir::Value IterRegionOperand = forop.getRegionIterArgs()[IterRegionOperandIdx];
       if(checkAccumulationChain<arith::AddFOp>(forop, IterRegionOperand, IterRegionOperandIdx)){
         /// Adjust consumer of iter operand
+        assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
+        // IterArgConsumer->dump();
+        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+          continue;
         assert(isa<arith::AddFOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
         IterArgConsumer->replaceAllUsesWith(AnotherOperand.getDefiningOp());
@@ -894,7 +902,12 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
       }
       else if(checkAccumulationChain<arith::AddIOp>(forop, IterRegionOperand, IterRegionOperandIdx)){
         /// Adjust consumer of iter operand
+        assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
+
+        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+          continue;   
+        
         assert(isa<arith::AddIOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
         IterArgConsumer->replaceAllUsesWith(AnotherOperand.getDefiningOp());
@@ -911,7 +924,12 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
       }
       else if(checkAccumulationChain<arith::MulFOp>(forop, IterRegionOperand, IterRegionOperandIdx)){
         /// Adjust consumer of iter operand
+        assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
+        
+        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+          continue;  
+
         assert(isa<arith::MulFOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
         IterArgConsumer->replaceAllUsesWith(AnotherOperand.getDefiningOp());
@@ -928,7 +946,12 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
       }
       else if(checkAccumulationChain<arith::MulIOp>(forop, IterRegionOperand, IterRegionOperandIdx)){
         /// Adjust consumer of iter operand
+        assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
+        
+        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+          continue;  
+                  
         assert(isa<arith::MulIOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
         IterArgConsumer->replaceAllUsesWith(AnotherOperand.getDefiningOp());
@@ -1006,17 +1029,35 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
  * For example:
               xxx
  * 
+ * There are two circumstances that need to add Isel to yield op.
+ * 1: If RegionOperand is yield immediately, and IterRegionOperandIdx is not paired with yield
+ * 2: If compute op before yield is select
 */
-void InsertIselForLoopCarry(ADORA::KernelOp kernel){
+void InsertIselForLoopCarry(ADORA::KernelOp kernel, bool verbose){
   OpBuilder b(kernel);
   kernel.walk([&](affine::AffineForOp forop){
+    if(verbose) forop.dump();
     int IterRegionOperandIdx;
     for(IterRegionOperandIdx = 0; IterRegionOperandIdx < forop.getNumRegionIterArgs(); IterRegionOperandIdx++){
       mlir::Value IterRegionOperand = forop.getRegionIterArgs()[IterRegionOperandIdx];
-      /// If IterRegionOperandIdx and yield is not paired
-      AffineYieldOp yieldop =  dyn_cast<AffineYieldOp>(forop.getBody()->getTerminator());
+      if(verbose) IterRegionOperand.dump();
+
+      /// get yieldop 
+      AffineYieldOp yieldop = dyn_cast<AffineYieldOp>(forop.getBody()->getTerminator());
+
+      /// check RegionOperand is yield immediately
       int YieldIndex = GetYieldIndexFromValue(yieldop, IterRegionOperand);
-      if(YieldIndex!= -1 && IterRegionOperandIdx != YieldIndex){
+
+      /// If IterRegionOperandIdx and yield is not paired
+      if(YieldIndex != -1 && IterRegionOperandIdx != YieldIndex){
+        (void)ReplaceLoopCarryValueWithNewIselOp(forop, IterRegionOperandIdx);
+      }
+      /// If compute op before yield is not acc type, insert isel op
+      else if(YieldIndex == -1
+          && !checkAccumulationChain<arith::AddIOp>(forop, IterRegionOperand, IterRegionOperandIdx)
+          && !checkAccumulationChain<arith::AddFOp>(forop, IterRegionOperand, IterRegionOperandIdx)
+          && !checkAccumulationChain<arith::MulIOp>(forop, IterRegionOperand, IterRegionOperandIdx)
+          && !checkAccumulationChain<arith::MulFOp>(forop, IterRegionOperand, IterRegionOperandIdx)){
         (void)ReplaceLoopCarryValueWithNewIselOp(forop, IterRegionOperandIdx);
       }
     }
@@ -1218,6 +1259,8 @@ std::string GetCMPTypeStr(mlir::Operation* op){
     else if(cmptype == "olt") return "FOLT32";
     else if(cmptype == "ole") return "FOLE32";
 
+    else if(cmptype == "uno") /*return "FULE32";*/return "FUNO32";
+
     else assert(0 && "Unsupported compare type.");   
   }
   else 
@@ -1234,7 +1277,7 @@ bool ConvertGreaterToLess(LLVMCDFGNode* node){
   else if(node->getTypeName() == "FUGE32") node->setTypeName("FULE32");
   else if(node->getTypeName() == "FOGT32") node->setTypeName("FOLT32");
   else if(node->getTypeName() == "FOGE32") node->setTypeName("FOLE32");
-  else return false;
+  else return true;
 
   /// exchange operand idx
   if(node->inputEdges().size() != 2){
@@ -1953,10 +1996,11 @@ static void HandleSelfCycle(LLVMCDFG* CDFG, bool verbose = true){
         // }
         // else{
           mlir::Operation* ComputeOp = yieldop.getOperand(OperandIdx).getDefiningOp();
-          LLVM_DEBUG(llvm::errs() << "[debug]ComputeOp: ");
-          LLVM_DEBUG(ComputeOp->dump());
+          if(verbose) llvm::errs() << "[debug]ComputeOp: ";
+          if(verbose) ComputeOp->dump();
           ComputeNode = CDFG->node(ComputeOp);
-          mlir::Value init_mlir_value = getInitialValueFromYieldIndex(yieldop, OperandIdx);    
+          mlir::Value init_mlir_value = getInitialValueFromYieldIndex(yieldop, OperandIdx);   
+          if(verbose) llvm::errs() << "[debug]init_mlir_value: " << init_mlir_value << "\n";
           
           /// set acc type
           if(ComputeNode->getTypeName() == "ADD" 
@@ -2500,7 +2544,7 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
   /// Extract Accumulation
   ////////////////////////
   HandleSelfCycle(CDFG, verbose);
-  if(verbose) { CDFG->CDFGtoDOT(CDFG->name_str()+"_1_CDFG.dot");}
+  if(verbose) { CDFG->CDFGtoDOT(CDFG->name_str()+"_2_CDFG.dot");}
   ////////////////////////
   /// End of extracting acc op
   ////////////////////////
@@ -2615,7 +2659,7 @@ LLVMCDFG* mlir::ADORA::generateCDFGfromKernel(LLVMCDFG* &CDFG, ADORA::KernelOp k
   if(verbose) kernel.dump();
 
   /// insert ISEL operator for loop carried value(not acc)
-  InsertIselForLoopCarry(kernel);
+  InsertIselForLoopCarry(kernel, verbose);
   if(verbose) kernel.dump();
 
   /// Generate

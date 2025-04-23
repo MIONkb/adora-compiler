@@ -31,7 +31,7 @@ for file in "$srcfolder"/*; do
     if [[ -f "$file" ]]; then
       cgra-opt \
         --ADORA-extract-affine-for-to-kernel \
-        --ADORA-approximate-math \
+        --adora-math-rewrite \
         --ADORA-hoist-loadstore \
         --ADORA-adjust-kernel-mem-footprint="cachesize=64 singlearraysize=4 disable-remainder-block explicit-datablock" \
         --ADORA-affine-loop-unroll="cgra-adg=${CGRA_ADG_PATH}/cgra_adg.json" \

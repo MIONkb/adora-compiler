@@ -42,7 +42,7 @@ using namespace mlir;
 using namespace mlir::affine;
 using namespace mlir::ADORA;
 
-#define DEBUG_TYPE "ADORA-simplify-loadstore"
+#define DEBUG_TYPE "adora-simplify-loadstore"
 //===----------------------------------------------------------------------===//
 // SimplifyLoadStoreInLoopNest
 //===----------------------------------------------------------------------===//
@@ -76,9 +76,13 @@ namespace
 PositionRelationInLoop mlir::ADORA::getPositionRelationship(Operation* lhs, Operation* rhs)
 {
   Operation* lhs_parent = lhs->getParentOp();
-  Operation* rhs_parent = rhs->getParentOp();  
-  if( lhs_parent->getName().getStringRef() != AffineForOp::getOperationName() ||
-      rhs_parent->getName().getStringRef() != AffineForOp::getOperationName())
+  Operation* rhs_parent = rhs->getParentOp(); 
+  
+  if(lhs_parent == rhs_parent && lhs_parent->getName().getStringRef() == ADORA::KernelOp::getOperationName() )
+    return PositionRelationInLoop::SameLevel;
+
+  else if( lhs_parent->getName().getStringRef() != AffineForOp::getOperationName() ||
+      rhs_parent->getName().getStringRef() != AffineForOp::getOperationName() )
     return PositionRelationInLoop::NotInSameLoopNest;
 
   AffineForOp lhsParentForOp = dyn_cast<AffineForOp>(*lhs_parent);

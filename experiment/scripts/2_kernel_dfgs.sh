@@ -48,7 +48,7 @@ for file in "$srcfolder"/*.mlir; do
     echo file : "$filename"
     if [[ -f "$file" ]]; then
       cgra-opt\
-        --ADORA-kernel-dfg-gen \
+        --adora-kernel-dfg-gen \
         $file 
     
       # ((cnt++))

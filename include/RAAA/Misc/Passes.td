@@ -15,7 +15,7 @@ include "mlir/Pass/PassBase.td"
 // Basic analysis passes
 //===----------------------------------------------------------------------===//
 
-def TestPrintOpNesting : Pass<"ADORA-test-print-nesting"> {
+def TestPrintOpNesting : Pass<"adora-test-print-nesting"> {
   let summary = "Print op nesting information";
   let description = [{
       Print nested intructure and metadata info associated with mlir operations.

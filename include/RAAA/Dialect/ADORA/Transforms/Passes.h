@@ -19,6 +19,7 @@ std::unique_ptr<OperationPass<ModuleOp>> createADORALoopCdfgGenPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createExtractAffineForToKernelPass();
 std::unique_ptr<OperationPass<ModuleOp>> createAdjustKernelMemoryFootprintPass();
 std::unique_ptr<OperationPass<ModuleOp>> createExtractKernelToFuncPass();
+std::unique_ptr<OperationPass<ModuleOp>> createSimplifyAffineLoopLevelsPass();
 std::unique_ptr<OperationPass<ModuleOp>> createADORAAffineLoopUnrollPass();
 std::unique_ptr<OperationPass<ModuleOp>> createAutoDesignSpaceExplorePass();
 std::unique_ptr<OperationPass<func::FuncOp>> createSimplifyLoadStoreInLoopNestPass();

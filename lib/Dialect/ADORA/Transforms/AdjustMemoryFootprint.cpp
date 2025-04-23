@@ -52,9 +52,9 @@ using namespace mlir::ADORA;
 // AdjustKernelMemoryFootprint to meet cachesize
 //===----------------------------------------------------------------------===//
 
-#define PASS_NAME "ADORA-adjust-kernel-mem-footprint"
+#define PASS_NAME "adora-adjust-kernel-mem-footprint"
 
-#define DEBUG_TYPE "ADORA-adjust-kernel-mem-footprint"
+#define DEBUG_TYPE "adora-adjust-kernel-mem-footprint"
 
 namespace
 {
@@ -622,14 +622,12 @@ int AdjustMemoryFootprintPass::ExplicitKernelDataBLockLoadStore(ADORA::KernelOp 
   /*****
    * A test for dependence analysis.
    */
-
-
   MemRefRegion memrefRegion(Kernel.getLoc());
   mlir::Value memref;
   SmallVector<mlir::Value, 4> IVs;
   LLVM_DEBUG(Kernel.dump());
   mlir::OpBuilder builder(Kernel.getBody().getContext());
-  LLVM_DEBUG(Kernel.dump());
+  // LLVM_DEBUG(Kernel.dump());
   unsigned BlockLoadStoreOpId = 0;
 
   // Tofix:
@@ -1010,7 +1008,7 @@ int AdjustMemoryFootprintPass::ExplicitKernelDataBLockLoadStore(ADORA::KernelOp 
             if(diffExpr.isSymbolicOrConstant()){
               /// Found a Constant diff
               AffineConstantExpr diffExpr_const=diffExpr.dyn_cast<AffineConstantExpr>();
-            if((memRefType.hasStaticShape() && diffExpr_const.getValue()==memRefType.getNumElements()) 
+              if((memRefType.hasStaticShape() && diffExpr_const.getValue()==memRefType.getNumElements()) 
                 && min_space==-1){
                 /// This upper and lowerbound is constrained by 
                 /// original memref's size and a smaller min_space
@@ -1293,6 +1291,14 @@ int AdjustMemoryFootprintPass::ExplicitKernelDataBLockLoadStore(ADORA::KernelOp 
               ubExpr_minspace = ubExpr;
               min_space = diffExpr_const.getValue();
             }
+            else if(diffExpr_const.getValue() == min_space && 
+              !ubExpr.isSymbolicOrConstant() && !lbExpr.isSymbolicOrConstant()){
+              /// This is to set the lb to the expression from
+              /// the one which contains dim variables rather than a constant bound
+              lbExpr_minspace = lbExpr;
+              ubExpr_minspace = ubExpr;
+              min_space = diffExpr_const.getValue();
+            }
           }
         }
       }
@@ -1360,9 +1366,10 @@ int AdjustMemoryFootprintPass::ExplicitKernelDataBLockLoadStore(ADORA::KernelOp 
         AffineMap StoreMap = storeop.getAffineMapAttr().getValue();
         for (unsigned r = 0; r < rank; r++) {
           AffineExpr StoreExpr = StoreMap.getResult(r);
-          // llvm::errs() << "[debug] before remove LoadExpr: " << LoadExpr << "\n";
+          llvm::errs() << "[debug] before remove StoreExpr: " << StoreExpr << "\n";
           // operand_range LoadOperands = loadop.getMapOperands();
           AffineExpr BlockStoreExpr = memExprs[r];
+          llvm::errs() << "[debug] before remove BlockStoreExpr: " << BlockStoreExpr << "\n";
           assert((BlockStoreExpr.getKind() == AffineExprKind::DimId ||
                   BlockStoreExpr.getKind() == AffineExprKind::Add   ||
                   BlockStoreExpr.getKind() == AffineExprKind::Mul   ||
@@ -1594,6 +1601,12 @@ SmallVector<int64_t> AdjustMemoryFootprintPass::FillMemRefShape
     }
   }
 
+  llvm::errs() << "NewShape Shape: ";
+  for(int r = NewShape.size() - 1; r >= 0; r--){
+    llvm::errs() << NewShape[r] << " ";
+    // NewShape[r] = TargetShape[r];
+  }
+  llvm::errs() << "\n";
 
   /// Check whether new shape oversize the local memory limit.
   /// If oversized, NewShape is not applied.
@@ -1609,9 +1622,11 @@ SmallVector<int64_t> AdjustMemoryFootprintPass::FillMemRefShape
 
   /// rule 2: One dma request align with the system bus aligned bits;
   unsigned Elements_notAligned = 0;
+  bool CannotAlign = false; //such as memref<1x231x231x3xf32>
   do {
+    int r;
     if(Elements_notAligned){
-      for(int r = ToFillShape.size() - 1; r >= 0; r--){
+      for(r = ToFillShape.size() - 1; r >= 0; r--){
         if(NewShape[r] != TargetShape[r]){
           NewShape[r] ++;
           break;
@@ -1619,16 +1634,17 @@ SmallVector<int64_t> AdjustMemoryFootprintPass::FillMemRefShape
       }
     }
     unsigned singleDMARequstLen = 1;
-    for(int r = ToFillShape.size() - 1; r >= 0; r--){
+    for(r = ToFillShape.size() - 1; r >= 0; r--){
       singleDMARequstLen *= NewShape[r];
-      if(NewShape[r] != TargetShape[r])
+      if(NewShape[r] != TargetShape[r]){
         break;
+      }
     }
-
+    
+    CannotAlign = (r >= 0 ? false: true);
     Elements_notAligned = singleDMARequstLen % Aligned_count ;
     
-  } while(Elements_notAligned != 0);
-
+  } while(Elements_notAligned != 0 && !CannotAlign);
 
   NewShapeBits = BitWidth;
   for(int r = ToFillShape.size() - 1; r >= 0; r--)

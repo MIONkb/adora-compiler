@@ -9,7 +9,7 @@
 include "RAAA/Dialect/ADORA/IR/ADORABase.td"
 include "mlir/Pass/PassBase.td"
 
-def ConvertKernelCallToLLVM : Pass<"ADORA-convert-kernelcall-to-llvm", "ModuleOp"> {
+def ConvertKernelCallToLLVM : Pass<"adora-convert-kernelcall-to-llvm", "ModuleOp"> {
   let summary = "lower ADORA's kernelcall op to LLVM dialect";
   let description = [{
     Convert Func dialect operations into the LLVM IR dialect operations.
@@ -23,7 +23,7 @@ def ConvertKernelCallToLLVM : Pass<"ADORA-convert-kernelcall-to-llvm", "ModuleOp
     --convert-math-to-llvm --convert-math-to-libm\
     --convert-arith-to-llvm \
     --finalize-memref-to-llvm \
-    --ADORA-convert-kernelcall-to-llvm \
+    --adora-convert-kernelcall-to-llvm \
     -convert-func-to-llvm=use-bare-ptr-memref-call-conv \
     --cse --canonicalize
     """
@@ -51,7 +51,7 @@ def ConvertKernelCallToLLVM : Pass<"ADORA-convert-kernelcall-to-llvm", "ModuleOp
   let dependentDialects = ["LLVM::LLVMDialect","::mlir::ADORA::ADORADialect"];
 }
 
-def ConvertADORAToSCF : Pass<"ADORA-convert-loadstore-to-scf", "ModuleOp"> {
+def ConvertADORAToSCF : Pass<"adora-convert-loadstore-to-scf", "ModuleOp"> {
   let summary = "lower ADORA's blockload/store op to SCF dialect";
   let description = [{
     Convert ADORA dialect operations into the scf dialect operations.
@@ -61,8 +61,8 @@ def ConvertADORAToSCF : Pass<"ADORA-convert-loadstore-to-scf", "ModuleOp"> {
   let dependentDialects = ["scf::SCFDialect","::mlir::ADORA::ADORADialect"];
 }
 
-def ApproximateMathWithArith : Pass<"ADORA-approximate-math", "ModuleOp"> {
-  let summary = "Approximate math op with a combination of simple arith ops";
+def MathRewrite : Pass<"adora-math-rewrite", "ModuleOp"> {
+  let summary = "Rewrite math op with a combination of simple arith ops using some fast approximation algorithm";
   let description = [{
   Approximate/Lower math op with a combination of arith ops.
   Note: Please use this pass before "-arith-expand" pass.
@@ -93,7 +93,7 @@ def ApproximateMathWithArith : Pass<"ADORA-approximate-math", "ModuleOp"> {
   arith.max/arith.min
 
   }];
-  let constructor = "createApproximateMathWithArithPass()";
+  let constructor = "createMathRewritePass()";
   let dependentDialects = ["math::MathDialect","arith::ArithDialect"];
 }
 

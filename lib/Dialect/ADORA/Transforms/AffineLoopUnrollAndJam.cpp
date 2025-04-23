@@ -60,7 +60,7 @@
 #include "RAAA/Misc/DFG.h"
 #include "./PassDetail.h"
 
-#define DEBUG_TYPE "ADORA-loop-unroll-jam"
+#define DEBUG_TYPE "adora-loop-unroll-jam"
 
 using namespace mlir;
 using namespace mlir::affine;

@@ -113,6 +113,7 @@ int main(int argc, char **argv) {
   mlir::ADORA::registerAdjustKernelMemoryFootprintPass();
   mlir::ADORA::registerExtractKernelToFuncPass();
   mlir::ADORA::registerAutoDesignSpaceExplorePass();
+  mlir::ADORA::registerSimplifyAffineLoopLevelsPass();
   mlir::ADORA::registerTestPrintOpNestingPass();
   mlir::ADORA::registerSimplifyLoadStoreInLoopNestPass();
   mlir::ADORA::registerADORAAffineLoopUnroll();
@@ -122,7 +123,7 @@ int main(int argc, char **argv) {
 
   mlir::ADORA::registerConvertKernelCallToLLVMPass();
   mlir::ADORA::registerConvertADORAToSCFPass();
-  mlir::ADORA::registerApproximateMathWithArith();
+  mlir::ADORA::registerMathRewrite();
 
   mlir::registerSCFForLoopCanonicalizationPass();
   

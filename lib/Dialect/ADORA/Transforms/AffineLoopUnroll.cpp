@@ -7,7 +7,9 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/AffineExprVisitor.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Parser/Parser.h"
 
 #include "mlir/Support/LLVM.h"
@@ -43,7 +45,7 @@ using namespace llvm; // for llvm.errs()
 using namespace mlir;
 using namespace mlir::affine;
 using namespace mlir::ADORA;
-#define DEBUG_TYPE "ADORA-affine-loop-unroll"
+#define DEBUG_TYPE "adora-affine-loop-unroll"
 namespace {
 struct ADORAAffineLoopUnrollPass : public ADORAAffineLoopUnrollBase<ADORAAffineLoopUnrollPass> {
   // ADORAAffineLoopUnrollPass() = default;
@@ -153,12 +155,89 @@ static SmallVector<LoadOrStoreT,  4> GetAllHoistOpInThisForLevel(OpToWalkT op_to
   return ToHoistOps;
 }
 
+/// Remove the `idx`-th yield value, iter_arg, and result from an AffineForOp.
+static AffineForOp removeIdxthIterArgOfAffineForOp(AffineForOp& forOp, unsigned idx) {
+  assert(idx < forOp.getNumIterOperands() &&
+         "Index out of bounds for AffineForOp iter operands!");
+  // reduce yield operand
+  auto yieldOp = dyn_cast<AffineYieldOp>(forOp.getBody()->getTerminator());
+  SmallVector<mlir::Value, 4> newYieldOperands;
+  for (unsigned i = 0, e = yieldOp.getNumOperands(); i < e; ++i) {
+    if (i != idx) {
+      newYieldOperands.push_back(yieldOp.getOperand(i));
+    }
+  }
+  yieldOp.getOperation()->setOperands(newYieldOperands);
+
+  /// erase idx-th arg
+  forOp.getBody()->eraseArgument(idx + 1);
+ 
+  // Create a new loop before the existing one, with the reduced operands.
+  IRRewriter rewriter(forOp.getContext());
+  rewriter.setInsertionPoint(forOp.getOperation());
+  SmallVector<mlir::Value, 4> newIterInits;
+  for (unsigned i = 0, e = forOp.getNumIterOperands(); i < e; ++i) {
+    if (i != idx) {
+      newIterInits.push_back(forOp.getInits()[i]);
+    }
+  }
+  AffineForOp newLoop = rewriter.create<AffineForOp>(
+    forOp.getLoc(), forOp.getLowerBoundOperands(), forOp.getLowerBoundMap(),
+    forOp.getUpperBoundOperands(), forOp.getUpperBoundMap(), forOp.getStep(), newIterInits);
+  
+  // llvm::errs() <<" block: \n";
+  // newLoop.getOperation()->getBlock()->dump();
+  /// move original block to new for block, to erase idx-th result
+  mlir::Block* originBlock = forOp.getBody();
+  mlir::Block* newBlock = newLoop.getBody();
+  originBlock->moveBefore(newBlock);
+  newBlock->erase();
+
+  // /// print every op and their oprand
+  // newLoop.walk([&](Operation* op){
+  //   llvm::errs() << "-------op------ \n";
+  //   op->dump();
+  //   for(auto operand: op->getOperands()){
+  //     llvm::errs() << "    -----oprand---- \n";
+  //     operand.dump();
+  //     llvm::errs() << "       ---parent--- \n";
+  //     operand.getParentBlock()->getParentOp()->dump();
+  //   }
+  // });
+  // forOp.walk([&](Operation* op){
+  //   llvm::errs() << "-------op------ \n";
+  //   op->dump();
+  //   for(auto operand: op->getOperands()){
+  //     llvm::errs() << "    -----oprand---- \n";
+  //     operand.dump();
+  //     llvm::errs() << "       ---parent--- \n";
+  //     operand.getParentBlock()->getParentOp()->dump();
+  //   }
+  // });
+
+  /// Replace iterargs
+  // for(int i = 0; i < forOp.getNumIterOperands(); i++){
+  //   if(i < idx)
+  //     forOp.getRegionIterArgs()[i].replaceAllUsesWith(newLoop.getRegionIterArgs()[i]);
+  //   else if(i > idx)
+  //     forOp.getRegionIterArgs()[i].replaceAllUsesWith(newLoop.getRegionIterArgs()[i-1]);
+  // }
+  // forOp.getInductionVar().replaceAllUsesWith(newLoop.getInductionVar());
+
+  /// erase original for op
+  forOp.erase();
+
+  // llvm::errs() <<" block: \n";
+  // newLoop.getOperation()->getBlock()->dump();
+  return newLoop;
+}
+
 /// @brief Move a pair of load store op in the original for op, eliminate loop-carried iteration variables
 /// @param storeop 
 /// @param loadop 
 /// @param storeop 
 /// @return success or not
-static bool MoveLoadStorePairIn(AffineForOp forop, AffineLoadOp loadop, AffineStoreOp storeop){ 
+static AffineForOp MoveLoadStorePairIn(AffineForOp forop, AffineLoadOp loadop, AffineStoreOp storeop){ 
   assert(getPositionRelationship(loadop.getOperation(), storeop.getOperation()) == PositionRelationInLoop::SameLevel);
   unsigned idx;
   for(idx = 0; idx < forop.getNumIterOperands(); idx ++){
@@ -170,7 +249,8 @@ static bool MoveLoadStorePairIn(AffineForOp forop, AffineLoadOp loadop, AffineSt
   assert(forop.getResult(idx) == storeop.getOperand(storeop.getStoredValOperandIndex()));
 
   /// Move load in the front, and remove iterarg
-  forop.getBody()->push_front(loadop);
+  // loadop.getOperation()->moveBefore(forop.getBody()->begin());
+  /// set the use of idx-th iterarg
   SmallVector<mlir::Operation*> IterArgConsumers = getAllUsesInBlock(forop.getRegionIterArgs()[idx], forop.getBody());
   for(mlir::Operation* Consumer : IterArgConsumers){
     unsigned i;
@@ -180,16 +260,29 @@ static bool MoveLoadStorePairIn(AffineForOp forop, AffineLoadOp loadop, AffineSt
       }
     }
   }
-  forop.getOperation()->eraseOperand(idx);
 
-  /// Move store in the back, and remove yield
+
+  // forop.getOperation()->eraseOperand(idx);
+  // forop.getBody()->eraseArgument(idx+1); /// erase the iterarg of block argument
+  // forop.dump();
+
+  /// Move store in the back
   AffineYieldOp yieldop =  dyn_cast<AffineYieldOp>(forop.getBody()->getTerminator());
+  storeop.getOperation()->remove();
+
   forop.getBody()->push_back(storeop);
   storeop.getOperation()->moveBefore(yieldop);
   storeop.setOperand(storeop.getStoredValOperandIndex(), yieldop.getOperand(idx));
-  yieldop.getOperation()->eraseOperand(idx);
 
-  return true;
+  /// remove idx-th iterarg, yield, and result
+  AffineForOp newLoop = removeIdxthIterArgOfAffineForOp(forop, idx);
+
+  /// move load op in
+  loadop.getOperation()->remove();
+  newLoop.getBody()->push_front(loadop.getOperation());
+
+  // newLoop.dump();
+  return newLoop;
 }
 
 
@@ -221,19 +314,19 @@ LogicalResult mlir::ADORA::loopUnrollByFactor_opt(
   SmallVector<AffineStoreOp, 4> ToHoistStores_copy = ToHoistStores;
   SmallVector<std::pair<AffineLoadOp, AffineStoreOp>, 4> HoistedPairs;
   // forOp.dump();
-  std::optional<AffineForOp> FixedForOp;
+  std::optional<AffineForOp> FixedForOp = forOp; 
   for(AffineLoadOp loadop : ToHoistLoads_copy){
     /// Check whether this load occurs with a corresponding store which have
     /// the same memref and address to access. 
     /// If so, this load-store pair 
     /// should be hoisted while construct a loop-carried variable.
     for(AffineStoreOp storeop : ToHoistStores_copy){
-      // llvm::errs() << "[info] loadop: " << loadop << "\n";   
-      // llvm::errs() << "[info] storeop: " << storeop << "\n";    
+      llvm::errs() << "[info] loadop: " << loadop << "\n";   
+      llvm::errs() << "[info] storeop: " << storeop << "\n";    
       if(LoadStoreSameMemAddr(loadop, storeop)){
         FixedForOp = MoveLoadStorePairOut(loadop, storeop);
         if(FixedForOp.has_value()){
-          // FixedForOp.value().dump();
+          FixedForOp.value().dump();
           // Remove hoisted load/store ops from to-check vector 
           AffineLoadOp* it_ld = std::find(ToHoistLoads.begin(), ToHoistLoads.end(), loadop);
           assert(it_ld != ToHoistLoads.end());
@@ -248,7 +341,7 @@ LogicalResult mlir::ADORA::loopUnrollByFactor_opt(
     }
   }
   // if()
-  // FixedForOp.value().dump();
+  FixedForOp.value().dump();
   
   /////////
   /// Step 4 : Do hoists for remaining load/store 
@@ -278,9 +371,15 @@ LogicalResult mlir::ADORA::loopUnrollByFactor_opt(
   if(unrollFactor < getConstantTripCount(FixedForOp.value()).value_or(0)){
     LogicalResult UnrollResult = loopUnrollByFactor(FixedForOp.value(), unrollFactor, /*annotateFn=*/nullptr, cleanUpUnroll);
     /// Put those op back for those which are move out as before.
-    // FixedForOp.value().dump();
+    FixedForOp.value().dump();
+
     for(auto HoistedPair: HoistedPairs){
-      MoveLoadStorePairIn(FixedForOp.value(), HoistedPair.first, HoistedPair.second);
+      HoistedPair.first.getOperation()->getBlock()->dump();
+      HoistedPair.first.dump();
+      HoistedPair.second.getOperation()->getBlock()->dump();
+      HoistedPair.second.dump();
+      FixedForOp = MoveLoadStorePairIn(FixedForOp.value(), HoistedPair.first, HoistedPair.second);
+      assert(FixedForOp.has_value());
     }
     // FixedForOp.value().dump();
     return UnrollResult;
@@ -417,6 +516,8 @@ LogicalResult ADORAAffineLoopUnrollPass::
   mlir::ModuleOp moduleop = final_m.get();
   SymbolTable symbolTable(moduleop.getOperation());
   
+  // moduleop.dump();
+  // getOperation().dump();
   // m.replace
   // for(int index = 0; index < m.getOps<func::FuncOp>().size(); index++){
   //   func::FuncOp oldfunc = *(m.getOps<func::FuncOp>()[index]);

@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRADORATransforms
   DFGgen.cpp
   AffineForToKernelPass.cpp
+  AffineLoopSimplify.cpp
   KernelToFuncPass.cpp
   AutoDesignSpaceExplore.cpp
   AdjustMemoryFootprint.cpp

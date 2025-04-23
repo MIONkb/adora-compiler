@@ -1,11 +1,16 @@
 
 ##########################
-#### You need to change the following 3 paths to your local path
-#### If you don't want to execute simulation, CHIPYARD_SOURCE_ENV can be omit.
+#### You need to change the following 3 paths to your own local path
+#### If you don't want need cgra hardware to execute simulation, CHIPYARD_SOURCE_ENV can be omit.
 ######################### 
 export CGRVOPT_PROJECT_PATH="/home/jhlou/CGRVOPT/cgra-opt"
 export CGRA_ADG_PATH="/home/jhlou/chipyard/generators/fdra/cgra-mg/src/main/resources"
 export CHIPYARD_DIR="/home/jhlou/chipyard"
+
+##########################
+#### FDRA projects should be placed at chipyard/generators
+######################### 
+export FDRA_DIR=$CHIPYARD_DIR"/generators/fdra"
 
 ##########################
 #### Don't have to change paths beneath

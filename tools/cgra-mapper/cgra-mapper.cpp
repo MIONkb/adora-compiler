@@ -214,7 +214,7 @@ int main(int argc, char **argv) {
   /// Before emit C, simplify blockload and blockstore op and affineapply
   SimplifyBlockAccessOp(moduleop);
   ADORA::simplifyConstantAffineApplyOpsInRegion(moduleop.getBodyRegion());
-  ADORA::simplifyAddAffineApplyOpsInRegion(moduleop.getBodyRegion());
+  ADORA::simplifyAddAffineApplyOpsInRegionButOutOfKernel(moduleop.getBodyRegion());
 
   moduleop.dump();
   

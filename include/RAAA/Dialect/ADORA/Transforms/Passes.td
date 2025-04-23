@@ -16,7 +16,7 @@ include "mlir/Dialect/Affine/IR/AffineOps.td"
 //===----------------------------------------------------------------------===//
 // CDFGgen for ADORA
 //===----------------------------------------------------------------------===//
-def ADORALoopCdfgGen : Pass<"ADORA-kernel-dfg-gen", "ModuleOp"> {
+def ADORALoopCdfgGen : Pass<"adora-kernel-dfg-gen", "ModuleOp"> {
   let summary = "Generate cdfg of ADORA from a kernel loop";
   let constructor = "mlir::ADORA::createADORALoopCdfgGenPass()";
   let dependentDialects = [
@@ -31,7 +31,7 @@ def ADORALoopCdfgGen : Pass<"ADORA-kernel-dfg-gen", "ModuleOp"> {
 // Affine To kernel
 //===----------------------------------------------------------------------===//
 
-def ExtractAffineForToKernel : Pass<"ADORA-extract-affine-for-to-kernel", "func::FuncOp"> {
+def ExtractAffineForToKernel : Pass<"adora-extract-affine-for-to-kernel", "func::FuncOp"> {
   let summary = "Extract all AffineFor in a FuncOp to a ADORA.KernelOp";
   let constructor = "mlir::ADORA::createExtractAffineForToKernelPass()";
   let dependentDialects = [
@@ -49,7 +49,7 @@ def ExtractAffineForToKernel : Pass<"ADORA-extract-affine-for-to-kernel", "func:
 //===----------------------------------------------------------------------===//
 // Kernel to independent mlir Func
 //===----------------------------------------------------------------------===//
-def ExtractKernelToFunc : Pass<"ADORA-extract-kernel-to-function", "ModuleOp"> {
+def ExtractKernelToFunc : Pass<"adora-extract-kernel-to-function", "ModuleOp"> {
   let summary = "Extract all ADORA.KernelOp and its region to a single func with explicit arguments";
   
   let description = [{
@@ -207,10 +207,25 @@ def ExtractKernelToFunc : Pass<"ADORA-extract-kernel-to-function", "ModuleOp"> {
   ];
 }
 
+
+//===----------------------------------------------------------------------===//
+// Adora Simplify loop structure
+//===----------------------------------------------------------------------===//
+
+def SimplifyAffineLoopLevels : Pass<"adora-simplify-affine-loop-levels", "ModuleOp"> {
+  let summary = "simplify stripcounts of affine loops";
+  let description = [{
+      
+  }];
+  let constructor = "mlir::ADORA::createSimplifyAffineLoopLevelsPass()";
+  let options = [];
+}
+
+
 //===----------------------------------------------------------------------===//
 // Loop unroll to achieve highest utilization
 //===----------------------------------------------------------------------===//
-def ADORAAffineLoopUnroll : Pass<"ADORA-affine-loop-unroll", "ModuleOp"> {
+def ADORAAffineLoopUnroll : Pass<"adora-affine-loop-unroll", "ModuleOp"> {
   let summary = "apply loop unroll to kernel function to achieve highest cgra utilization";
   let description = [{
     CGRAOPT applies loop unrolling to a kernel function from the innermost to outermost level,
@@ -252,7 +267,7 @@ def ADORAAffineLoopUnroll : Pass<"ADORA-affine-loop-unroll", "ModuleOp"> {
 //===----------------------------------------------------------------------===//
 // Loop UnrollAndJam
 //===----------------------------------------------------------------------===//
-def ADORALoopUnrollAndJam : Pass<"ADORA-loop-unroll-jam", "ModuleOp"> {
+def ADORALoopUnrollAndJam : Pass<"adora-loop-unroll-jam", "ModuleOp"> {
   let summary = "Unroll and jam affine loops";
   let constructor = "mlir::ADORA::createADORALoopUnrollAndJamPass()";
   let options = [
@@ -268,7 +283,7 @@ def ADORALoopUnrollAndJam : Pass<"ADORA-loop-unroll-jam", "ModuleOp"> {
 //===----------------------------------------------------------------------===//
 // Autometed Loop Unroll/UnrollAndJam
 //===----------------------------------------------------------------------===//
-def ADORAAutoUnroll : Pass<"ADORA-auto-unroll", "ModuleOp"> {
+def ADORAAutoUnroll : Pass<"adora-auto-unroll", "ModuleOp"> {
   let summary = "Automated unroll or unroll-and-jam based on dependency analysis.";
   let constructor = "mlir::ADORA::createADORAAutoUnrollPass()";
   let options = [
@@ -284,7 +299,7 @@ def ADORAAutoUnroll : Pass<"ADORA-auto-unroll", "ModuleOp"> {
 //===----------------------------------------------------------------------===//
 // Adjust(Partition) Kernel according to a customized Cachesize
 //===----------------------------------------------------------------------===//
-def AdjustKernelMemoryFootprint : Pass<"ADORA-adjust-kernel-mem-footprint", "ModuleOp"> {
+def AdjustKernelMemoryFootprint : Pass<"adora-adjust-kernel-mem-footprint", "ModuleOp"> {
   let summary = "Adjust(partition) kernels' memory footprint to apply to customized cachesize";
   let constructor = "mlir::ADORA::createAdjustKernelMemoryFootprintPass()";
   let dependentDialects = [
@@ -309,7 +324,7 @@ def AdjustKernelMemoryFootprint : Pass<"ADORA-adjust-kernel-mem-footprint", "Mod
 //===----------------------------------------------------------------------===//
 // Simplify Load/Store Operation In Loop-Nest
 //===----------------------------------------------------------------------===//
-def SimplifyLoadStoreInLoopNest : Pass<"ADORA-simplify-loadstore", "func::FuncOp"> {
+def SimplifyLoadStoreInLoopNest : Pass<"adora-simplify-loadstore", "func::FuncOp"> {
   let summary = "Simplify inner affine.load/store operations. (Such as hoist to outer level to decrease memmory accesses)";
   let description = [{
     This Pass will simplify repetitive affine.load/store operations which access 
@@ -343,7 +358,7 @@ def SimplifyLoadStoreInLoopNest : Pass<"ADORA-simplify-loadstore", "func::FuncOp
 // Loop Reorder
 //===----------------------------------------------------------------------===//
 def AffineLoopReorder :
-      Pass<"ADORA-loop-reorder", "func::FuncOp"> {
+      Pass<"adora-loop-reorder", "func::FuncOp"> {
   let summary = "reorder/interchange affine loop nests";
   let description = [{
     This pass aims to reorganize affine loop nests using polyhedral-based dependency analysis. 
@@ -355,7 +370,7 @@ def AffineLoopReorder :
 //===----------------------------------------------------------------------===//
 // Frontend Design Space Exploration
 //===----------------------------------------------------------------------===//
-def AutoDesignSpaceExplore : Pass<"ADORA-auto-dse", "ModuleOp"> {
+def AutoDesignSpaceExplore : Pass<"adora-auto-dse", "ModuleOp"> {
   let summary = "design space explore for application frontend optimization";
   let description = [{
     This pass will automatically conduct design space exploration (DSE)

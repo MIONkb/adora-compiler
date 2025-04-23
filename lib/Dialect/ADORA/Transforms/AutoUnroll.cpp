@@ -27,7 +27,7 @@
 #include "RAAA/Misc/DFG.h"
 #include "./PassDetail.h"
 
-#define DEBUG_TYPE "ADORA-auto-unroll"
+#define DEBUG_TYPE "adora-auto-unroll"
 
 using namespace mlir;
 using namespace mlir::affine;
@@ -117,7 +117,11 @@ SmallVector<SmallVector<unsigned>> ADORAAutoUnroll::ConstructUnrollSpaceFromStra
       }
     }
     else if(ForNodes[i].getUnrollStrategy() == UnrollStrategy::Unroll_and_Jam){
-      assert(i < ForNodes.size() - 1);
+      if(i == ForNodes.size() - 1) /// there is no loop level out of kernel
+        break;
+        
+        
+      assert(i < ForNodes.size() - 1); 
       ADORA::ForNode parentForNode = ForNodes[ForNodes.size() - 1];
       if(parentForNode.IsOutOfKernel()){
         /// Kernel is in one affine for op
@@ -145,9 +149,10 @@ SmallVector<SmallVector<unsigned>> ADORAAutoUnroll::ConstructUnrollSpaceFromStra
       }
       // ForNodes[i].UnrollFactors.push_back(1);
       /// if one level can't be unrolled, then the outer level can't be unrolled either.
-      // break;
+      break;
     }
     else if(ForNodes[i].getUnrollStrategy() == UnrollStrategy::CannotUnroll){
+      ForNodes[i].UnrollFactors.push_back(1);
       /// If this level can't be unrolled, then out level can't be unrolled either.
       break;
     }
@@ -185,7 +190,7 @@ chooseAndApplyUnrollStrategyWithDeps(ADORA::KernelOp kernel, mlir::ModuleOp& m){
   std::filesystem::path DesignSpacefolderPath = currentPath / folderName;
   std::filesystem::create_directory(DesignSpacefolderPath);
   int max_ALU = 0, max_LSU = 0;
-  std::string final_FilePath="";
+  std::string final_FilePath="__";
 
   ///////////////
   /// For store op, check whether exists port conflict 
@@ -196,20 +201,35 @@ chooseAndApplyUnrollStrategyWithDeps(ADORA::KernelOp kernel, mlir::ModuleOp& m){
   //// Decide the unroll strategy of each level(Unroll or Unroll-and-Jam)
   // SmallVector<UnrollStrategy> urStrategies;
   for(ADORA::ForNode& node: ForNodes){
-    if(node.IsOutOfKernel()) continue;
-
-    UnrollStrategy strategy = UnrollStrategy::Unroll;
+    if(node.IsOutOfKernel())  /// Out of kernel
+      continue;
+    UnrollStrategy strategy;
     AffineForOp forop = node.getForOp();
-    mlir::Value IterValue = forop.getSingleInductionVar().value();
-    forop.walk([&](AffineStoreOp storeop){
-      if(OperandRangeContainsValue(storeop.getIndices(), IterValue)){
-        //// port conflict exists
-        strategy = UnrollStrategy::Unroll_and_Jam;
-        WalkResult::interrupt();
-      }
 
-      /// TODO: when to return CannotUnroll
-    });
+    uint64_t StripCount = getConstantTripCount(forop).value_or(0);
+    /// StripCount = 0, means the loop is not constant strip count, can't be unrolled
+    if(StripCount == 0){
+      strategy = UnrollStrategy::CannotUnroll;
+    } 
+    /// StripCount = 1, skip
+    else if(StripCount == 1){
+      strategy = UnrollStrategy::Unroll;
+    }
+    else{
+      /// choose Unroll Strategy
+      strategy = UnrollStrategy::Unroll;
+      mlir::Value IterValue = forop.getSingleInductionVar().value();
+      forop.walk([&](AffineStoreOp storeop){
+        if(OperandRangeContainsValue(storeop.getIndices(), IterValue)){
+          //// port conflict exists
+          strategy = UnrollStrategy::Unroll_and_Jam;
+          WalkResult::interrupt();
+        }
+
+        /// TODO: when to return CannotUnroll
+      });
+    }
+
     node.setUnrollStrategy(strategy);
     // urStrategies.push_back(strategy);
     // urStrategies.push_back(UnrollStrategy::CannotUnroll);
@@ -249,6 +269,7 @@ chooseAndApplyUnrollStrategyWithDeps(ADORA::KernelOp kernel, mlir::ModuleOp& m){
       /// Apply unrolling by this factor
       unsigned unrollfactor = point[node_cnt];
       ADORA::ForNode NodeToUnroll = ForNodesUR[node_cnt];
+      NodeToUnroll.dumpForOp();
 
       /// if this level could be unrolled
       if(unrollfactor > 1 && !NodeToUnroll.IsOutOfKernel()){
@@ -321,6 +342,8 @@ chooseAndApplyUnrollStrategyWithDeps(ADORA::KernelOp kernel, mlir::ModuleOp& m){
       /// we don't have to keep unrolling to get larger dfg.
       break;
     }
+
+    // topmodule.erase();
   }/// End of traversing on every design point
   
 
@@ -330,31 +353,34 @@ chooseAndApplyUnrollStrategyWithDeps(ADORA::KernelOp kernel, mlir::ModuleOp& m){
   //   MemRefAccess storeAccess(storeop);
   //   unsigned depth = getNestingDepth(kernel.getTopAffineFopInKernel());
   
-  //// Apply the optimal unroll result
-  std::string errorMessage;
-  auto file = openInputFile(final_FilePath, &errorMessage);
-  if (!file) {
-    llvm::errs() << errorMessage << "\n";
-    assert(0);
+  if(final_FilePath != "__"){
+    //// Apply the optimal unroll result
+    std::string errorMessage;
+    auto file = openInputFile(final_FilePath, &errorMessage);
+    if (!file) {
+      llvm::errs() << errorMessage << "\n";
+      assert(0);
+    }
+    
+    llvm::SourceMgr sourceMgr;
+    sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
+    mlir::OwningOpRef<mlir::ModuleOp> final_m = parseSourceFile<ModuleOp>(sourceMgr, m.getContext()); 
+    mlir::ModuleOp moduleop = final_m.get();
+    SymbolTable symbolTable(moduleop.getOperation());
+    
+    // m.replace
+    // for(int index = 0; index < m.getOps<func::FuncOp>().size(); index++){
+    //   func::FuncOp oldfunc = *(m.getOps<func::FuncOp>()[index]);
+    //   func::FuncOp newfunc = *(m.getOps<func::FuncOp>()[index]);
+    //   newfunc.getOperation()->moveBefore(oldfunc);
+    //   oldfunc.getOperation()->erase();
+    // }
+    func::FuncOp oldfunc = *(m.getOps<func::FuncOp>().begin());
+    func::FuncOp newfunc = *(moduleop.getOps<func::FuncOp>().begin());
+    newfunc.getOperation()->moveBefore(oldfunc);
+    oldfunc.getOperation()->erase();
   }
-  
-  llvm::SourceMgr sourceMgr;
-  sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
-  mlir::OwningOpRef<mlir::ModuleOp> final_m = parseSourceFile<ModuleOp>(sourceMgr, m.getContext()); 
-  mlir::ModuleOp moduleop = final_m.get();
-  SymbolTable symbolTable(moduleop.getOperation());
-  
-  // m.replace
-  // for(int index = 0; index < m.getOps<func::FuncOp>().size(); index++){
-  //   func::FuncOp oldfunc = *(m.getOps<func::FuncOp>()[index]);
-  //   func::FuncOp newfunc = *(m.getOps<func::FuncOp>()[index]);
-  //   newfunc.getOperation()->moveBefore(oldfunc);
-  //   oldfunc.getOperation()->erase();
-  // }
-  func::FuncOp oldfunc = *(m.getOps<func::FuncOp>().begin());
-  func::FuncOp newfunc = *(moduleop.getOps<func::FuncOp>().begin());
-  newfunc.getOperation()->moveBefore(oldfunc);
-  oldfunc.getOperation()->erase();
+ 
 
   return LogicalResult::success();
 }
@@ -377,4 +403,5 @@ void ADORAAutoUnroll::runOnOperation() {
   for(auto func : m.getOps<func::FuncOp>()){
     ResetIndexOfBlockAccessOpInFunc(func);
   }
+  m.dump();
 }

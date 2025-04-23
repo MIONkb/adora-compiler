@@ -82,10 +82,11 @@ void eliminateUnusedIndices(Operation *op);
 SmallVector<mlir::Operation*>  getAllUsesInRegion(const mlir::Value beused, ::mlir::Region* region);
 SmallVector<mlir::Operation*>  getAllUsesInBlock(const mlir::Value beused, ::mlir::Block* block);
 void ResetIndexOfBlockAccessOpInFunc(func::FuncOp& func);
+inline bool opIsContainedByKernel(mlir::Operation* op);
 
 ///// following 3 functions are defined to simplify AffineApplyOp
 void simplifyConstantAffineApplyOpsInRegion(::mlir::Region& region);
-void simplifyAddAffineApplyOpsInRegion(::mlir::Region& region);
+void simplifyAddAffineApplyOpsInRegionButOutOfKernel(::mlir::Region& region);
 void simplifyLoadAndStoreOpsInRegion(::mlir::Region& region);
 
 ///// following 4 functions are defined to help extract kernel function
@@ -117,6 +118,19 @@ inline int findElement(const llvm::SmallVector<T, N>& vec, const T& elem) {
     }
   }
   return -1;
+}
+
+//===----------------------------------------------------------------------===//
+// A templated find func for value range
+//===----------------------------------------------------------------------===//
+inline mlir::Value findElement(const ValueRange vec, const mlir::Value& elem) {
+  for (ValueRange::iterator itr = vec.begin(); itr != vec.end(); ++itr) {
+    if (*itr == elem) {
+      return *itr;
+    }
+  }
+  
+  return NULL;
 }
 
 template <typename T>

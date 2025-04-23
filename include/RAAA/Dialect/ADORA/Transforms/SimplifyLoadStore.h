@@ -34,7 +34,7 @@ using namespace mlir;
 using namespace mlir::affine;
 using namespace mlir::ADORA;
 
-#define DEBUG_TYPE "ADORA-simplify-loadstore"
+#define DEBUG_TYPE "adora-simplify-loadstore"
 
 namespace mlir {
 namespace ADORA {

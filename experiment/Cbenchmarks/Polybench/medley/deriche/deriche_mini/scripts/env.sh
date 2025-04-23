@@ -8,9 +8,9 @@ export CGRA_ADG_PATH="/home/jhlou/chipyard/generators/fdra/cgra-mg/src/main/reso
 export CHIPYARD_DIR="/home/jhlou/chipyard"
 
 ##########################
-#### ADORA projects should be placed at chipyard/generators
+#### FDRA projects should be placed at chipyard/generators
 ######################### 
-export ADORA_DIR=$CHIPYARD_DIR"/generators/fdra"
+export FDRA_DIR=$CHIPYARD_DIR"/generators/fdra"
 
 ##########################
 #### Don't have to change paths beneath

@@ -1,0 +1,23 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="forward_kernel_0_0", size="8192", offset="0,0", pattern="4,64,4,32", color = black];
+FOLT321[opcode = "FOLT32", color = black];
+SEL2[opcode = "SEL", color = black];
+Output3[opcode = "Output", ref_name="forward_kernel_0_1", size="8192", offset="0,0", pattern="4,64,4,32", color = black];
+Input4[opcode = "Input", ref_name="forward_kernel_0_0", size="8192", offset="0,0", pattern="4,64,4,32", color = black];
+FOLT325[opcode = "FOLT32", color = black];
+SEL6[opcode = "SEL", color = black];
+Output7[opcode = "Output", ref_name="forward_kernel_0_1", size="8192", offset="0,0", pattern="4,64,4,32", color = black];
+CONST12[opcode = "CONST", value="0x00000000", color = black];
+Input0 -> FOLT321[color = black, style = bold, operand = 1, label = "Op=1"];
+CONST12 -> FOLT321[color = black, style = bold, operand = 0, label = "Op=0"];
+FOLT321 -> SEL2[color = black, style = bold, operand = 2, label = "Op=2"];
+Input0 -> SEL2[color = black, style = bold, operand = 1, label = "Op=1"];
+CONST12 -> SEL2[color = black, style = bold, operand = 0, label = "Op=0"];
+SEL2 -> Output3[color = black, style = bold, operand = 0, label = "Op=0"];
+Input4 -> FOLT325[color = black, style = bold, operand = 1, label = "Op=1"];
+CONST12 -> FOLT325[color = black, style = bold, operand = 0, label = "Op=0"];
+FOLT325 -> SEL6[color = black, style = bold, operand = 2, label = "Op=2"];
+Input4 -> SEL6[color = black, style = bold, operand = 1, label = "Op=1"];
+CONST12 -> SEL6[color = black, style = bold, operand = 0, label = "Op=0"];
+SEL6 -> Output7[color = black, style = bold, operand = 0, label = "Op=0"];
+}

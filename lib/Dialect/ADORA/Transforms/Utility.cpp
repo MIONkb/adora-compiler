@@ -96,7 +96,7 @@ mlir::Operation* mlir::ADORA::eraseKernel(func::FuncOp& TopFunc, ADORA::KernelOp
 OpTable TramUnsupportOpTable = 
 {
   /// math dialect
-  ::mlir::math::ExpOp::getOperationName(), // math.exp
+  // ::mlir::math::ExpOp::getOperationName(), // math.exp now we support it with math rewrite
   ::mlir::math::ErfOp::getOperationName(), // math.erf
   /// controlflow dialect
   ::mlir::cf::AssertOp::getOperationName(), // cf.erf
@@ -1262,80 +1262,90 @@ void ADORA::simplifyConstantAffineApplyOpsInRegion(mlir::Region& region){
 
 }
 
+inline bool ADORA::opIsContainedByKernel(mlir::Operation* op){
+  if(isa<ADORA::KernelOp>(op->getParentOp()))
+    return true;
+  else if(isa<func::FuncOp>(op->getParentOp()))
+    return false;
+  else
+    return opIsContainedByKernel(op->getParentOp());
+}
 
-void ADORA::simplifyAddAffineApplyOpsInRegion(mlir::Region& region){
+void ADORA::simplifyAddAffineApplyOpsInRegionButOutOfKernel(mlir::Region& region){
   /////////
   /// Simplify affine.apply operation generated from unrollingAndJam.
   /// Refer to AffineOps.cpp: SimplifyAffineOp
   ////////
   SmallVector<affine::AffineApplyOp> ApplyOpsToDel;
   region.walk([&](affine::AffineApplyOp affineOp)
-  {
-    OpBuilder b(affineOp.getContext());
-    affineOp.getOperation()->getBlock()->dump();
-    // affineOp.dump();
-    AffineMap map = affineOp.getAffineMap();
-    assert(map.getResults().size() == 1 && map.getResult(0).getKind() == AffineExprKind::Add);
-    assert(affineOp.getMapOperands().size() == 1);
-    mlir::Value operand = affineOp.getMapOperands()[0];
-
-    auto expr = map.getResult(0).dyn_cast<AffineBinaryOpExpr>();
-    AffineConstantExpr constantexpr;
-    // AffineDimExpr dimexpr;
-    if(  expr.getLHS().getKind() == AffineExprKind::DimId 
-      && expr.getRHS().getKind() == AffineExprKind::Constant){
-      // dimexpr = expr.getLHS().dyn_cast<AffineDimExpr>();
-      constantexpr = expr.getRHS().dyn_cast<AffineConstantExpr>();
+  { 
+    if(!opIsContainedByKernel(affineOp.getOperation())){
+      OpBuilder b(affineOp.getContext());
+      affineOp.getOperation()->getBlock()->dump();
+      // affineOp.dump();
+      AffineMap map = affineOp.getAffineMap();
+      assert(map.getResults().size() == 1 && map.getResult(0).getKind() == AffineExprKind::Add);
+      assert(affineOp.getMapOperands().size() == 1);
+      mlir::Value operand = affineOp.getMapOperands()[0];
+  
+      auto expr = map.getResult(0).dyn_cast<AffineBinaryOpExpr>();
+      AffineConstantExpr constantexpr;
+      // AffineDimExpr dimexpr;
+      if(  expr.getLHS().getKind() == AffineExprKind::DimId 
+        && expr.getRHS().getKind() == AffineExprKind::Constant){
+        // dimexpr = expr.getLHS().dyn_cast<AffineDimExpr>();
+        constantexpr = expr.getRHS().dyn_cast<AffineConstantExpr>();
+      }
+      else if(expr.getRHS().getKind() == AffineExprKind::DimId 
+        && expr.getLHS().getKind() == AffineExprKind::Constant){
+        // dimexpr = expr.getRHS().dyn_cast<AffineDimExpr>();
+        constantexpr = expr.getLHS().dyn_cast<AffineConstantExpr>();
+      }
+      else{
+        assert(false && "This AffineApplyOp is not a DimId + Constant style.");
+      }
+  
+      int64_t v = constantexpr.getValue();
+      arith::ConstantOp newconst = b.create<arith::ConstantOp>(affineOp.getLoc(), b.getIndexAttr(v));
+      affineOp.getOperation()->getBlock()->push_back(newconst);
+      newconst.getOperation()->moveBefore(affineOp);
+      arith::AddIOp newadd = b.create<arith::AddIOp>(affineOp.getLoc(), operand, newconst.getResult());
+      affineOp.getOperation()->getBlock()->push_back(newadd);
+      newadd.getOperation()->moveAfter(affineOp);
+  
+      affineOp.getOperation()->replaceAllUsesWith(newadd); 
+      ApplyOpsToDel.push_back(affineOp);
+      
+      // if(/*IsConstantAffineOp(affineOp)*/true){
+      //   // map.dump();
+      //   auto oldOperands = affineOp.getMapOperands();
+      //   SmallVector<mlir::Value, 8> resultOperands(oldOperands);
+      //   composeAffineMapAndOperands(&map, &resultOperands);
+      //   canonicalizeMapAndOperands(&map, &resultOperands);
+      //   simplifyMapWithOperands(map, resultOperands);
+      //   affineOp.getOperation()->getBlock()->dump();
+      //   // map.dump();
+      //   // region.dump();
+      //   assert(map.getResults().size() == 1);
+      //   AffineConstantExpr ApplyExpr = map.getResult(0).dyn_cast<AffineConstantExpr>();
+      //   // ApplyExpr.dump();
+      //   int64_t bias = ApplyExpr.getValue();
+      
+      //   IntegerAttr constAttr = b.getIndexAttr(bias);
+      //   arith::ConstantOp newconst = b.create<arith::ConstantOp>(region.getLoc(), b.getIndexType() , constAttr);
+      //   // affine::AffineApplyOp newapply = b.create<affine::AffineApplyOp>(affineOp.getLoc(), map , resultOperands);
+      //   affineOp.getOperation()->getBlock()->push_back(newconst);
+      //   newconst.getOperation()->moveBefore(affineOp);
+      //   // newconst.dump();
+      //   affineOp.getOperation()->replaceAllUsesWith(newconst);
+      //   ApplyOpsToDel.push_back(affineOp);
+      // }
+  
+      // if (map == oldMap && std::equal(oldOperands.begin(), oldOperands.end(),
+      //                             resultOperands.begin()))
+      // return failure();
+      // replaceAffineOp(rewriter, affineOp, map, resultOperands);
     }
-    else if(expr.getRHS().getKind() == AffineExprKind::DimId 
-      && expr.getLHS().getKind() == AffineExprKind::Constant){
-      // dimexpr = expr.getRHS().dyn_cast<AffineDimExpr>();
-      constantexpr = expr.getLHS().dyn_cast<AffineConstantExpr>();
-    }
-    else{
-      assert(false && "This AffineApplyOp is not a DimId + Constant style.");
-    }
-
-    int64_t v = constantexpr.getValue();
-    arith::ConstantOp newconst = b.create<arith::ConstantOp>(affineOp.getLoc(), b.getIndexAttr(v));
-    affineOp.getOperation()->getBlock()->push_back(newconst);
-    newconst.getOperation()->moveBefore(affineOp);
-    arith::AddIOp newadd = b.create<arith::AddIOp>(affineOp.getLoc(), operand, newconst.getResult());
-    affineOp.getOperation()->getBlock()->push_back(newadd);
-    newadd.getOperation()->moveAfter(affineOp);
-
-    affineOp.getOperation()->replaceAllUsesWith(newadd); 
-    ApplyOpsToDel.push_back(affineOp);
-    
-    // if(/*IsConstantAffineOp(affineOp)*/true){
-    //   // map.dump();
-    //   auto oldOperands = affineOp.getMapOperands();
-    //   SmallVector<mlir::Value, 8> resultOperands(oldOperands);
-    //   composeAffineMapAndOperands(&map, &resultOperands);
-    //   canonicalizeMapAndOperands(&map, &resultOperands);
-    //   simplifyMapWithOperands(map, resultOperands);
-    //   affineOp.getOperation()->getBlock()->dump();
-    //   // map.dump();
-    //   // region.dump();
-    //   assert(map.getResults().size() == 1);
-    //   AffineConstantExpr ApplyExpr = map.getResult(0).dyn_cast<AffineConstantExpr>();
-    //   // ApplyExpr.dump();
-    //   int64_t bias = ApplyExpr.getValue();
-    
-    //   IntegerAttr constAttr = b.getIndexAttr(bias);
-    //   arith::ConstantOp newconst = b.create<arith::ConstantOp>(region.getLoc(), b.getIndexType() , constAttr);
-    //   // affine::AffineApplyOp newapply = b.create<affine::AffineApplyOp>(affineOp.getLoc(), map , resultOperands);
-    //   affineOp.getOperation()->getBlock()->push_back(newconst);
-    //   newconst.getOperation()->moveBefore(affineOp);
-    //   // newconst.dump();
-    //   affineOp.getOperation()->replaceAllUsesWith(newconst);
-    //   ApplyOpsToDel.push_back(affineOp);
-    // }
-
-    // if (map == oldMap && std::equal(oldOperands.begin(), oldOperands.end(),
-    //                             resultOperands.begin()))
-    // return failure();
-    // replaceAffineOp(rewriter, affineOp, map, resultOperands);
   });
   for(auto applyop : ApplyOpsToDel){
     applyop.getOperation()->erase();
@@ -1344,7 +1354,7 @@ void ADORA::simplifyAddAffineApplyOpsInRegion(mlir::Region& region){
 
 void ADORA::simplifyLoadAndStoreOpsInRegion(mlir::Region& region){
   /////////
-  /// Simplify affine.apply operation generated from unrolling.
+  /// Simplify load store operation.
   /// Refer to AffineOps.cpp: SimplifyAffineOp
   ////////
   SmallVector<mlir::Operation*> OpsToDel;
@@ -1354,7 +1364,7 @@ void ADORA::simplifyLoadAndStoreOpsInRegion(mlir::Region& region){
   {
     IRRewriter rewriter(affineOp.getContext());
     OpBuilder b(affineOp.getContext());
-    affineOp.dump();
+    // affineOp.dump();
     AffineMap map = affineOp.getAffineMap();
     // map.dump();
     AffineMap oldMap = map;
@@ -1385,7 +1395,7 @@ void ADORA::simplifyLoadAndStoreOpsInRegion(mlir::Region& region){
     // newaffineop.dump();
     OpsToDel.push_back(affineOp.getOperation());
   });
-  region.front().dump();
+  // region.front().dump();
 
   result = region.walk([&](affine::AffineStoreOp affineOp) -> WalkResult
   {
@@ -1422,13 +1432,13 @@ void ADORA::simplifyLoadAndStoreOpsInRegion(mlir::Region& region){
     // newaffineop.dump();
     OpsToDel.push_back(affineOp.getOperation());
   });
-  region.front().dump();
+  // region.front().dump();
 
   for(auto op : OpsToDel){
     op->erase();
   }
   OpsToDel.clear();
-  region.front().dump();
+  // region.front().dump();
 
   region.walk([&](affine::AffineApplyOp affineOp) -> WalkResult
   {

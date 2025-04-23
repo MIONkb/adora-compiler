@@ -43,7 +43,7 @@ using namespace mlir::ADORA;
 //===----------------------------------------------------------------------===//
 // KERNELToFunc
 //===----------------------------------------------------------------------===//
-#define DEBUG_TYPE "ADORA-kernel-to-function"
+#define DEBUG_TYPE "adora-kernel-to-function"
 namespace
 {
 

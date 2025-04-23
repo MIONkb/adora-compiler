@@ -1,6 +1,6 @@
 add_mlir_conversion_library(MLIRADORALowerings
   KernelCallToLLVM.cpp
-  ApproximateMathWithArith.cpp
+  MathRewrite.cpp
   ADORAToSCF.cpp
 
   ADDITIONAL_HEADER_DIRS

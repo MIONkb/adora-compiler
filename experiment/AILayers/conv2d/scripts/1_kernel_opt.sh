@@ -35,7 +35,7 @@ for file in "$srcfolder"/*; do
       cgra-opt \
         --ADORA-extract-affine-for-to-kernel \
         --ADORA-simplify-loadstore \
-        --ADORA-approximate-math \
+        --adora-math-rewrite \
         --ADORA-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=4 disable-remainder-block explicit-datablock" \
         --ADORA-affine-loop-unroll="cgra-adg=${CGRA_ADG_PATH}/cgra_adg.json" \
         "$file" -o $tarfolder/"$filename"_opt.mlir
