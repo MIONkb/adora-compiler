@@ -16,6 +16,11 @@ void DFGNode::setOperation(std::string operation){
     setOpLatency(Operations::latency(operation));
     setCommutative(Operations::isCommutative(operation));
     setAccumulative(Operations::isAccumulative(operation));
+
+    // if(operation == "ISEL" || operation == "CISEL"){
+    //     setInitSelection(true);
+    // }
+
 }
 
 

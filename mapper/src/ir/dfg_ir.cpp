@@ -448,6 +448,7 @@ DFG* DFGIR::parseDFGJFromMLIRCDFG(LLVMCDFG * CDFG){
         LLVMCDFGNode* node = elem.second;
         std::string NodeName = node->getTypeName() + std::to_string(id);
         std::string opName = node->getTypeName();
+        std::cout << NodeName << "\n";
         std::transform(opName.begin(), opName.end(), opName.begin(), toupper);
         // int id = nodeJson["_gvid"].get<int>() + 1; // start from 1
         // if(opName == "INPUT"){
@@ -586,7 +587,15 @@ DFG* DFGIR::parseDFGJFromMLIRCDFG(LLVMCDFG * CDFG){
                         dfg_node->setRepeats(0x4fe);
                         VarACC.push_back(values[3]);
                     }
-                    dfg_node->setIsAccFirst(true);
+                    ///// acc first
+
+                    if(opName == "ISEL"){
+                        dfg_node->setIsAccFirst(false);
+                    }
+                    else{
+                        dfg_node->setIsAccFirst(true);
+                    }
+                        
                     if(!IsAccConstant(VarACC)){
                         dfg->VariableConfigNodes[dfg_node] = VariableConfig(VariableConfig::NodeT::ACCNode);
                         dfg->VariableConfigNodes[dfg_node].initVal = VarACC[0];

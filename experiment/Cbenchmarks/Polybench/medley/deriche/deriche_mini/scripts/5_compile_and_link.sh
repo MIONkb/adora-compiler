@@ -52,6 +52,7 @@ riscv64-unknown-elf-gcc \
  -DBAREMETAL=1 -e _start -g  \
  -o $tarfolder/${baremetal_file_name}-baremetal \
  $rootfolder/$main_file \
+ /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/medley/deriche/deriche_mini/cpu_deriche.c \
  $src_files  $asm_files\
  $CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/syscalls.c \
  $CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/CRunnerUtils.cpp \

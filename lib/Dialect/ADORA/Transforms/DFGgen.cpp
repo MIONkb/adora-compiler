@@ -1397,17 +1397,16 @@ Define_Polymorphism_Of_StringIntArith(SubAsStr)
 
 //// Get the outter level of one operation in one kernel
 std::string getOuterLoopTotalTripcountUntilKernel(mlir::Operation* op){
-  std::string total_tripcount_str;
-  int total_tripcount, tripcount = 1;
+  // std::string total_tripcount_str = "1";
+  int tripcount = 1;
   if(isa<affine::AffineForOp>(op->getParentOp())){
     tripcount = getConstantTripCount(dyn_cast<affine::AffineForOp>(op->getParentOp())).value_or(0);
-    /// if(tripcount==0)
+    assert(tripcount != 0);
 
-    if(isInteger(total_tripcount_str)) 
-      total_tripcount = std::stoi(total_tripcount_str);
+    // if(isInteger(total_tripcount_str)) 
+    //   total_tripcount = std::stoi(total_tripcount_str);
 
-    total_tripcount = total_tripcount * tripcount;
-    return getOuterLoopTotalTripcountUntilKernel(op->getParentOp());
+    return MulAsStr(std::to_string(tripcount), getOuterLoopTotalTripcountUntilKernel(op->getParentOp()));
   }
   else if(isa<ADORA::KernelOp>(op->getParentOp())){
     return std::to_string(1);

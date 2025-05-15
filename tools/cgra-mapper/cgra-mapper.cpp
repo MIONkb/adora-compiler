@@ -31,6 +31,8 @@
 #include <ctime>
 #include <regex>
 #include <sstream>
+#include <thread>
+#include <mutex>
 #include <getopt.h>
 
 #include "op/operations.h"
@@ -50,6 +52,49 @@ namespace mlir {
 
 using namespace llvm;
 using namespace mlir;
+
+static int kernel_cnt = 0;
+
+//// function on single thread
+// void mapKernel(ADORA::KernelOp kernel, const std::string& GeneralOpNameFile, int timeout_ms, int max_iters, const std::string& objOpt, std::vector<MapperSA*>& mapper_Vec, std::vector<DFGIR*>& DFGIR_Vec, Emitter& emitter){
+//   MapperSA* mapper = new MapperSA(adg, timeout_ms, max_iters, objOpt);
+//   mapper_Vec.push_back(mapper);
+//   /// Generating DFG
+//   std::string kernelName = kernel.getKernelName();
+//   if(kernelName.empty()){
+//     kernelName = "kernel_" + std::to_string(kernel_cnt);
+//   }
+//   LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile);
+//   generateCDFGfromKernel(CDFG, kernel, /*verbose=*/true);
+//   // CDFG->CDFGtoDOT(CDFG->name_str()+"_CDFG.dot");
+
+//   /// DFG Mapping to CGRA architecture
+//   DFGIR* dfg_ir = new DFGIR(CDFG);
+//   DFGIR_Vec.push_back(dfg_ir);
+
+//   DFG* dfg = dfg_ir->getDFG();
+//   int numNodes = dfg->nodes().size();
+//   int numOpNodes = numNodes - dfg->ioNodes().size();
+//   // std::cout << "numOpNodes: " << numOpNodes << ", numDfgNodes(Op+IO): "  << numNodes << std::endl;
+//   // std::cout << "//============== Print DFG =================//" << std::endl;
+//   // dfg->print();
+//   // std::cout << "//============== End Print DFG =================//" << std::endl;
+//   // dfg->print();
+//   // map DFG to ADG
+//   mapper->setDFG(dfg);
+//   std::filesystem::create_directory(kernelName + "_map_result");
+//   CDFG->CDFGtoDOT(kernelName + "_map_result/before_map_" + CDFG->name_str() + "_CDFG.dot");
+//   bool succeed = mapper->execute(/*dumpCallFunc=*/false, /*dumpMappedViz*/true, /*resultDir=*/kernelName + "_map_result");
+//   if(succeed){
+//     std::lock_guard<std::mutex> lock(mtx); // 锁定，保护共享资源
+//     // Mapping is successful, get all blockload and blockstore op and corresponding spad memory addresses.
+//     emitter.setMapResult(kernel, mapper);
+//     emitter.DataBlockOperationsToSPADInfo(kernel, mapper);
+//       // emitter.GenerateCGRACFGAndEXE(kernel, mapper);
+//   }
+  
+//   kernel_cnt++;
+// }
 
 int main(int argc, char **argv) {
   // mlir::registerAllDialects();
@@ -150,6 +195,13 @@ int main(int argc, char **argv) {
     cl::desc("Output filename"),
     cl::value_desc("filename"),
     cl::init("-"));
+  
+  // static cl::opt<int> nthreads(
+  //   "j", 
+  //   cl::Optional, 
+  //   cl::desc("Allow N mapping jobs at once(default to be 1)"),
+  //   cl::value_desc("[N]"),
+  //   cl::init(1));
 
   InitLLVM y(argc, argv);
 
@@ -242,23 +294,30 @@ int main(int argc, char **argv) {
   CGRACallEmitter emitter(moduleop);
   std::vector<MapperSA*>mapper_Vec;
   std::vector<DFGIR*>DFGIR_Vec;
+
+  std::string GeneralOpNameFile_str;
+  if (GeneralOpNameFile == nullptr) {
+    std::cerr << "Environment variable \" GENERAL_OP_NAME_ENV \" is not set." << std::endl;
+    GeneralOpNameFile_str = "/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt";
+    std::cerr << "Using \" GENERAL_OP_NAME_ENV \" = \"/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt\"" << std::endl;
+  }
+  else
+    GeneralOpNameFile_str = GeneralOpNameFile;
   
   /// Traverse through whole module to get a mapping result
+  //// TODO: multithread mapping
+  // SmallVector<ADORA::KernelOp> kernels;
+  // moduleop.walk([&](ADORA::KernelOp kernel) {
+  //   kernels.push_back(kernel);
+  // });
+
   int kernel_cnt = 0;
   moduleop.walk([&](ADORA::KernelOp kernel) {
     MapperSA* mapper = new MapperSA(adg, timeout_ms, max_iters, objOpt);
     mapper_Vec.push_back(mapper);
     /// Generating DFG
     // std::string fileName = kernel.getKernelName();
-    
-    std::string GeneralOpNameFile_str;
-    if (GeneralOpNameFile == nullptr) {
-      std::cerr << "Environment variable \" GENERAL_OP_NAME_ENV \" is not set." << std::endl;
-      GeneralOpNameFile_str = "/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt";
-      std::cerr << "Using \" GENERAL_OP_NAME_ENV \" = \"/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt\"" << std::endl;
-    }
-    else
-      GeneralOpNameFile_str = GeneralOpNameFile;
+  
 
     std::string kernelName = kernel.getKernelName();
     if(kernelName.empty()){
@@ -282,9 +341,13 @@ int main(int argc, char **argv) {
     // dfg->print();
     // map DFG to ADG
     mapper->setDFG(dfg);
-    std::filesystem::create_directory("map_result");
-    CDFG->CDFGtoDOT("map_result/before_map_" + CDFG->name_str() + "_CDFG.dot");
-    bool succeed = mapper->execute(/*dumpCallFunc=*/false, /*dumpMappedViz*/true, /*resultDir=*/"map_result");
+
+    std::filesystem::create_directory(kernelName + "_map_result");
+    CDFG->CDFGtoDOT(kernelName + "_map_result/before_map_" + CDFG->name_str() + "_CDFG.dot");
+    bool succeed = mapper->execute(/*dumpCallFunc=*/false, /*dumpMappedViz*/true, /*resultDir=*/kernelName + "_map_result");
+    // std::filesystem::create_directory("map_result");
+    // CDFG->CDFGtoDOT("map_result/before_map_" + CDFG->name_str() + "_CDFG.dot");
+    // bool succeed = mapper->execute(/*dumpCallFunc=*/false, /*dumpMappedViz*/true, /*resultDir=*/"map_result");
     if(succeed){
       // Mapping is successful, get all blockload and blockstore op and corresponding spad memory addresses.
       emitter.setMapResult(kernel, mapper);

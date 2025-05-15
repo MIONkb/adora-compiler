@@ -33,6 +33,7 @@ std::map<int, CfgData> Configuration::getGpeCfgData(GPENode* node){
     ADG* subAdg = node->subADG();
     auto& adgNodeAttr = _mapping->adgNodeAttr(adgNodeId);
     DFGNode* dfgNode = adgNodeAttr.dfgNode;
+    dfgNode->printDfgNode(); /// @jhlou 
     std::map<int, CfgData> cfg;
     // operation
     int opc = Operations::OPC(dfgNode->operation());
@@ -120,7 +121,7 @@ std::map<int, CfgData> Configuration::getGpeCfgData(GPENode* node){
         }
 
         /// II
-        int II = 1;
+        int II = _mapping->II();
         int WI = dfgNode->interval() * II;
         int wiId = node->cfgIdMap["WI"];
         addCfgData(cfg, node->configInfo(wiId), (uint32_t)WI);
@@ -248,7 +249,7 @@ std::map<int, CfgData> Configuration::getIobCfgData(IOBNode* node){
     }else{ // IOB used as IB
         isStore = 0;
     }
-    int II = 1;
+    int II = _mapping->II();
     int latency = dfgNodeAttr.lat - dfgNode->opLatency(); // substract load/store latency
     int dataBytes = _mapping->getADG()->bitWidth() / 8;
     int baseAddr = _dfgIoSpadAddrs[dfgNode->id()];
