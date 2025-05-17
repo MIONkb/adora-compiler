@@ -268,7 +268,7 @@ public:
               <<", 0x" << std::hex << spadbaddr 
               <<", " << std::dec << DMA_Len 
               <<", " << std::dec << fuse  /*fuse*/
-              <<", 0" /*Task id*/ << ", 0" /*Task dep*/
+              <<", _task_id" /*Task id*/ << ", LD_DEP_EX_LAST_TASK" /*Task dep*/
               <<");\n";
       indent() << load_data.str();
       _os << "\n";
@@ -403,7 +403,7 @@ public:
               <<" + " << "spadoffset_" << BLid 
               <<", " << std::dec << DMA_Len 
               <<", " << std::dec << fuse  /*fuse*/
-              <<", 0" /*Task id*/ << ", 0" /*Task dep*/
+              <<", _task_id" /*Task id*/ << ", LD_DEP_EX_LAST_TASK" /*Task dep*/
               <<");\n";
       indent() << load_data.str();
 
@@ -426,6 +426,30 @@ public:
     return true;
   }
 
+  //////
+  /// Check whether a DataBlockStoreOp is the last of one kernel in one Block.
+  ///
+  static bool IsLastBlockStoreOp(ADORA::DataBlockStoreOp op){
+    Block* parentBlock = op.getOperation()->getBlock();
+
+    bool behindThisOp = false;
+    for(auto it = parentBlock->begin(); it != parentBlock->end(); it++){
+      if(behindThisOp && isa<ADORA::DataBlockStoreOp>(it)){
+        ADORA::DataBlockStoreOp toCheck = dyn_cast<ADORA::DataBlockStoreOp>(it);
+        
+        if(toCheck.getKernelName() == op.getKernelName()){
+          //// this is not the last datablockop of one kernel in this block
+          return false;
+        }
+      }
+      if(&*it == op.getOperation()){
+        behindThisOp = true;
+      }
+    }
+
+    return true;
+  }
+
   bool visitOp(ADORA::DataBlockStoreOp op) {
     /// DataBlockStoreOp can be seen as an opposite operation of memref subview op, 
     /// 6 variables should be maintained:
@@ -443,7 +467,7 @@ public:
     ::llvm::ArrayRef<int64_t> TargetShape =  op.getTargetMemrefType().getShape();
     // MemRefType SourceType = op.getOriginalMemref();
     // MemRefType ResultType = op.getResultType();
-  if(TargetShape.size() == 0){
+    if(TargetShape.size() == 0){
       //// memref<2xf32> -> memref<f32> 
       std::string Memref_BaseAddr = _cgracallemitter->lookupName(op.getTargetMemref());
       // llvm::SmallVector<dfgIoInfo> DfgIoInfos = _cgracallemitter->getDfgIoInfosFromBlockLoad(op);
@@ -457,12 +481,17 @@ public:
       store_data <<"store(&" << Memref_BaseAddr  //// address not pointer
               <<", 0x" << std::hex << spadbaddr 
               <<", " << std::dec << DMA_Len 
-              <<", 0" /*Task id*/ << ", 0" /*Task dep*/
+              <<", _task_id" /*Task id*/ << ", 0" /*Task dep*/
               <<");\n";
       indent() << store_data.str();
 
       _os << "\n";
       indent() << "}\n";
+
+      if(IsLastBlockStoreOp(op)){
+        indent() << "_task_id++;\n";
+      }
+
       return true;
     }
 
@@ -591,7 +620,7 @@ public:
               <<", 0x" << std::hex << spadbaddr 
               <<" + " << "spadoffset_" << BLid 
               <<", " << std::dec << DMA_Len 
-              <<", 0" /*Task id*/ << ", 0" /*Task dep*/
+              <<", _task_id" /*Task id*/ << ", 0" /*Task dep*/
               <<");\n";
       indent() << store_data.str();
 
@@ -599,7 +628,6 @@ public:
     indent()<< "spadoffset_" << BLid 
             << " = spadoffset_" << BLid 
             << " + " << DMA_Len <<";\n";
-
 
 
     _indent = cur_indent;
@@ -610,6 +638,10 @@ public:
     }
     _os << "\n";
     indent() << "}\n";
+
+    if(IsLastBlockStoreOp(op)){
+      indent() << "_task_id++;\n";
+    }
 
     return true;    
   }
@@ -1072,6 +1104,14 @@ bool CGRACallEmitter::emitCGRACallFunction(llvm::raw_ostream &os) {
 
 #include "include/ISA.h"
 
+uint8_t _task_id = 0;
+
+#define LD_DEP_ST_LAST_TASK 1     // this load command depends on the store command of last task
+#define LD_DEP_EX_LAST_TASK 2     // this load command depends on the execute command of last task
+#define LD_DEP_ST_LAST_SEC_TASK 3 // this load command depends on the store command of last second task
+#define EX_DEP_ST_LAST_TASK 1     // this EXECUTE command depends on the store command of last task
+
+
 )XXX";
   // _moduleop.walk([&](mlir::Operation* op) {
   //   op->dump();
@@ -1326,9 +1366,9 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(
   int cfgBaseAddrCtrl = cfgBaseAddr / cfgSpadDataByte; // config base address the controller access
   
   CFGandEXE << "load_cfg((void*)cin, 0x" << std::hex << cfgBaseAddrSpad << std::dec << ", " 
-       << cfg_len << ", " << /*_task_id=*/"0" << ", " << /*_ld_cfg_dep*/"0" << ");\n";
-  CFGandEXE << "config(0x" << std::hex << cfgBaseAddrCtrl << std::dec << ", " << cfgNum << ", " << /*_task_id*/"0" << ", " << 0 << ");\n";
-  CFGandEXE << "execute(0x" << std::hex << _iob_ens << std::dec << ", " << /*_task_id*/"0" << ", " << /*_ex_dep*/"0" << ");\n";
+       << cfg_len << ", " << /*_task_id=*/"_task_id" << ", " << /*_ld_cfg_dep*/"LD_DEP_EX_LAST_TASK" << ");\n";
+  CFGandEXE << "config(0x" << std::hex << cfgBaseAddrCtrl << std::dec << ", " << cfgNum << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/ 0 << ");\n";
+  CFGandEXE << "execute(0x" << std::hex << _iob_ens << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"0" << ");\n";
 
   KnToCfgExe[kernel] = CFGandEXE.str();
   
