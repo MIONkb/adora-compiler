@@ -477,8 +477,8 @@ DFG* DFGIR::parseDFGJFromMLIRCDFG(LLVMCDFG * CDFG){
                 // if(nodeJson.contains("ref_name")){
                 //     dfg_io_node->setMemRefName(nodeJson["ref_name"].get<std::string>());
                 // }
-                dfg_io_node->setMemOffset(atoi(node->getInitAddr().c_str()));
-                dfg_io_node->setReducedMemOffset(0);
+                dfg_io_node->setMemOffset(0);
+                dfg_io_node->setReducedMemOffset(atoi(node->getInitAddr().c_str())); //// The first addr iob access
                 // if(nodeJson.contains("offset")){
                 //     int offset = std::stoi(nodeJson["offset"].get<std::string>());
                 //     std::string patStr = nodeJson["offset"].get<std::string>();
@@ -522,6 +522,7 @@ DFG* DFGIR::parseDFGJFromMLIRCDFG(LLVMCDFG * CDFG){
                     dfg->VariableConfigNodes[dfg_node] = VariableConfig(VariableConfig::NodeT::IONode);
                     dfg->VariableConfigNodes[dfg_node].pattern = VarPattern;
                     dfg->VariableConfigNodes[dfg_node].memOffset = "__const__";
+                    dfg->VariableConfigNodes[dfg_node].reducedmemOffset = "__const__";
                     dfg->VariableConfigNodes[dfg_node].print();
                 }
                 // if(nodeJson.contains("pattern")){

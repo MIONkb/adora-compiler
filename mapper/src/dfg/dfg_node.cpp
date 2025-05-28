@@ -80,7 +80,8 @@ bool VariableConfig::IsAccVariable(){
 
 bool VariableConfig::IsVariable(){
     return IsPatternVariable() || IsAccVariable() 
-        || (memOffset != "__const__" && memOffset != "-" && !memOffset.empty());
+        || (memOffset != "__const__" && memOffset != "-" && !memOffset.empty())
+        || (reducedmemOffset != "__const__" && reducedmemOffset != "-" && !reducedmemOffset.empty());
 }
 
 
@@ -92,6 +93,7 @@ void VariableConfig::print(){
         std::cout << "Variable Config ";
         std::cout << "IO Node type:" ;
         std::cout << ", memOffset: "<< memOffset << "\n";
+        std::cout << ", reducedmemOffset: "<< reducedmemOffset << "\n";
         if(pattern.size() == 0)
             std::cout << "pattern is not set yet." ;
         else {

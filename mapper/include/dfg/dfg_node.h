@@ -112,6 +112,7 @@ public:
     VariableConfig(NodeT _type) : 
       type(_type),
       memOffset(_type == NodeT::IONode ? "0" : "-"),
+      reducedmemOffset(_type == NodeT::IONode ? "0" : "-"),
       initVal(_type == NodeT::ACCNode ? "0" : "-"),
       cycles(_type == NodeT::ACCNode ? "0" : "-"),
       interval(_type == NodeT::ACCNode ? "0" : "-"),
@@ -120,6 +121,7 @@ public:
     NodeT type = NodeT::NotVariable;
     //// For IOB 
     std::string memOffset;
+    std::string reducedmemOffset;
     std::vector<std::pair<std::string, std::string>> pattern;
 
     std::unordered_map<uint32_t, std::pair<uint32_t, std::string>> LSBToLenExpr = {};

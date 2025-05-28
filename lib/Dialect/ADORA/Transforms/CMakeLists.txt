@@ -11,6 +11,7 @@ add_mlir_dialect_library(MLIRADORATransforms
   AutoUnroll.cpp
   AffineLoopReorder.cpp
   DependencyAnalysis.cpp
+  ScheduleAdoraTasks.cpp
   Utility.cpp
 
   ADDITIONAL_HEADER_DIRS

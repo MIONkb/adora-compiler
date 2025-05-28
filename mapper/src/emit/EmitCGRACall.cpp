@@ -1147,7 +1147,8 @@ void CGRACallEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, Map
   std::vector<spadBankStatus> bank_status;
   // DenseMap<int, dfgIoInfo> dfg_io_infos;
   bank_status.assign(adg->numIobNodes(), {0, 0, 0, 0}); /*{iob, used, start, end}*/
-
+  std::map<int, dfgIoInfo> dfg_io_infos;
+  uint64_t iob_ens = 0;
   /// Get io information of every block load ops, including Addr(Spad), iobAddr, LorS
   _moduleop.walk([&](ADORA::DataBlockLoadOp blockload) {  
     if(blockload.getKernelName() == kernel.getKernelName()){
@@ -1163,7 +1164,7 @@ void CGRACallEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, Map
           auto& attr =  mapper->_mapping->dfgNodeAttr(id);
           int iobId = attr.adgNode->id();
           int iobIdx = dynamic_cast<IOBNode*>(adg->node(iobId))->index();
-          _iob_ens |= 1 << iobIdx;
+          iob_ens |= 1 << iobIdx;
           std::vector<int> banks = adg->iobToSpadBanks(iobIdx); // spad banks connected to this IOB
           int minBank = *(std::min_element(banks.begin(), banks.end()));
           std::vector<int> availBanks;
@@ -1187,7 +1188,7 @@ void CGRACallEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, Map
           bank_status[selBank].start = 0;
           bank_status[selBank].end = memSize;  
 
-          _dfg_io_infos[id] = ioInfo;
+          dfg_io_infos[id] = ioInfo;
 
           _LoadToDfgIoInfos[blockload].push_back(ioInfo); 
         }
@@ -1211,7 +1212,7 @@ void CGRACallEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, Map
           auto& attr =  mapper->_mapping->dfgNodeAttr(id);
           int iobId = attr.adgNode->id();
           int iobIdx = dynamic_cast<IOBNode*>(adg->node(iobId))->index();
-          _iob_ens |= 1 << iobIdx;
+          iob_ens |= 1 << iobIdx;
           std::vector<int> banks = adg->iobToSpadBanks(iobIdx); // spad banks connected to this IOB
           int minBank = *(std::min_element(banks.begin(), banks.end()));
           std::vector<int> availBanks;
@@ -1235,7 +1236,7 @@ void CGRACallEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, Map
           bank_status[selBank].start = 0;
           bank_status[selBank].end = memSize;  
 
-          _dfg_io_infos[id] = ioInfo;
+          dfg_io_infos[id] = ioInfo;
 
           assert(_StoreToDfgIoInfo.count(blockstore) == 0 && "One output operation should only be count once.");
           _StoreToDfgIoInfo[blockstore] = ioInfo; 
@@ -1243,6 +1244,9 @@ void CGRACallEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, Map
       }
     }
   });
+
+  _kernel_to_dfg_io_infos[kernel] = dfg_io_infos;
+  _kernel_to_iob_ens[kernel] = iob_ens;
 }
 
 // Traverse the whole module to find which operation keeps a "VAR_CONFIG" attr
@@ -1277,7 +1281,8 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(
   std::stringstream CFGandEXE;
 
    // cfg.dumpCfgData(std::cout);
-  for(auto &elem : _dfg_io_infos){
+  std::map<int, dfgIoInfo> dfg_io_infos = std::move(_kernel_to_dfg_io_infos[kernel]);
+  for(auto &elem : dfg_io_infos){
     cfg.setDfgIoSpadAddr(elem.first, elem.second.iobAddr);
   }
   std::vector<CfgDataPacket> cfgData;
@@ -1365,10 +1370,12 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(
   int cfgBaseAddrSpad = cfgBaseAddr + banks * sizeofBank; // cfg spad on top of iob spad
   int cfgBaseAddrCtrl = cfgBaseAddr / cfgSpadDataByte; // config base address the controller access
   
+  uint64_t iob_ens = _kernel_to_iob_ens[kernel];
+
   CFGandEXE << "load_cfg((void*)cin, 0x" << std::hex << cfgBaseAddrSpad << std::dec << ", " 
        << cfg_len << ", " << /*_task_id=*/"_task_id" << ", " << /*_ld_cfg_dep*/"LD_DEP_EX_LAST_TASK" << ");\n";
   CFGandEXE << "config(0x" << std::hex << cfgBaseAddrCtrl << std::dec << ", " << cfgNum << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/ 0 << ");\n";
-  CFGandEXE << "execute(0x" << std::hex << _iob_ens << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"0" << ");\n";
+  CFGandEXE << "execute(0x" << std::hex << iob_ens << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"EX_DEP_ST_LAST_TASK" << ");\n";
 
   KnToCfgExe[kernel] = CFGandEXE.str();
   

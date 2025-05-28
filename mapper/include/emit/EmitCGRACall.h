@@ -78,10 +78,12 @@ public:
 private:
   mlir::ModuleOp _moduleop;
   std::stringstream _CFGandEXE;
-  std::map<int, dfgIoInfo> _dfg_io_infos;
+  std::map<KernelOp, std::map<int, dfgIoInfo>> _kernel_to_dfg_io_infos;
+  // std::map<int, int> _dfgIoSpadAddrs;
   ADG* _adg;
 
-  uint64_t _iob_ens = 0;
+  std::map<KernelOp, uint64_t> _kernel_to_iob_ens;
+  // uint64_t _iob_ens = 0;
   llvm::SmallDenseMap<ADORA::DataBlockLoadOp, llvm::SmallVector<dfgIoInfo>> _LoadToDfgIoInfos;
   llvm::SmallDenseMap<ADORA::DataBlockStoreOp, dfgIoInfo> _StoreToDfgIoInfo;
 

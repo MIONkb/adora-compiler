@@ -120,6 +120,7 @@ int main(int argc, char **argv) {
   mlir::ADORA::registerADORALoopUnrollAndJam();
   mlir::ADORA::registerADORAAutoUnroll();
   mlir::ADORA::registerAffineLoopReorder();
+  mlir::ADORA::registerScheduleADORATasks();
 
   mlir::ADORA::registerConvertKernelCallToLLVMPass();
   mlir::ADORA::registerConvertADORAToSCFPass();

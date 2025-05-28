@@ -209,7 +209,7 @@ def ExtractKernelToFunc : Pass<"adora-extract-kernel-to-function", "ModuleOp"> {
 
 
 //===----------------------------------------------------------------------===//
-// Adora Simplify loop structure
+// ADORA Simplify loop structure
 //===----------------------------------------------------------------------===//
 
 def SimplifyAffineLoopLevels : Pass<"adora-simplify-affine-loop-levels", "ModuleOp"> {
@@ -365,6 +365,21 @@ def AffineLoopReorder :
     Its primary goal is to enhance the data locality.
   }];
   let constructor = "mlir::ADORA::createAffineLoopReorderPass()";
+}
+
+
+//===----------------------------------------------------------------------===//
+// Loop Reorder
+//===----------------------------------------------------------------------===//
+def ScheduleADORATasks: Pass<"adora-schedule-tasks", "ModuleOp"> {
+  let summary = "schedule CGRA tasks after";
+  let description = [{
+    Schedule CGRA tasks, simplify data movement. 
+    Following situations need to be considered:
+      1.
+      2.
+  }];
+  let constructor = "mlir::ADORA::createScheduleADORATasksPass()";
 }
 
 //===----------------------------------------------------------------------===//
