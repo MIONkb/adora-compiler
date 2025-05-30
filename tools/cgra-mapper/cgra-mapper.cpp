@@ -352,7 +352,7 @@ int main(int argc, char **argv) {
       // Mapping is successful, get all blockload and blockstore op and corresponding spad memory addresses.
       emitter.setMapResult(kernel, mapper);
       emitter.DataBlockOperationsToSPADInfo(kernel, mapper);
-      // emitter.GenerateCGRACFGAndEXE(kernel, mapper);
+      emitter.GenerateCGRAConfig(kernel, mapper);
     }
     kernel_cnt++;
   });

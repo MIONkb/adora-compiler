@@ -74,15 +74,17 @@ void print_image1and2(int w, int h,
   // for (i = 0; i < w; i++)
   //   for (j = 0; j < h; j++) {
 
-  for (i = 0; i < w; i=i+4)
-    for (j = 0; j < h; j = j + 8) {
+  for (i = 0; i < w; i=i+4){
+    for (j = 0; j < h; j = j + 4) {
     //   if ((i * h + j) % 20 == 0) fprintf(POLYBENCH_DUMP_TARGET, "\n");
     //   fprintf(POLYBENCH_DUMP_TARGET, DATA_PRINTF_MODIFIER, imgOut[i][j]);
       // if ((i * h + j) % 20 == 0) printf("\n");
       // printf(DATA_PRINTF_MODIFIER, imgOut[i][j]);
       printf("[%d, %d]%ld-%ld," , i, j, (int)(10000 * imgOut1[i][j]), (int)(10000 * imgOut2[i][j]));
-      printf("%x-%x\n", FpToHex(imgOut1[i][j]), FpToHex(imgOut2[i][j]));
+      printf("%x-%x\t", FpToHex(imgOut1[i][j]), FpToHex(imgOut2[i][j]));
     }
+    printf("\n");
+  }
   POLYBENCH_DUMP_END("imgOut");
   POLYBENCH_DUMP_FINISH;
 }
@@ -162,15 +164,15 @@ int main(int argc, char** argv)
      by the function call in argument. */
 //   polybench_prevent_dce(print_array(w, h, POLYBENCH_ARRAY(imgOut)));
     // print_image1and2(W, H, y1_2, y1_2);
-    // printf("imgOut1\n");
-    // // print_image1and2(W, H, imgIn, imgIn);
-    // // print_image1and2(W, H, y1_1, y1_2);
-    // print_image1and2(W, H, imgOut1, imgOut2);
-
-    // printf("y1\n");
-    // // print_image1and2(W, H, imgIn, imgIn);
-    // // print_image1and2(W, H, y1_1, y1_2);
+    printf("imgOut1\n");
+    // print_image1and2(W, H, imgIn, imgIn);
     // print_image1and2(W, H, y1_1, y1_2);
+    print_image1and2(W, H, imgOut1, imgOut2);
+
+    printf("y1\n");
+    // // print_image1and2(W, H, imgIn, imgIn);
+    // // print_image1and2(W, H, y1_1, y1_2);
+    print_image1and2(W, H, y1_1, y1_2);
 
     printf("y2\n");
     // // print_image1and2(W, H, imgIn, imgIn);

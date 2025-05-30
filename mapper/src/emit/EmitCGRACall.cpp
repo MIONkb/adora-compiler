@@ -1113,6 +1113,17 @@ uint8_t _task_id = 0;
 
 
 )XXX";
+
+  //// emit configuration data array
+  os << R"XXX(
+//===----------------------------------------------------------------------===//
+// Configuration Data 
+//===----------------------------------------------------------------------===//
+)XXX";  
+  for(auto elem : KnToCfgData){
+    os << elem.second << "\n";
+  }
+
   // _moduleop.walk([&](mlir::Operation* op) {
   //   op->dump();
   // });
@@ -1273,12 +1284,13 @@ void CGRACallEmitter::setMapResult(ADORA::KernelOp k, MapperSA* mapper){
   KnToConfiguration[k] = Configuration(mapper->_mapping);
 }
 
-
-/// @brief Get the config and execution instructions of CGRA
-void CGRACallEmitter::GenerateCGRACFGAndEXE(
+/// @brief Get the config data
+std::string CGRACallEmitter::GenerateCGRAConfig(
   ADORA::KernelOp& kernel, Configuration cfg, ADG* adg){
-  adg->print();
-  std::stringstream CFGandEXE;
+  // adg->print();
+  std::string CFGarrayName = "cin_" + kernel.getKernelName();
+  std::stringstream CFGdata;
+  CFGdata << "/// " << kernel.getKernelName() << "\n";
 
    // cfg.dumpCfgData(std::cout);
   std::map<int, dfgIoInfo> dfg_io_infos = std::move(_kernel_to_dfg_io_infos[kernel]);
@@ -1299,48 +1311,86 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(
   }
 
   if(cfgAddrWidth > 16){
-    CFGandEXE << "volatile unsigned int ";
+    CFGdata << "volatile unsigned int ";
   }else{
-    CFGandEXE << "volatile unsigned short ";
+    CFGdata << "volatile unsigned short ";
   }
-  CFGandEXE << "cin[" << cfgNum << "][" << (1 + cfgDataWidth / alignWidth) << "] __attribute__((aligned(" << cfgSpadDataByte << "))) = {\n";
-  CFGandEXE << std::hex;
+  CFGdata << CFGarrayName << "[" << cfgNum << "][" << (1 + cfgDataWidth / alignWidth) << "] __attribute__((aligned(" << cfgSpadDataByte << "))) = {\n";
+  CFGdata << std::hex;
   int alignWidthHex = alignWidth/4;
   for(auto& cdp : cfgData){
-    CFGandEXE << "\t\t{";
+    CFGdata << "\t\t{";
     for(auto data : cdp.data){      
       if(alignWidth == 32){
-         CFGandEXE << "0x" << std::setw(alignWidthHex) << std::setfill('0') << data << ", ";
+         CFGdata << "0x" << std::setw(alignWidthHex) << std::setfill('0') << data << ", ";
       }else{
-        CFGandEXE << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (data & 0xffff) << ", ";
-        CFGandEXE << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (data >> 16) << ", ";
+        CFGdata << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (data & 0xffff) << ", ";
+        CFGdata << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (data >> 16) << ", ";
       }
             
     }
-    CFGandEXE << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (cdp.addr) << "},\n";
+    CFGdata << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (cdp.addr) << "},\n";
   }
-  CFGandEXE << std::dec << "\t};\n\n";
+  CFGdata << std::dec << "\t};\n\n";
 
+  KnToCfgData[kernel] = CFGdata.str();
+  KnToCfgArrayInfo[kernel] = std::pair(CFGarrayName, cfgNum);
+
+  return CFGdata.str();
+}
+
+/// @brief Get the config data
+std::string CGRACallEmitter::GenerateCGRAConfig(
+  ADORA::KernelOp& kernel, MapperSA* mapper){
+  ADG* adg = mapper->getADG();
+  Configuration cfg(mapper->_mapping);
+  KnToConfiguration[kernel] = cfg;
+  _adg = adg;
+  return GenerateCGRAConfig(kernel, cfg, adg);
+}
+
+
+
+/// @brief Get the config and execution instructions of CGRA
+void CGRACallEmitter::GenerateCGRACFGAndEXE(
+  ADORA::KernelOp& kernel, Configuration cfg, ADG* adg){
+  // adg->print();
+  /////////////////////// CFG is generated in GenerateCGRACFGData()
+  std::stringstream CFGandEXE;
+
+  int cfgSpadDataByte = adg->cfgSpadDataWidth() / 8;
+  int cfgAddrWidth = adg->cfgAddrWidth();
+  int cfgDataWidth = adg->cfgDataWidth();
+  int alignWidth = (cfgAddrWidth > 16) ? 32 : 16;
+  assert(alignWidth >= cfgAddrWidth && cfgDataWidth >= alignWidth);
+
+  if(!MapHasKey(KnToCfgData, kernel)){
+    std::string cfgdata = GenerateCGRAConfig(kernel, cfg, adg);
+    CFGandEXE << cfgdata << "\n";
+  }
+  assert(MapHasKey(KnToCfgData, kernel));
+  std::string CFGarrayName = KnToCfgArrayInfo[kernel].first;
+  int cfgNum = KnToCfgArrayInfo[kernel].second;
 
   /// replace the variable part of the config
   CFGandEXE << std::hex;
   for(auto elem : cfg.VarReplaceInfo){
     std::string varcfg_name = lookupVarConfigName(elem.first);
     for(auto& replace: elem.second) {
-      CFGandEXE << std::dec << "cin[" << replace.Idx0 << "][" << replace.Idx1 << "] = ";
+      CFGandEXE << std::dec << CFGarrayName << "[" << replace.Idx0 << "][" << replace.Idx1 << "] = ";
       assert(replace.lshift == 0 || replace.rshift == 0);
       if(replace.lshift == 0){
         // right shift
         CFGandEXE << std::hex << "(" << varcfg_name << " >> 0x" << replace.rshift << ")"
                   << " | " 
-                  << std::dec << "(" << "cin[" << replace.Idx0 << "][" << replace.Idx1 << "]" 
+                  << std::dec << "(" << CFGarrayName  <<"[" << replace.Idx0 << "][" << replace.Idx1 << "]" 
                   << std::hex << " & 0x" << replace.getMask() << ");\n" ;
       }
       else{
         // left shift
         CFGandEXE << std::hex << "(" << varcfg_name << " << 0x" << replace.lshift << ")"
                   << " | " 
-                  << std::dec << "(" << "cin[" << replace.Idx0 << "][" << replace.Idx1 << "]" 
+                  << std::dec << "(" << CFGarrayName <<"[" << replace.Idx0 << "][" << replace.Idx1 << "]" 
                   << std::hex << " & 0x" << replace.getMask() << ");\n" ;
       }
     }
@@ -1372,14 +1422,14 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(
   
   uint64_t iob_ens = _kernel_to_iob_ens[kernel];
 
-  CFGandEXE << "load_cfg((void*)cin, 0x" << std::hex << cfgBaseAddrSpad << std::dec << ", " 
+  CFGandEXE << "load_cfg((void*)" << CFGarrayName << ", 0x" << std::hex << cfgBaseAddrSpad << std::dec << ", " 
        << cfg_len << ", " << /*_task_id=*/"_task_id" << ", " << /*_ld_cfg_dep*/"LD_DEP_EX_LAST_TASK" << ");\n";
   CFGandEXE << "config(0x" << std::hex << cfgBaseAddrCtrl << std::dec << ", " << cfgNum << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/ 0 << ");\n";
   CFGandEXE << "execute(0x" << std::hex << iob_ens << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"EX_DEP_ST_LAST_TASK" << ");\n";
 
   KnToCfgExe[kernel] = CFGandEXE.str();
   
-  std::cout << CFGandEXE.str() << std::endl;
+  // std::cout << CFGandEXE.str() << std::endl;
 }
 
 
