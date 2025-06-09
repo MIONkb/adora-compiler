@@ -1,0 +1,11 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="kernel_fir_0", size="400", offset="0,0", pattern="4,100", color = black];
+Input1[opcode = "Input", ref_name="kernel_fir_1", size="400", offset="0,396", pattern="-4,100", color = black];
+MUL2[opcode = "MUL", color = black];
+ACC3[opcode = "ACC", acc_params="0,100,1,1", acc_first=1, color = black];
+Output6[opcode = "Output", ref_name="kernel_fir_2", size="8", offset="0,0", pattern="0,100", color = purple];
+Input0 -> MUL2[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> MUL2[color = black, style = bold, operand = 1, label = "Op=1"];
+MUL2 -> ACC3[color = black, style = bold, operand = 1, label = "Op=1"];
+ACC3 -> Output6[color = black, style = bold, operand = 0, label = "Op=0"];
+}

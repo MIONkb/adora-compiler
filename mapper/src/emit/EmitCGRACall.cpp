@@ -325,7 +325,34 @@ public:
       }
     }
     if(DRAM_Offset == "") {
-      DRAM_Offset = "0";
+      if(op.getAffineMap().isEmpty()){
+        ///// For %2 = ADORA.BlockLoad %arg2 [] : memref<?xi32> -> memref<2xi32>
+        DRAM_Offset = "0";
+      }
+      else{
+        ///// For %2 = ADORA.BlockLoad %arg2 [11, 10] : memref<20x506xi32> -> memref<2x506xi32>
+        for(int exprIdx = 0; exprIdx < op.getAffineMap().getResults().size(); exprIdx++){
+          AffineExpr expr = op.getAffineMap().getResult(exprIdx);
+          assert(expr.getKind() == AffineExprKind::Constant);
+          std::string cstValue = std::to_string(expr.dyn_cast<AffineConstantExpr>().getValue());
+          assert(cstValue != "");
+          if(cstValue == "0")
+            continue;
+          else{
+            // SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/exprIdx, /*map=*/op.getAffineMap());
+            int64_t elements_each_step = DataBytes;
+            for (unsigned i = exprIdx + 1; i < SourceShape.size(); i++){
+              elements_each_step *= SourceShape[i];
+            }
+            if(DRAM_Offset != "")
+              DRAM_Offset = DRAM_Offset + " + ";
+            DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + cstValue;
+          }
+        }
+      }
+      if(DRAM_Offset == "") {
+        DRAM_Offset = "0";
+      }
     }
 
     /// Get DMA_Request_Offset
@@ -535,8 +562,8 @@ public:
 
         for(unsigned d = 0; d < Dimensions.size(); d++){
           int64_t elements_each_step = DataBytes;
-          for (unsigned i = Dimensions[d] + 1; i < SourceShape.size(); i++){
-            elements_each_step *= SourceShape[i];
+          for (unsigned i = Dimensions[d] + 1; i < TargetShape.size(); i++){
+            elements_each_step *= TargetShape[i];
           }
           if(DRAM_Offset != "")
             DRAM_Offset = DRAM_Offset + " + ";
@@ -545,7 +572,34 @@ public:
       }
     }
     if(DRAM_Offset == "") {
-      DRAM_Offset = "0";
+      if(op.getAffineMap().isEmpty()){
+        ///// ADORA.Blockstore %1, %arg2 [] :  memref<2xi32> -> memref<?xi32> 
+        DRAM_Offset = "0";
+      }
+      else{
+        ///// ADORA.Blockstore %1, %arg2 [11, 10] : memref<2x506xi32> -> memref<20x506xi32>
+        for(int exprIdx = 0; exprIdx < op.getAffineMap().getResults().size(); exprIdx++){
+          AffineExpr expr = op.getAffineMap().getResult(exprIdx);
+          assert(expr.getKind() == AffineExprKind::Constant);
+          std::string cstValue = std::to_string(expr.dyn_cast<AffineConstantExpr>().getValue());
+          assert(cstValue != "");
+          if(cstValue == "0")
+            continue;
+          else{
+            // SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/exprIdx, /*map=*/op.getAffineMap());
+            int64_t elements_each_step = DataBytes;
+            for (unsigned i = exprIdx + 1; i < TargetShape.size(); i++){
+              elements_each_step *= TargetShape[i];
+            }
+            if(DRAM_Offset != "")
+              DRAM_Offset = DRAM_Offset + " + ";
+            DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + cstValue;
+          }
+        }
+      }
+      if(DRAM_Offset == "") {
+        DRAM_Offset = "0";
+      }
     }
 
     /// Get DMA_Request_Offset
@@ -1425,7 +1479,7 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(
   CFGandEXE << "load_cfg((void*)" << CFGarrayName << ", 0x" << std::hex << cfgBaseAddrSpad << std::dec << ", " 
        << cfg_len << ", " << /*_task_id=*/"_task_id" << ", " << /*_ld_cfg_dep*/"LD_DEP_EX_LAST_TASK" << ");\n";
   CFGandEXE << "config(0x" << std::hex << cfgBaseAddrCtrl << std::dec << ", " << cfgNum << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/ 0 << ");\n";
-  CFGandEXE << "execute(0x" << std::hex << iob_ens << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"EX_DEP_ST_LAST_TASK" << ");\n";
+  CFGandEXE << "execute(0x" << std::hex << iob_ens << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"LD_DEP_ST_LAST_TASK" << ");\n";
 
   KnToCfgExe[kernel] = CFGandEXE.str();
   

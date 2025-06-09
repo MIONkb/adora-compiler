@@ -1,0 +1,35 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="kernel_fir_0", size="400", offset="0,0", pattern="16,25", color = black];
+Input1[opcode = "Input", ref_name="kernel_fir_1", size="400", offset="0,396", pattern="-16,25", color = black];
+MUL2[opcode = "MUL", color = black];
+ADD3[opcode = "ADD", color = black];
+Input4[opcode = "Input", ref_name="kernel_fir_0", size="400", offset="0,4", pattern="16,25", color = black];
+Input5[opcode = "Input", ref_name="kernel_fir_1", size="400", offset="0,392", pattern="-16,25", color = black];
+MUL6[opcode = "MUL", color = black];
+ADD7[opcode = "ADD", color = black];
+Input8[opcode = "Input", ref_name="kernel_fir_0", size="400", offset="0,8", pattern="16,25", color = black];
+Input9[opcode = "Input", ref_name="kernel_fir_1", size="400", offset="0,388", pattern="-16,25", color = black];
+MUL10[opcode = "MUL", color = black];
+ADD11[opcode = "ADD", color = black];
+Input12[opcode = "Input", ref_name="kernel_fir_0", size="400", offset="0,12", pattern="16,25", color = black];
+Input13[opcode = "Input", ref_name="kernel_fir_1", size="400", offset="0,384", pattern="-16,25", color = black];
+MUL14[opcode = "MUL", color = black];
+ACC15[opcode = "ACC", acc_params="0,25,1,1", acc_first=1, color = black];
+Output18[opcode = "Output", ref_name="kernel_fir_2", size="8", offset="0,0", pattern="0,25", color = purple];
+Input0 -> MUL2[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> MUL2[color = black, style = bold, operand = 1, label = "Op=1"];
+MUL2 -> ADD3[color = black, style = bold, operand = 1, label = "Op=1"];
+Input4 -> MUL6[color = black, style = bold, operand = 0, label = "Op=0"];
+Input5 -> MUL6[color = black, style = bold, operand = 1, label = "Op=1"];
+ADD3 -> ADD7[color = black, style = bold, operand = 0, label = "Op=0"];
+MUL6 -> ADD7[color = black, style = bold, operand = 1, label = "Op=1"];
+Input8 -> MUL10[color = black, style = bold, operand = 0, label = "Op=0"];
+Input9 -> MUL10[color = black, style = bold, operand = 1, label = "Op=1"];
+ADD7 -> ADD11[color = black, style = bold, operand = 0, label = "Op=0"];
+MUL10 -> ADD11[color = black, style = bold, operand = 1, label = "Op=1"];
+Input12 -> MUL14[color = black, style = bold, operand = 0, label = "Op=0"];
+Input13 -> MUL14[color = black, style = bold, operand = 1, label = "Op=1"];
+ADD11 -> ACC15[color = black, style = bold, operand = 0, label = "Op=0"];
+MUL14 -> ACC15[color = black, style = bold, operand = 1, label = "Op=1"];
+ACC15 -> Output18[color = black, style = bold, operand = 0, label = "Op=0"];
+}

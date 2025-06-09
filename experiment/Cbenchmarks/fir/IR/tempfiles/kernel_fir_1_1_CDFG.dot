@@ -1,0 +1,18 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="kernel_fir_0", size="400", offset="0,0", pattern="4,100", color = black];
+Input1[opcode = "Input", ref_name="kernel_fir_1", size="400", offset="0,396", pattern="-4,100", color = black];
+MUL2[opcode = "MUL", color = black];
+ADD3[opcode = "ADD", color = black];
+yield4[opcode = "yield", color = black];
+for5[opcode = "for", color = purple];
+Output6[opcode = "Output", ref_name="kernel_fir_2", size="8", offset="0,0", pattern="0,100", color = purple];
+CONST7[opcode = "CONST", value="0x00000000", color = black];
+Input0 -> MUL2[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> MUL2[color = black, style = bold, operand = 1, label = "Op=1"];
+for5 -> ADD3[color = black, style = dashed, operand = 0, iterdist = 0, label = "Op=0, IterDist = 0"];
+MUL2 -> ADD3[color = black, style = bold, operand = 1, label = "Op=1"];
+ADD3 -> yield4[color = black, style = bold, operand = 0, label = "Op=0"];
+CONST7 -> for5[color = black, style = bold, operand = 0, label = "Op=0"];
+for5 -> Output6[color = black, style = bold, operand = 0, label = "Op=0"];
+yield4 -> for5[color = black, style = dashed, operand = 1, iterdist = -4096, label = "Op=1, IterDist = -4096"];
+}

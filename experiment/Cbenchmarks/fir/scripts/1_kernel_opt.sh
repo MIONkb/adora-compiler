@@ -41,6 +41,7 @@ for file in "$srcfolder"/*; do
         "$file" -o $tarfolder/"$filename"_opt.mlir
 
         # --adora-auto-unroll="cgra-adg=${CGRA_ADG_PATH}/cgra_adg.json" \
+        # --adora-extract-affine-for-to-kernel \
         # --adora-simplify-loadstore \
         # --adora-extract-affine-for-to-kernel \
         # --adora-hoist-loadstore \

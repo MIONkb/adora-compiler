@@ -66,7 +66,11 @@ struct AffineForKernelCaptor: public ExtractAffineForToKernelBase<AffineForKerne
               op->getName().getStringRef()== AffineVectorLoadOp ::getOperationName()||
               op->getName().getStringRef()== AffineVectorStoreOp ::getOperationName()||
               op->getName().getStringRef()== AffineYieldOp ::getOperationName() ||
-              op->getName().getStringRef()== mlir::memref::LoadOp ::getOperationName())
+              op->getName().getStringRef()== mlir::memref::LoadOp ::getOperationName()||
+              /// arith
+              op->getName().getStringRef()== mlir::arith::TruncFOp ::getOperationName() ||
+              op->getName().getStringRef()== mlir::arith::TruncIOp ::getOperationName() ||
+              op->getName().getStringRef()== mlir::arith::UIToFPOp ::getOperationName() )
           {
             return WalkResult::advance();
           }

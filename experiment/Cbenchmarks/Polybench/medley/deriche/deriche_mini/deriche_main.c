@@ -74,15 +74,18 @@ void print_image1and2(int w, int h,
   // for (i = 0; i < w; i++)
   //   for (j = 0; j < h; j++) {
 
-  for (i = 0; i < w; i=i+4){
-    for (j = 0; j < h; j = j + 4) {
+  for (i = 0; i < w; i=i+1){
+    for (j = 0; j < h; j = j + 1) {
     //   if ((i * h + j) % 20 == 0) fprintf(POLYBENCH_DUMP_TARGET, "\n");
     //   fprintf(POLYBENCH_DUMP_TARGET, DATA_PRINTF_MODIFIER, imgOut[i][j]);
       // if ((i * h + j) % 20 == 0) printf("\n");
       // printf(DATA_PRINTF_MODIFIER, imgOut[i][j]);
-      printf("[%d, %d]%ld-%ld," , i, j, (int)(10000 * imgOut1[i][j]), (int)(10000 * imgOut2[i][j]));
-      printf("%x-%x\t", FpToHex(imgOut1[i][j]), FpToHex(imgOut2[i][j]));
+      if((int)(10000 * imgOut1[i][j]) != (int)(10000 * imgOut2[i][j])){
+        printf("[%d, %d]%ld-%ld," , i, j, (int)(10000 * imgOut1[i][j]), (int)(10000 * imgOut2[i][j]));
+        printf("%x-%x\t", FpToHex(imgOut1[i][j]), FpToHex(imgOut2[i][j]));
+      }
     }
+    printf("over one line:[%d, %d]%x-%x" , i, 0, FpToHex(imgOut1[i][0]), FpToHex(imgOut2[i][0]));
     printf("\n");
   }
   POLYBENCH_DUMP_END("imgOut");
