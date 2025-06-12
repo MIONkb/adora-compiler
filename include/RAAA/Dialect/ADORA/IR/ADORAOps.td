@@ -512,4 +512,57 @@ def IselOp : ADORA_Op<"isel">{
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// Merge op
+//===----------------------------------------------------------------------===//
+def MergeOp : ADORA_Op<"merge">{
+  let summary = "Merge node in CGRA processing elements (PE) used in systolic execution.";
+  let description = [{
+    "Merge" combines multiple inputs into a single sequence of outputs, akin to Parallel-to-Sequential conversion. 
+    The merge operation should be linked to an output node.
+  }];
+
+  let builders = [
+    OpBuilder<(ins "ValueRange":$inputs)>
+  ];
+
+ // Define inputs as a variadic argument.
+  let arguments = (ins Variadic<AnyType>: $inputs);
+  
+  // Define outputs.
+  let results = (outs AnyType: $out);
+  // let results = (outs AnyStaticShapeMemRef: $result); /// No results for 
+  
+  let extraClassDeclaration = [{
+    ::mlir::Value getResult(){
+      return getOut();
+    }
+
+    ::mlir::VectorType getOutVectorType(){
+      return ::llvm::cast<VectorType>(getOut().getType());
+    }
+
+    ArrayRef<int64_t> getOutVectorShape() const {
+      return getOutVectorType().getShape();
+    }
+
+    Type getElementType(){
+      return getOutVectorType().getElementType();
+    }
+
+    ::mlir::Value getInput(int idx){
+      return getInputs()[idx];
+    }
+
+    int getMergeNumber(){
+      return getInputs().size();
+    }
+  }];
+
+  // let hasCustomAssemblyFormat = 1;
+  // let assemblyFormat = "$in attr-dict `:` type($in) `->` type($out)";
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
 #endif // ADORA_OPS

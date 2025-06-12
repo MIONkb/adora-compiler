@@ -483,5 +483,102 @@ LogicalResult IselOp::verify() {
 }
 
 
+//===----------------------------------------------------------------------===//
+// MergeOp
+//===----------------------------------------------------------------------===//
+void MergeOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ValueRange inputs){
+  assert(inputs.size() > 1);
+  ::mlir::Type intype = inputs[0].getType();
+  for(auto input : inputs){
+    assert(input.getType() == intype && "All inputs of merge op should be the same type.");
+  }
+
+  SmallVector<int64_t> shape;
+  shape.push_back(inputs.size());
+
+  ::mlir::Type outtype = VectorType::get(shape, intype);
+  build(odsBuilder, odsState, outtype, inputs);
+}
+
+LogicalResult MergeOp::verify() {
+  if(!(getInputs().size() > 1)){
+    return emitOpError(
+        "merge op: input number of merge op should be larger than 1");
+  }
+  ::mlir::Type intype = getInput(0).getType();
+  for(auto input : getInputs()){
+    if(input.getType() != intype){
+      return emitOpError(
+        "merge op: all inputs of merge op should be the same type.");
+    }
+  }
+
+  ::mlir::Type outtype = ::llvm::cast<VectorType>(getOut().getType()).getElementType();
+  if(outtype != intype){
+    return emitOpError(
+        "merge op: input and output element type should be the same");
+  }
+
+  llvm::ArrayRef<int64_t> shape = ::llvm::cast<VectorType>(getOut().getType()).getShape();
+  int num = 1;
+  for(auto s : shape){
+    num *= s;
+  }
+
+  if(num != getInputs().size()){
+    return emitOpError(
+        "merge op: the count of inputs must correspond to the sum of the element count in the output vectors");
+  }
+
+  return success();
+}
+
+void MergeOp::print(OpAsmPrinter &p) {
+  Type intype = getElementType();
+  p << " " ;
+  /// print inputs
+  llvm::interleaveComma(getInputs(), p, [&](auto it) {
+    p << it;
+  });
+
+  p << " : " ;
+  llvm::interleaveComma(getInputs(), p, [&](auto it) {
+    p << intype;
+  });
+  p << " -> " ;
+  p << getOutVectorType();
+
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+ParseResult MergeOp::parse(OpAsmParser &parser, OperationState &result) {
+  auto &builder = parser.getBuilder();
+  Type outType;
+
+  /// parse inputs
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> inputs;
+  if (parser.parseOperandList(inputs))
+    return failure();
+  
+  /// parse inputs type
+  SmallVector<Type, 3> types;
+  if (parser.parseColonTypeList(types))
+    return failure();
+
+  /// zip inputs and type
+  for (auto pair : llvm::zip(inputs, types)){
+    if (parser.resolveOperand(std::get<0>(pair),std::get<1>(pair), result.operands))
+      return failure();
+  }
+
+  /// parse output type
+  if (parser.parseArrowTypeList(result.types))
+  {
+    return failure();
+  }
+
+  return parser.parseOptionalAttrDict(result.attributes);
+}
+
 #define GET_OP_CLASSES
 #include "RAAA/Dialect/ADORA/IR/ADORAOps.cpp.inc"

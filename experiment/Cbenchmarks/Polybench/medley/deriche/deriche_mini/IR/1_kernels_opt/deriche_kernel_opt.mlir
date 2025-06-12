@@ -28,88 +28,88 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f16, dense<16> : 
     affine.store %0, %alloca_13[] : memref<f32>
     %alloca_14 = memref.alloca() : memref<f32>
     affine.store %0, %alloca_14[] : memref<f32>
-    // affine.for %arg4 = 0 to 64 step 32 {
-    //   %1 = ADORA.BlockLoad %arg0 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "0", KernelName = "kernel_deriche_0"}
-    //   %2 = ADORA.LocalMemAlloc memref<32x64xf32>  {Id = "1", KernelName = "kernel_deriche_0"}
-    //   %3 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "2", KernelName = "kernel_deriche_0"}
-    //   %4 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "3", KernelName = "kernel_deriche_0"}
-    //   %5 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "4", KernelName = "kernel_deriche_0"}
-    //   ADORA.kernel {
-    //     affine.for %arg5 = 0 to 32 {
-    //       %6:3 = affine.for %arg6 = 0 to 64 iter_args(%arg7 = %cst_5, %arg8 = %cst_5, %arg9 = %cst_5) -> (f32, f32, f32) {
-    //         %7 = affine.load %1[%arg5, %arg6] : memref<32x64xf32>
-    //         %8 = arith.mulf %7, %cst_2 : f32
-    //         %9 = arith.mulf %arg7, %cst : f32
-    //         %10 = arith.addf %8, %9 : f32
-    //         %11 = arith.mulf %arg8, %cst_3 : f32
-    //         %12 = arith.addf %10, %11 : f32
-    //         %13 = arith.mulf %arg9, %cst_4 : f32
-    //         %14 = arith.addf %12, %13 : f32
-    //         affine.store %14, %2[%arg5, %arg6] : memref<32x64xf32>
-    //         affine.yield %7, %14, %arg8 : f32, f32, f32
-    //       }
-    //       affine.store %6#2, %4[0] : memref<2xf32>
-    //       affine.store %6#1, %5[0] : memref<2xf32>
-    //       affine.store %6#0, %3[0] : memref<2xf32>
-    //     }
-    //     ADORA.terminator
-    //   } {KernelName = "kernel_deriche_0"}
-    //   ADORA.BlockStore %5, %alloca_12 [] : memref<2xf32> -> memref<f32>  {Id = "4", KernelName = "kernel_deriche_0"}
-    //   ADORA.BlockStore %4, %alloca_11 [] : memref<2xf32> -> memref<f32>  {Id = "3", KernelName = "kernel_deriche_0"}
-    //   ADORA.BlockStore %3, %alloca_14 [] : memref<2xf32> -> memref<f32>  {Id = "2", KernelName = "kernel_deriche_0"}
-    //   ADORA.BlockStore %2, %arg2 [%arg4, 0] : memref<32x64xf32> -> memref<?x64xf32>  {Id = "1", KernelName = "kernel_deriche_0"}
-    // }
-    // affine.for %arg4 = 0 to 64 step 32 {
-    //   %1 = ADORA.BlockLoad %arg0 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "0", KernelName = "kernel_deriche_1"}
-    //   %2 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "1", KernelName = "kernel_deriche_1"}
-    //   %3 = ADORA.LocalMemAlloc memref<32x64xf32>  {Id = "2", KernelName = "kernel_deriche_1"}
-    //   %4 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "3", KernelName = "kernel_deriche_1"}
-    //   %5 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "4", KernelName = "kernel_deriche_1"}
-    //   %6 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "5", KernelName = "kernel_deriche_1"}
-    //   ADORA.kernel {
-    //     affine.for %arg5 = 0 to 32 {
-    //       %7:4 = affine.for %arg6 = 0 to 64 iter_args(%arg7 = %cst_5, %arg8 = %cst_5, %arg9 = %cst_5, %arg10 = %cst_5) -> (f32, f32, f32, f32) {
-    //         %8 = arith.mulf %arg7, %cst_0 : f32
-    //         %9 = arith.mulf %arg8, %cst_1 : f32
-    //         %10 = arith.addf %8, %9 : f32
-    //         %11 = arith.mulf %arg9, %cst_3 : f32
-    //         %12 = arith.addf %10, %11 : f32
-    //         %13 = arith.mulf %arg10, %cst_4 : f32
-    //         %14 = arith.addf %12, %13 : f32
-    //         affine.store %14, %3[%arg5, -%arg6 + 63] : memref<32x64xf32>
-    //         %15 = affine.load %1[%arg5, -%arg6 + 63] : memref<32x64xf32>
-    //         affine.yield %15, %arg7, %14, %arg9 : f32, f32, f32, f32
-    //       }
-    //       affine.store %7#3, %5[0] : memref<2xf32>
-    //       affine.store %7#2, %6[0] : memref<2xf32>
-    //       affine.store %7#1, %4[0] : memref<2xf32>
-    //       affine.store %7#0, %2[0] : memref<2xf32>
-    //     }
-    //     ADORA.terminator
-    //   } {KernelName = "kernel_deriche_1"}
-    //   ADORA.BlockStore %6, %alloca_6 [] : memref<2xf32> -> memref<f32>  {Id = "5", KernelName = "kernel_deriche_1"}
-    //   ADORA.BlockStore %5, %alloca [] : memref<2xf32> -> memref<f32>  {Id = "4", KernelName = "kernel_deriche_1"}
-    //   ADORA.BlockStore %4, %alloca_9 [] : memref<2xf32> -> memref<f32>  {Id = "3", KernelName = "kernel_deriche_1"}
-    //   ADORA.BlockStore %3, %arg3 [%arg4, 0] : memref<32x64xf32> -> memref<?x64xf32>  {Id = "2", KernelName = "kernel_deriche_1"}
-    //   ADORA.BlockStore %2, %alloca_10 [] : memref<2xf32> -> memref<f32>  {Id = "1", KernelName = "kernel_deriche_1"}
-    // }
-    // affine.for %arg4 = 0 to 64 step 32 {
-    //   %1 = ADORA.BlockLoad %arg2 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "0", KernelName = "kernel_deriche_2"}
-    //   %2 = ADORA.BlockLoad %arg3 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "1", KernelName = "kernel_deriche_2"}
-    //   %3 = ADORA.LocalMemAlloc memref<32x64xf32>  {Id = "2", KernelName = "kernel_deriche_2"}
-    //   ADORA.kernel {
-    //     affine.for %arg5 = 0 to 32 {
-    //       affine.for %arg6 = 0 to 64 {
-    //         %4 = affine.load %1[%arg5, %arg6] : memref<32x64xf32>
-    //         %5 = affine.load %2[%arg5, %arg6] : memref<32x64xf32>
-    //         %6 = arith.addf %4, %5 : f32
-    //         affine.store %6, %3[%arg5, %arg6] : memref<32x64xf32>
-    //       }
-    //     }
-    //     ADORA.terminator
-    //   } {KernelName = "kernel_deriche_2"}
-    //   ADORA.BlockStore %3, %arg1 [%arg4, 0] : memref<32x64xf32> -> memref<?x64xf32>  {Id = "2", KernelName = "kernel_deriche_2"}
-    // }
+    affine.for %arg4 = 0 to 64 step 32 {
+      %1 = ADORA.BlockLoad %arg0 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "0", KernelName = "kernel_deriche_0"}
+      %2 = ADORA.LocalMemAlloc memref<32x64xf32>  {Id = "1", KernelName = "kernel_deriche_0"}
+      %3 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "2", KernelName = "kernel_deriche_0"}
+      %4 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "3", KernelName = "kernel_deriche_0"}
+      %5 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "4", KernelName = "kernel_deriche_0"}
+      ADORA.kernel {
+        affine.for %arg5 = 0 to 32 {
+          %6:3 = affine.for %arg6 = 0 to 64 iter_args(%arg7 = %cst_5, %arg8 = %cst_5, %arg9 = %cst_5) -> (f32, f32, f32) {
+            %7 = affine.load %1[%arg5, %arg6] : memref<32x64xf32>
+            %8 = arith.mulf %7, %cst_2 : f32
+            %9 = arith.mulf %arg7, %cst : f32
+            %10 = arith.addf %8, %9 : f32
+            %11 = arith.mulf %arg8, %cst_3 : f32
+            %12 = arith.addf %10, %11 : f32
+            %13 = arith.mulf %arg9, %cst_4 : f32
+            %14 = arith.addf %12, %13 : f32
+            affine.store %14, %2[%arg5, %arg6] : memref<32x64xf32>
+            affine.yield %7, %14, %arg8 : f32, f32, f32
+          }
+          affine.store %6#2, %4[0] : memref<2xf32>
+          affine.store %6#1, %5[0] : memref<2xf32>
+          affine.store %6#0, %3[0] : memref<2xf32>
+        }
+        ADORA.terminator
+      } {KernelName = "kernel_deriche_0"}
+      ADORA.BlockStore %5, %alloca_12 [] : memref<2xf32> -> memref<f32>  {Id = "4", KernelName = "kernel_deriche_0"}
+      ADORA.BlockStore %4, %alloca_11 [] : memref<2xf32> -> memref<f32>  {Id = "3", KernelName = "kernel_deriche_0"}
+      ADORA.BlockStore %3, %alloca_14 [] : memref<2xf32> -> memref<f32>  {Id = "2", KernelName = "kernel_deriche_0"}
+      ADORA.BlockStore %2, %arg2 [%arg4, 0] : memref<32x64xf32> -> memref<?x64xf32>  {Id = "1", KernelName = "kernel_deriche_0"}
+    }
+    affine.for %arg4 = 0 to 64 step 32 {
+      %1 = ADORA.BlockLoad %arg0 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "0", KernelName = "kernel_deriche_1"}
+      %2 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "1", KernelName = "kernel_deriche_1"}
+      %3 = ADORA.LocalMemAlloc memref<32x64xf32>  {Id = "2", KernelName = "kernel_deriche_1"}
+      %4 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "3", KernelName = "kernel_deriche_1"}
+      %5 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "4", KernelName = "kernel_deriche_1"}
+      %6 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "5", KernelName = "kernel_deriche_1"}
+      ADORA.kernel {
+        affine.for %arg5 = 0 to 32 {
+          %7:4 = affine.for %arg6 = 0 to 64 iter_args(%arg7 = %cst_5, %arg8 = %cst_5, %arg9 = %cst_5, %arg10 = %cst_5) -> (f32, f32, f32, f32) {
+            %8 = arith.mulf %arg7, %cst_0 : f32
+            %9 = arith.mulf %arg8, %cst_1 : f32
+            %10 = arith.addf %8, %9 : f32
+            %11 = arith.mulf %arg9, %cst_3 : f32
+            %12 = arith.addf %10, %11 : f32
+            %13 = arith.mulf %arg10, %cst_4 : f32
+            %14 = arith.addf %12, %13 : f32
+            affine.store %14, %3[%arg5, -%arg6 + 63] : memref<32x64xf32>
+            %15 = affine.load %1[%arg5, -%arg6 + 63] : memref<32x64xf32>
+            affine.yield %15, %arg7, %14, %arg9 : f32, f32, f32, f32
+          }
+          affine.store %7#3, %5[0] : memref<2xf32>
+          affine.store %7#2, %6[0] : memref<2xf32>
+          affine.store %7#1, %4[0] : memref<2xf32>
+          affine.store %7#0, %2[0] : memref<2xf32>
+        }
+        ADORA.terminator
+      } {KernelName = "kernel_deriche_1"}
+      ADORA.BlockStore %6, %alloca_6 [] : memref<2xf32> -> memref<f32>  {Id = "5", KernelName = "kernel_deriche_1"}
+      ADORA.BlockStore %5, %alloca [] : memref<2xf32> -> memref<f32>  {Id = "4", KernelName = "kernel_deriche_1"}
+      ADORA.BlockStore %4, %alloca_9 [] : memref<2xf32> -> memref<f32>  {Id = "3", KernelName = "kernel_deriche_1"}
+      ADORA.BlockStore %3, %arg3 [%arg4, 0] : memref<32x64xf32> -> memref<?x64xf32>  {Id = "2", KernelName = "kernel_deriche_1"}
+      ADORA.BlockStore %2, %alloca_10 [] : memref<2xf32> -> memref<f32>  {Id = "1", KernelName = "kernel_deriche_1"}
+    }
+    affine.for %arg4 = 0 to 64 step 32 {
+      %1 = ADORA.BlockLoad %arg2 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "0", KernelName = "kernel_deriche_2"}
+      %2 = ADORA.BlockLoad %arg3 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "1", KernelName = "kernel_deriche_2"}
+      %3 = ADORA.LocalMemAlloc memref<32x64xf32>  {Id = "2", KernelName = "kernel_deriche_2"}
+      ADORA.kernel {
+        affine.for %arg5 = 0 to 32 {
+          affine.for %arg6 = 0 to 64 {
+            %4 = affine.load %1[%arg5, %arg6] : memref<32x64xf32>
+            %5 = affine.load %2[%arg5, %arg6] : memref<32x64xf32>
+            %6 = arith.addf %4, %5 : f32
+            affine.store %6, %3[%arg5, %arg6] : memref<32x64xf32>
+          }
+        }
+        ADORA.terminator
+      } {KernelName = "kernel_deriche_2"}
+      ADORA.BlockStore %3, %arg1 [%arg4, 0] : memref<32x64xf32> -> memref<?x64xf32>  {Id = "2", KernelName = "kernel_deriche_2"}
+    }
     affine.for %arg4 = 0 to 64 step 32 {
       %1 = ADORA.BlockLoad %arg1 [0, %arg4] : memref<?x64xf32> -> memref<64x32xf32>  {Id = "0", KernelName = "kernel_deriche_3"}
       %2 = ADORA.LocalMemAlloc memref<64x32xf32>  {Id = "1", KernelName = "kernel_deriche_3"}
@@ -139,60 +139,59 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f16, dense<16> : 
       ADORA.BlockStore %5, %alloca_13 [] : memref<2xf32> -> memref<f32>  {Id = "4", KernelName = "kernel_deriche_3"}
       ADORA.BlockStore %4, %alloca_12 [] : memref<2xf32> -> memref<f32>  {Id = "3", KernelName = "kernel_deriche_3"}
       ADORA.BlockStore %3, %alloca_11 [] : memref<2xf32> -> memref<f32>  {Id = "2", KernelName = "kernel_deriche_3"}
-      // ADORA.BlockStore %2, %arg2 [0, %arg4] : memref<64x32xf32> -> memref<?x64xf32>  {Id = "1", KernelName = "kernel_deriche_3"}
-      ADORA.BlockStore %2, %arg2 [%arg4, 0] : memref<64x32xf32> -> memref<?x64xf32>  {Id = "1", KernelName = "kernel_deriche_3"}
+      ADORA.BlockStore %2, %arg2 [0, %arg4] : memref<64x32xf32> -> memref<?x64xf32>  {Id = "1", KernelName = "kernel_deriche_3"}
     }
-  //   affine.for %arg4 = 0 to 64 step 32 {
-  //     %1 = ADORA.BlockLoad %arg1 [0, %arg4] : memref<?x64xf32> -> memref<64x32xf32>  {Id = "0", KernelName = "kernel_deriche_4"}
-  //     %2 = ADORA.LocalMemAlloc memref<64x32xf32>  {Id = "1", KernelName = "kernel_deriche_4"}
-  //     %3 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "2", KernelName = "kernel_deriche_4"}
-  //     %4 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "3", KernelName = "kernel_deriche_4"}
-  //     %5 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "4", KernelName = "kernel_deriche_4"}
-  //     %6 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "5", KernelName = "kernel_deriche_4"}
-  //     ADORA.kernel {
-  //       affine.for %arg5 = 0 to 32 {
-  //         %7:4 = affine.for %arg6 = 0 to 64 iter_args(%arg7 = %cst_5, %arg8 = %cst_5, %arg9 = %cst_5, %arg10 = %cst_5) -> (f32, f32, f32, f32) {
-  //           %8 = arith.mulf %arg7, %cst_0 : f32
-  //           %9 = arith.mulf %arg8, %cst_1 : f32
-  //           %10 = arith.addf %8, %9 : f32
-  //           %11 = arith.mulf %arg9, %cst_3 : f32
-  //           %12 = arith.addf %10, %11 : f32
-  //           %13 = arith.mulf %arg10, %cst_4 : f32
-  //           %14 = arith.addf %12, %13 : f32
-  //           affine.store %14, %2[-%arg6 + 63, %arg5] : memref<64x32xf32>
-  //           %15 = affine.load %1[-%arg6 + 63, %arg5] : memref<64x32xf32>
-  //           affine.yield %15, %arg7, %14, %arg9 : f32, f32, f32, f32
-  //         }
-  //         affine.store %7#3, %3[0] : memref<2xf32>
-  //         affine.store %7#2, %4[0] : memref<2xf32>
-  //         affine.store %7#1, %5[0] : memref<2xf32>
-  //         affine.store %7#0, %6[0] : memref<2xf32>
-  //       }
-  //       ADORA.terminator
-  //     } {KernelName = "kernel_deriche_4"}
-  //     ADORA.BlockStore %6, %alloca_8 [] : memref<2xf32> -> memref<f32>  {Id = "5", KernelName = "kernel_deriche_4"}
-  //     ADORA.BlockStore %5, %alloca_7 [] : memref<2xf32> -> memref<f32>  {Id = "4", KernelName = "kernel_deriche_4"}
-  //     ADORA.BlockStore %4, %alloca_6 [] : memref<2xf32> -> memref<f32>  {Id = "3", KernelName = "kernel_deriche_4"}
-  //     ADORA.BlockStore %3, %alloca [] : memref<2xf32> -> memref<f32>  {Id = "2", KernelName = "kernel_deriche_4"}
-  //     ADORA.BlockStore %2, %arg3 [0, %arg4] : memref<64x32xf32> -> memref<?x64xf32>  {Id = "1", KernelName = "kernel_deriche_4"}
-  //   }
-  //   affine.for %arg4 = 0 to 64 step 32 {
-  //     %1 = ADORA.BlockLoad %arg2 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "0", KernelName = "kernel_deriche_5"}
-  //     %2 = ADORA.BlockLoad %arg3 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "1", KernelName = "kernel_deriche_5"}
-  //     %3 = ADORA.LocalMemAlloc memref<32x64xf32>  {Id = "2", KernelName = "kernel_deriche_5"}
-  //     ADORA.kernel {
-  //       affine.for %arg5 = 0 to 32 {
-  //         affine.for %arg6 = 0 to 64 {
-  //           %4 = affine.load %1[%arg5, %arg6] : memref<32x64xf32>
-  //           %5 = affine.load %2[%arg5, %arg6] : memref<32x64xf32>
-  //           %6 = arith.addf %4, %5 : f32
-  //           affine.store %6, %3[%arg5, %arg6] : memref<32x64xf32>
-  //         }
-  //       }
-  //       ADORA.terminator
-  //     } {KernelName = "kernel_deriche_5"}
-  //     ADORA.BlockStore %3, %arg1 [%arg4, 0] : memref<32x64xf32> -> memref<?x64xf32>  {Id = "2", KernelName = "kernel_deriche_5"}
-  //   }
+    affine.for %arg4 = 0 to 64 step 32 {
+      %1 = ADORA.BlockLoad %arg1 [0, %arg4] : memref<?x64xf32> -> memref<64x32xf32>  {Id = "0", KernelName = "kernel_deriche_4"}
+      %2 = ADORA.LocalMemAlloc memref<64x32xf32>  {Id = "1", KernelName = "kernel_deriche_4"}
+      %3 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "2", KernelName = "kernel_deriche_4"}
+      %4 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "3", KernelName = "kernel_deriche_4"}
+      %5 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "4", KernelName = "kernel_deriche_4"}
+      %6 = ADORA.LocalMemAlloc memref<2xf32>  {Id = "5", KernelName = "kernel_deriche_4"}
+      ADORA.kernel {
+        affine.for %arg5 = 0 to 32 {
+          %7:4 = affine.for %arg6 = 0 to 64 iter_args(%arg7 = %cst_5, %arg8 = %cst_5, %arg9 = %cst_5, %arg10 = %cst_5) -> (f32, f32, f32, f32) {
+            %8 = arith.mulf %arg7, %cst_0 : f32
+            %9 = arith.mulf %arg8, %cst_1 : f32
+            %10 = arith.addf %8, %9 : f32
+            %11 = arith.mulf %arg9, %cst_3 : f32
+            %12 = arith.addf %10, %11 : f32
+            %13 = arith.mulf %arg10, %cst_4 : f32
+            %14 = arith.addf %12, %13 : f32
+            affine.store %14, %2[-%arg6 + 63, %arg5] : memref<64x32xf32>
+            %15 = affine.load %1[-%arg6 + 63, %arg5] : memref<64x32xf32>
+            affine.yield %15, %arg7, %14, %arg9 : f32, f32, f32, f32
+          }
+          affine.store %7#3, %3[0] : memref<2xf32>
+          affine.store %7#2, %4[0] : memref<2xf32>
+          affine.store %7#1, %5[0] : memref<2xf32>
+          affine.store %7#0, %6[0] : memref<2xf32>
+        }
+        ADORA.terminator
+      } {KernelName = "kernel_deriche_4"}
+      ADORA.BlockStore %6, %alloca_8 [] : memref<2xf32> -> memref<f32>  {Id = "5", KernelName = "kernel_deriche_4"}
+      ADORA.BlockStore %5, %alloca_7 [] : memref<2xf32> -> memref<f32>  {Id = "4", KernelName = "kernel_deriche_4"}
+      ADORA.BlockStore %4, %alloca_6 [] : memref<2xf32> -> memref<f32>  {Id = "3", KernelName = "kernel_deriche_4"}
+      ADORA.BlockStore %3, %alloca [] : memref<2xf32> -> memref<f32>  {Id = "2", KernelName = "kernel_deriche_4"}
+      ADORA.BlockStore %2, %arg3 [0, %arg4] : memref<64x32xf32> -> memref<?x64xf32>  {Id = "1", KernelName = "kernel_deriche_4"}
+    }
+    affine.for %arg4 = 0 to 64 step 32 {
+      %1 = ADORA.BlockLoad %arg2 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "0", KernelName = "kernel_deriche_5"}
+      %2 = ADORA.BlockLoad %arg3 [%arg4, 0] : memref<?x64xf32> -> memref<32x64xf32>  {Id = "1", KernelName = "kernel_deriche_5"}
+      %3 = ADORA.LocalMemAlloc memref<32x64xf32>  {Id = "2", KernelName = "kernel_deriche_5"}
+      ADORA.kernel {
+        affine.for %arg5 = 0 to 32 {
+          affine.for %arg6 = 0 to 64 {
+            %4 = affine.load %1[%arg5, %arg6] : memref<32x64xf32>
+            %5 = affine.load %2[%arg5, %arg6] : memref<32x64xf32>
+            %6 = arith.addf %4, %5 : f32
+            affine.store %6, %3[%arg5, %arg6] : memref<32x64xf32>
+          }
+        }
+        ADORA.terminator
+      } {KernelName = "kernel_deriche_5"}
+      ADORA.BlockStore %3, %arg1 [%arg4, 0] : memref<32x64xf32> -> memref<?x64xf32>  {Id = "2", KernelName = "kernel_deriche_5"}
+    }
     return
   }
 }

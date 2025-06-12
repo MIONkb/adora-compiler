@@ -2,11 +2,8 @@
 
 rootfolder=$(pwd)
 IRfolder="IR"
-# srcfolder="$rootfolder/$IRfolder/1_kernels_opt"
-# tarfolder="$rootfolder/$IRfolder/3_cgra_exes"
-# srcfolder="$rootfolder/$IRfolder/extra_opt"
-srcfolder="$rootfolder/$IRfolder/extra_map"
-tarfolder="$rootfolder/$IRfolder/extra_exe"
+srcfolder="$rootfolder/$IRfolder/1_kernels_opt"
+tarfolder="$rootfolder/$IRfolder/3_cgra_exes"
 tempfolder="$rootfolder/$IRfolder/tempfiles"
 # kernel_basename="forward_kernel"
 

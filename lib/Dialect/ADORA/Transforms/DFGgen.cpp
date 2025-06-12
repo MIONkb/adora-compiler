@@ -1953,7 +1953,7 @@ static void HandleSelfCycle(LLVMCDFG* CDFG, bool verbose = true){
         // fornode->addOutputNode(node, /*isBackEdge=*/false);
         // node->addInputNode(fornode,  /*operand_idx=*/ 1, /*isBackEdge=*/false);
 
-        fornode->addInputNode(node,  1, /*isBackEdge=*/true);
+        fornode->addInputNode(node,  /*edgeidx=*/0, /*isBackEdge=*/true);
         node->addOutputNode(fornode, /*isBackEdge=*/true);
         CDFG->addEdge(node, fornode); //To fix: Edge Type
         // for(auto &elem : CDFG->edges()){

@@ -3,7 +3,7 @@
 ######
 rootfolder=$(pwd)
 IRfolder="IR"
-kernel_src=deriche
+kernel_src=fir
 DATASET_Size="MINI_DATASET"
 tarfolder="$rootfolder/$IRfolder/0_kernels"
 

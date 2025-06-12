@@ -268,7 +268,7 @@ public:
               <<", 0x" << std::hex << spadbaddr 
               <<", " << std::dec << DMA_Len 
               <<", " << std::dec << fuse  /*fuse*/
-              <<", _task_id" /*Task id*/ << ", LD_DEP_EX_LAST_TASK" /*Task dep*/
+              <<", _task_id" /*Task id*/ << ", LD_DEP_ST_LAST_TASK" /*Task dep*/
               <<");\n";
       indent() << load_data.str();
       _os << "\n";
@@ -430,7 +430,7 @@ public:
               <<" + " << "spadoffset_" << BLid 
               <<", " << std::dec << DMA_Len 
               <<", " << std::dec << fuse  /*fuse*/
-              <<", _task_id" /*Task id*/ << ", LD_DEP_EX_LAST_TASK" /*Task dep*/
+              <<", _task_id" /*Task id*/ << ", LD_DEP_ST_LAST_TASK" /*Task dep*/
               <<");\n";
       indent() << load_data.str();
 
@@ -1479,7 +1479,7 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(
   CFGandEXE << "load_cfg((void*)" << CFGarrayName << ", 0x" << std::hex << cfgBaseAddrSpad << std::dec << ", " 
        << cfg_len << ", " << /*_task_id=*/"_task_id" << ", " << /*_ld_cfg_dep*/"LD_DEP_EX_LAST_TASK" << ");\n";
   CFGandEXE << "config(0x" << std::hex << cfgBaseAddrCtrl << std::dec << ", " << cfgNum << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/ 0 << ");\n";
-  CFGandEXE << "execute(0x" << std::hex << iob_ens << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"LD_DEP_ST_LAST_TASK" << ");\n";
+  CFGandEXE << "execute(0x" << std::hex << iob_ens << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"EX_DEP_ST_LAST_TASK" << ");\n";
 
   KnToCfgExe[kernel] = CFGandEXE.str();
   

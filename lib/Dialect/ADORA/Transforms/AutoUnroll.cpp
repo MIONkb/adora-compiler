@@ -55,6 +55,7 @@ namespace {
     }
     SmallVector<SmallVector<unsigned>> ConstructUnrollSpaceFromStrategy(SmallVector<ADORA::ForNode> ForNodes);
     LogicalResult chooseAndApplyUnrollStrategyWithDeps(ADORA::KernelOp kernel, mlir::ModuleOp& m);
+    bool KernelIsInPerfectNestedLoop(ADORA::KernelOp kernel);
     void runOnOperation() override;
   };
 } // namespace
@@ -76,6 +77,25 @@ bool OperandRangeContainsValue(::mlir::Operation::operand_range range,  mlir::Va
   return false;
 }
 
+bool ADORAAutoUnroll::KernelIsInPerfectNestedLoop(ADORA::KernelOp kernel){
+  mlir::Operation* parent = kernel.getOperation()->getParentOp();
+  if(!isa_and_present<AffineForOp>(parent))
+    return false;
+  
+  AffineForOp parentfor = dyn_cast<AffineForOp>(parent);
+
+  // We already know that the block can't be empty.
+  auto hasTwoElements = [](Block *block) {
+    auto secondOpIt = std::next(block->begin());
+    return secondOpIt != block->end() && &*secondOpIt == &block->back();
+  };
+
+  // parentForOp's body should be just this kernel and the terminator.
+  if (!hasTwoElements(parentfor.getBody()))
+    return false;
+
+  return true;
+}
 
 /// @brief A design point is a number sequence:
 ///        tilefactor(loop0),unrollfactor(loop0),tilefactor(loop1),unrollfactor(loop1).......
@@ -229,7 +249,10 @@ chooseAndApplyUnrollStrategyWithDeps(ADORA::KernelOp kernel, mlir::ModuleOp& m){
         /// TODO: when to return CannotUnroll
       });
     }
-
+    /// If kernel is not in a perfectly nested loop, cannot unroll.
+    if(strategy == UnrollStrategy::Unroll_and_Jam && !KernelIsInPerfectNestedLoop(kernel)){
+      strategy = UnrollStrategy::CannotUnroll;
+    }
     node.setUnrollStrategy(strategy);
     // urStrategies.push_back(strategy);
     // urStrategies.push_back(UnrollStrategy::CannotUnroll);

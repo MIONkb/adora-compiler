@@ -35,12 +35,13 @@ for file in "$srcfolder"/*; do
     echo "$filename"
     if [[ -f "$file" ]]; then
       cgra-opt \
-        --adora-extract-affine-for-to-kernel \
         --adora-simplify-loadstore \
         --adora-math-rewrite \
         --adora-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
         "$file" -o $tarfolder/"$filename"_opt.mlir
 
+        # --adora-auto-unroll="cgra-adg=${CGRA_ADG_PATH}/cgra_adg.json" \
+        # --adora-extract-affine-for-to-kernel \
         # --adora-simplify-loadstore \
         # --adora-extract-affine-for-to-kernel \
         # --adora-hoist-loadstore \

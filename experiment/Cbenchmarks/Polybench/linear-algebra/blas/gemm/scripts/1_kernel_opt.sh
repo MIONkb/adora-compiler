@@ -1,9 +1,23 @@
 #!/bin/bash
+###################
+## User define args 
+###################
+unroll=0 # 1: auto unroll, 0: Don't unroll
+# c=(${unroll} -e 1)
+# echo $c
+# exit
+###################
+## Don't touch other part
+###################
+
 rootfolder=$(pwd)
 IRfolder="IR"
 srcfolder="$rootfolder/$IRfolder/0_kernels"
+# srcfolder="$rootfolder/$IRfolder/extra"
 tarfolder="$rootfolder/$IRfolder/1_kernels_opt"
+# tarfolder="$rootfolder/$IRfolder/extra_opt"
 tempfolder="$rootfolder/$IRfolder/tempfiles"
+
 echo "current path:$rootfolder"
 
 if [ ! -d "$tarfolder" ]; then
@@ -32,19 +46,30 @@ for file in "$srcfolder"/*; do
     filename=$(basename "$file" .mlir)
     echo "$filename"
     if [[ -f "$file" ]]; then
-      cgra-opt \
-        --ADORA-simplify-loadstore \
-        --adora-math-rewrite \
-        --ADORA-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
-        "$file" -o $tarfolder/"$filename"_opt.mlir
+      if [[ ${unroll} -eq 1 ]]; then
+        cgra-opt \
+          --adora-simplify-loadstore \
+          --adora-math-rewrite \
+          --adora-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
+           --adora-auto-unroll="cgra-adg=${CGRA_ADG_PATH}/cgra_adg.json" \
+          "$file" -o $tarfolder/"$filename"_opt.mlir
+      else
+         cgra-opt \
+          --adora-simplify-loadstore \
+          --adora-math-rewrite \
+          --adora-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
+          "$file" -o $tarfolder/"$filename"_opt.mlir
+      fi
 
-        # --ADORA-extract-affine-for-to-kernel \
-        # --ADORA-hoist-loadstore \
- # --ADORA-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
-        # --ADORA-loop-unroll-jam \
-        # --ADORA-affine-loop-unroll="cgra-adg=${CGRA_ADG_PATH}/cgra_adg.json" \
         # 
-        # --ADORA-hoist-loadstore \
+        # --adora-simplify-loadstore \
+        # --adora-extract-affine-for-to-kernel \
+        # --adora-hoist-loadstore \
+ # --adora-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
+        # --adora-loop-unroll-jam \
+        # --adora-affine-loop-unroll="cgra-adg=${CGRA_ADG_PATH}/cgra_adg.json" \
+        # 
+        # --adora-hoist-loadstore \
         # "$file" -o $tarfolder/"$filename"_opt.mlir
       ((cnt++))
       echo $cnt

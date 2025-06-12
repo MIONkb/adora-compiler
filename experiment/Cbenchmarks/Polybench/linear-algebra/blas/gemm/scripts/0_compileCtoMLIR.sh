@@ -7,8 +7,6 @@ kernel_src=gemm
 DATASET_Size="MINI_DATASET"
 tarfolder="$rootfolder/$IRfolder/0_kernels"
 
-set -x
-
 if [ -d "$IRfolder" ]; then
   mv $IRfolder previous_IR
 fi
@@ -50,10 +48,10 @@ cgeist \
 
 # -I$CHIPYARD_DIR/.conda-env/riscv-tools/riscv64-unknown-elf/include/ \
 # -I$CHIPYARD_DIR/.conda-env/riscv-tools/lib/gcc/riscv64-unknown-elf/12.2.0/include \
-# -I$ADORA_DIR/software/tests \
-# -I$ADORA_DIR/software/tests/riscv-tests/env \
-# -I$ADORA_DIR/software/tests/riscv-tests \
-# -I$ADORA_DIR/software/tests/riscv-tests/benchmarks/common \
+# -I$FDRA_DIR/software/tests \
+# -I$FDRA_DIR/software/tests/riscv-tests/env \
+# -I$FDRA_DIR/software/tests/riscv-tests \
+# -I$FDRA_DIR/software/tests/riscv-tests/benchmarks/common \
 
 mlir-opt\
  --allow-unregistered-dialect      \
@@ -74,15 +72,13 @@ cgra-opt \
     --canonicalize \
     -reconcile-unrealized-casts \
     --affine-loop-fusion \
-    --ADORA-extract-affine-for-to-kernel \
+    --adora-extract-affine-for-to-kernel \
     --arith-expand --memref-expand \
     -cse \
     $IRfolder/"$kernel_src"_normalized.mlir -o $tarfolder/"$kernel_src"_kernel.mlir
 
-        # --ADORA-extract-kernel-to-function="kernel-gen-dir=$IRfolder" \
+        # --adora-extract-kernel-to-function="kernel-gen-dir=$IRfolder" \
 
 if [ $? -eq 0 ]; then
     echo "Kernels for CGRA are recognized."
 fi
-
-set +x

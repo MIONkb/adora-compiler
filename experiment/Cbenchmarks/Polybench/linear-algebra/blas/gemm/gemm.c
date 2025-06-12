@@ -31,14 +31,15 @@
 
 
 void gemm(
-		 DATA_TYPE alpha,
-		 DATA_TYPE beta,
+		//  DATA_TYPE alpha,
+		//  DATA_TYPE beta,
 		 DATA_TYPE C[NI][NJ], /// 1000 1100
 		 DATA_TYPE A[NI][NK], /// 1000 1200
 		 DATA_TYPE B[NK][NJ]) /// 1200 1100
 {
   int i, j, k;
-
+  DATA_TYPE alpha = 1.5;
+  DATA_TYPE beta = 1.2;
 //BLAS PARAMS
 //TRANSA = 'N'
 //TRANSB = 'N'
@@ -48,11 +49,13 @@ void gemm(
 //C is NIxNJ
 #pragma scop
   for (i = 0; i < NI; i++) {
-    for (j = 0; j < NJ; j++)
-	C[i][j] *= beta;
+    for (j = 0; j < NJ; j++){
+	    C[i][j] *= beta;
+    }
     for (k = 0; k < NK; k++) {
-       for (j = 0; j < NJ; j++)
-	  C[i][j] += alpha * A[i][k] * B[k][j];
+      for (j = 0; j < NJ; j++){
+	      C[i][j] += alpha * A[i][k] * B[k][j];
+      }
     }
   }
 #pragma endscop

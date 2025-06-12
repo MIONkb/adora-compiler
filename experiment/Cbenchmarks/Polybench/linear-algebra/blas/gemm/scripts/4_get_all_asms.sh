@@ -1,12 +1,11 @@
 #!/bin/bash
 
-# 指定文件夹路径
 rootfolder=$(pwd)
 IRfolder="IR"
 srcfolder="$rootfolder/$IRfolder/3_cgra_exes"
 tarfolder="$rootfolder/$IRfolder/4_asms"
 tempfolder="$rootfolder/$IRfolder/tempfiles"
-func_name="deriche"
+func_name="jacobi-1d"
 
 if [ ! -d "$tarfolder" ]; then
   mkdir -p "$tarfolder"
@@ -54,60 +53,63 @@ cp  $CHIPYARD_DIR/generators/fdra/software/tests/gemm/crt.S $tarfolder/crt.s
 
 include_line="#include \"include/ISA.h\""
 cnt=0
-for file in "$srcfolder"/*.c; do
-    # 检查文件是否为普通文件
-    filename=$(basename "$file" .c)
-    echo "$filename"
-    if [[ -f "$file" ]]; then
-      echo $cnt
-      ((cnt++))
+# for file in "$srcfolder"/*.c; do
+#     # 检查文件是否为普通文件
+#     filename=$(basename "$file" .c)
+#     echo "$filename"
+#     if [[ -f "$file" ]]; then
+#       echo $cnt
+#       ((cnt++))
 
-      if ! grep -q "$include_line" "$file"; then
-            temp_file="${file}.temp"
-            echo -e "$include_line\n$(cat "$file")" > "$temp_file"
-            mv "$temp_file" "$file"
-            echo "Added include directive to $file"
-      fi
+#       if ! grep -q "$include_line" "$file"; then
+#             temp_file="${file}.temp"
+#             echo -e "$include_line\n$(cat "$file")" > "$temp_file"
+#             mv "$temp_file" "$file"
+#             echo "Added include directive to $file"
+#       fi
 
-      # gcc .c to .asm
-      echo        riscv64-unknown-elf-gcc \
-        -DPREALLOCATE=1 -DMULTITHREAD=1 -mcmodel=medany \
-        -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf \
-        -fno-tree-loop-distribute-patterns -march=rv64gc -Wa,-march=rv64gc12 \
-        -lm -lgcc \
-        -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests \
-        -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests/env \
-        -I${CHIPYARD_DIR}/generators/fdra/software/tests/ \
-        -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests/benchmarks/common \
-        -DID_STRING=  -nostdlib -nostartfiles -static \
-        -DBAREMETAL=1 \
-        "$file" \
-        -S -o "$tarfolder/$filename.s"
+#       # gcc .c to .asm
+#       echo        riscv64-unknown-elf-gcc \
+#         -DPREALLOCATE=1 -DMULTITHREAD=1 -mcmodel=medany \
+#         -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf \
+#         -fno-tree-loop-distribute-patterns -march=rv64gc -Wa,-march=rv64gc12 \
+#         -lm -lgcc \
+#         -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests \
+#         -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests/env \
+#         -I${CHIPYARD_DIR}/generators/fdra/software/tests/ \
+#         -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests/benchmarks/common \
+#         -DID_STRING=  -nostdlib -nostartfiles -static \
+#         -DBAREMETAL=1 \
+#         "$file" \
+#         -S -o "$tarfolder/$filename.s"
 
-      riscv64-unknown-elf-gcc \
-        -DPREALLOCATE=1 -DMULTITHREAD=1 -mcmodel=medany \
-        -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf \
-        -fno-tree-loop-distribute-patterns -march=rv64gc -Wa,-march=rv64gc12 \
-        -lm -lgcc \
-        -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests \
-        -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests/env \
-        -I${CHIPYARD_DIR}/generators/fdra/software/tests/ \
-        -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests/benchmarks/common \
-        -DID_STRING=  -nostdlib -nostartfiles -static \
-        -DBAREMETAL=1 \
-        "$file" \
-        -S -o "$tarfolder/$filename.s"
+#       riscv64-unknown-elf-gcc \
+#         -DPREALLOCATE=1 -DMULTITHREAD=1 -mcmodel=medany \
+#         -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf \
+#         -fno-tree-loop-distribute-patterns -march=rv64gc -Wa,-march=rv64gc12 \
+#         -lm -lgcc \
+#         -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests \
+#         -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests/env \
+#         -I${CHIPYARD_DIR}/generators/fdra/software/tests/ \
+#         -I${CHIPYARD_DIR}/generators/fdra/software/tests/riscv-tests/benchmarks/common \
+#         -DID_STRING=  -nostdlib -nostartfiles -static \
+#         -DBAREMETAL=1 \
+#         "$file" \
+#         -S -o "$tarfolder/$filename.s"
 
-      # if [[ -f "$tempfolder/cgra_execute.c" ]]; then
-      #   cp "$tempfolder/cgra_execute.c" $tarfolder/$filename.c
-      #   rm "$tempfolder/cgra_execute.c"
-      # else
-      #   echo "Mapping for $filename.json failed !"
-      #   exit 0
-      # fi
-    fi
-done
-cnt=0
+#       # if [[ -f "$tempfolder/cgra_execute.c" ]]; then
+#       #   cp "$tempfolder/cgra_execute.c" $tarfolder/$filename.c
+#       #   rm "$tempfolder/cgra_execute.c"
+#       # else
+#       #   echo "Mapping for $filename.json failed !"
+#       #   exit 0
+#       # fi
+#     fi
+# done
+# cnt=0
+
+
+# cd $rootfolder/$IRfolder
 
 # echo "Using mlir-translate: "
 # which mlir-translate
@@ -116,27 +118,11 @@ cnt=0
 # echo "Using llvm llc2 : "
 # which llc
 
-###
-# Host code on cpu
-###
-# lowering only host to llvm
-# echo cgra-opt -promote-buffers-to-stack --arith-expand --memref-expand  \
-#  -normalize-memrefs --expand-strided-metadata  -lower-affine \
-#  --scf-for-loop-canonicalization -convert-scf-to-cf \
-#  --convert-math-to-llvm --convert-math-to-libm \
-#  --convert-arith-to-llvm \
-#  --finalize-memref-to-llvm="use-opaque-pointers" \
-#  -normalize-memrefs \
-#  --finalize-memref-to-llvm="use-opaque-pointers" \
-#  -convert-func-to-llvm=use-bare-ptr-memref-call-conv \
-#  -convert-func-to-llvm=use-bare-ptr-memref-call-conv \
-#  --finalize-memref-to-llvm="use-opaque-pointers" \
-#  --cse --canonicalize \
-#  --reconcile-unrealized-casts \
-#  $rootfolder/$IRfolder/2_host.mlir -o $rootfolder/$IRfolder/"3_${func_name}_llvm.mlir" \
-#  --mlir-print-ir-after-all 2>&1 | cat > "3_intermediate_${func_name}_llvm.mlir"
-
-# mlir-opt -promote-buffers-to-stack --arith-expand --memref-expand  \
+# ###
+# # Host code on cpu
+# ###
+# # lowering only host to llvm
+# echo mlir-opt -promote-buffers-to-stack --arith-expand --memref-expand  \
 #  -normalize-memrefs --expand-strided-metadata  -lower-affine \
 #  --scf-for-loop-canonicalization -convert-scf-to-cf \
 #  --convert-math-to-llvm --convert-math-to-libm \
@@ -152,36 +138,59 @@ cnt=0
 #  --finalize-memref-to-llvm="use-opaque-pointers" \
 #  --cse --canonicalize \
 #  --reconcile-unrealized-casts \
-#  $rootfolder/2_host.mlir -o $rootfolder/"3_${func_name}_llvm.mlir" \
+#  $rootfolder/$IRfolder/affine_host.mlir -o $rootfolder/$IRfolder/"3_${func_name}_llvm.mlir" \
 #  --mlir-print-ir-after-all 2>&1 | cat > "3_intermediate_${func_name}_llvm.mlir"
 
- #  --ADORA-convert-kernelcall-to-llvm \
+# mlir-opt \
+#  -promote-buffers-to-stack --arith-expand --memref-expand  \
+#  --expand-strided-metadata  -lower-affine \
+#  --scf-for-loop-canonicalization -convert-scf-to-cf \
+#  --convert-math-to-llvm --convert-math-to-libm \
+#  --convert-arith-to-llvm \
+#   -convert-func-to-llvm=use-bare-ptr-memref-call-conv \
+#    --import-constants-with-refs \
+#  --finalize-memref-to-llvm="use-opaque-pointers" \
+#   --import-constants-with-refs \
+#    --memref-expand \
+#  --finalize-memref-to-llvm="use-opaque-pointers" \
+#  -convert-func-to-llvm=use-bare-ptr-memref-call-conv \
+#  -convert-func-to-llvm=use-bare-ptr-memref-call-conv \
+#  --finalize-memref-to-llvm="use-opaque-pointers" \
+#  --cse --canonicalize \
+#  --reconcile-unrealized-casts \
+#  $rootfolder/$IRfolder/affine_host.mlir -o $rootfolder/$IRfolder/"3_${func_name}_llvm.mlir" \
+#  --mlir-print-ir-after-all 2>&1 | cat > "3_intermediate_${func_name}_llvm.mlir"
 
-# mlir-translate  --mlir-to-llvmir $rootfolder/"3_${func_name}_llvm.mlir" > "$rootfolder/$func_name.ll"
+#   # -normalize-memrefs  \
+#   #  --mlir-elide-elementsattrs-if-larger=2 
+#  #  --adora-convert-kernelcall-to-llvm \
+
+# # mlir-translate  --mlir-to-llvmir $rootfolder/$IRfolder/"3_${func_name}_llvm.mlir" > "$rootfolder/$IRfolder/$func_name.ll"
 
 # mlir-translate  --mlir-to-llvmir \
-#  $rootfolder/"3_${func_name}_llvm.mlir" \
-#  -o "$rootfolder/$func_name.ll"
+#  $rootfolder/$IRfolder/"3_${func_name}_llvm.mlir" \
+#  -o "$rootfolder/$IRfolder/$func_name.ll"
 
 
-# opt -memprof  "$rootfolder/$func_name.ll" -o "$rootfolder/$func_name.bc"
-# echo opt -O3 \
-#  --disable-builtin=memset "$rootfolder/$func_name.ll" -o "$rootfolder/$func_name.bc"
-# # /home/jhlou/Tools/llvm-18/build/bin/opt -O3 \
+# # opt -memprof  "$rootfolder/$IRfolder/$func_name.ll" -o "$rootfolder/$IRfolder/$func_name.bc"
+# # echo opt -O3 \
 # #  --disable-builtin=memset "$rootfolder/$func_name.ll" -o "$rootfolder/$func_name.bc"
+# # opt -O3 \
+# #  --disable-builtin=memset "$rootfolder/$IRfolder/$func_name.ll" \
+# #  -o "$rootfolder/$IRfolder/$func_name.bc"
 
-# opt -O3  "$rootfolder/$func_name.ll" --disable-builtin=memset  --mtriple=riscv64 --mcpu=rocket-rv64 -o "$rootfolder/$func_name.bc"
-# opt -O3  "$rootfolder/$func_name.ll" --disable-builtin=memset  --mtriple=riscv64 --mcpu=rocket-rv64 -S -o "$rootfolder/${func_name}_opt.ll"
+# opt -O3  "$rootfolder/$IRfolder/$func_name.ll" --disable-builtin=memset  --mtriple=riscv64 --mcpu=rocket-rv64 -o "$rootfolder/$IRfolder/$func_name.bc"
+# opt -O3  "$rootfolder/$IRfolder/$func_name.ll" --disable-builtin=memset  --mtriple=riscv64 --mcpu=rocket-rv64 -S -o "$rootfolder/$IRfolder/${func_name}_opt.ll"
 
-# echo llc -O3 "$rootfolder/$func_name.bc" \
-#   -I /home/jhlou/chipyard/.conda-env/riscv-tools/riscv64-unknown-elf/include\
-#   -march=riscv64 -mtriple=riscv64-unknown-elf-gnu -mcpu=rocket-rv64 \
-#   -mattr=+c,+d,+relax,+m  \
-#   --relocation-model=pic \
-#   -float-abi=hard \
-#   -code-model=small \
-#   -o "$tarfolder/$func_name.s"
-# llc -O3 "$rootfolder/$func_name.bc" \
+# # echo llc -O3 "$rootfolder/$func_name.bc" \
+# #   -I /home/jhlou/chipyard/.conda-env/riscv-tools/riscv64-unknown-elf/include\
+# #   -march=riscv64 -mtriple=riscv64-unknown-elf-gnu -mcpu=rocket-rv64 \
+# #   -mattr=+c,+d,+relax,+m  \
+# #   --relocation-model=pic \
+# #   -float-abi=hard \
+# #   -code-model=small \
+# #   -o "$tarfolder/$func_name.s"
+# llc -O3 "$rootfolder/$IRfolder/$func_name.bc" \
 #   -I /home/jhlou/chipyard/.conda-env/riscv-tools/riscv64-unknown-elf/include\
 #   -march=riscv64 -mtriple=riscv64-unknown-elf-gnu -mcpu=rocket-rv64 \
 #   -mattr=+c,+d,+relax,+m  \
