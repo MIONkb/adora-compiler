@@ -1,0 +1,71 @@
+///// General op name file
+///// convert TypeName from arith/memref dialect Ops to 
+///// low-level hardware operation
+ADORA.isel ISEL
+
+arith.constant CONST
+arith.muli MUL
+arith.addi ADD 
+
+arith.addui_extended addui_extended 
+arith.andi AND 
+
+arith.bitcast bitcast 
+arith.ceildivsi ceildivsi 
+arith.ceildivui ceildivui 
+
+arith.cmpi CMP 
+
+arith.divsi divsi 
+arith.divui divui 
+arith.extf extf 
+arith.extsi extsi 
+arith.extui extui 
+arith.fptosi fptosi 
+arith.fptoui fptoui 
+arith.floordivsi floordivsi 
+arith.index_cast index_cast 
+arith.index_castui index_castui 
+arith.maxf maxf 
+arith.maxsi maxsi 
+arith.maxui maxui 
+arith.minf minf 
+arith.minsi minsi 
+arith.minui minui 
+
+arith.muli MUL 
+arith.mulsi_extended mulsi_extended 
+arith.mului_extended mului_extended 
+arith.negf negf 
+arith.ori OR 
+arith.remf remf 
+arith.remsi remsi 
+arith.remui remui 
+arith.sitofp sitofp 
+arith.shli SHL 
+arith.shrsi ASHR 
+arith.shrui LSHR 
+
+arith.subi SUB 
+arith.truncf truncf 
+arith.trunci trunci 
+arith.uitofp uitofp 
+arith.xori XOR 
+arith.select SEL 
+
+/// float operation
+arith.addf FADD32 
+arith.cmpf FCMP32
+arith.divf FDIV32
+arith.mulf FMUL32
+arith.subf FSUB32 
+
+/// Load Store
+memref.load load
+memref.store store
+affine.load Input
+affine.store Output
+affine.yield yield
+affine.for for
+scf.for scf_for
+scf.yield scf_yield
