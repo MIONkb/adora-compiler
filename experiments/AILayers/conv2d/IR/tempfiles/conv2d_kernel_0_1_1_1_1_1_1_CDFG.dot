@@ -1,0 +1,34 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="conv2d_kernel_0_1", size="6144", offset="0,0", pattern="4,7,232,7,488,3,-5652,58,-5628,2", color = black];
+Input1[opcode = "Input", ref_name="conv2d_kernel_0_2", size="1176", offset="0,0", pattern="4,7,4,7,4,3,-584,58,-584,2", color = black];
+FMUL322[opcode = "FMUL32", color = black];
+FADD323[opcode = "FADD32", color = black];
+yield4[opcode = "yield", color = black];
+for5[opcode = "for", color = purple];
+yield6[opcode = "yield", color = purple];
+for7[opcode = "for", color = blue];
+yield8[opcode = "yield", color = blue];
+Input9[opcode = "Input", ref_name="conv2d_kernel_0_0", size="464", offset="0,0", pattern="0,7,0,7,0,3,4,58,4,2", color = yellow];
+CONST10[opcode = "CONST", value="0x00000000", color = black];
+for11[opcode = "for", color = yellow];
+FADD3212[opcode = "FADD32", color = yellow];
+Output13[opcode = "Output", ref_name="conv2d_kernel_0_3", size="464", offset="0,0", pattern="0,7,0,7,0,3,4,58,4,2", color = yellow];
+for15[opcode = "for", color = black];
+for17[opcode = "for", color = purple];
+Input0 -> FMUL322[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> FMUL322[color = black, style = bold, operand = 1, label = "Op=1"];
+FMUL322 -> FADD323[color = black, style = bold, operand = 0, label = "Op=0"];
+for5 -> FADD323[color = black, style = dashed, operand = 1, iterdist = 0, label = "Op=1, IterDist = 0"];
+FADD323 -> yield4[color = black, style = bold, operand = 0, label = "Op=0"];
+for7 -> for5[color = black, style = dashed, operand = 0, iterdist = 0, label = "Op=0, IterDist = 0"];
+for5 -> yield6[color = black, style = bold, operand = 0, label = "Op=0"];
+for11 -> for7[color = black, style = dashed, operand = 0, iterdist = 0, label = "Op=0, IterDist = 0"];
+for7 -> yield8[color = black, style = bold, operand = 0, label = "Op=0"];
+CONST10 -> for11[color = black, style = bold, operand = 0, label = "Op=0"];
+for11 -> FADD3212[color = black, style = bold, operand = 0, label = "Op=0"];
+Input9 -> FADD3212[color = black, style = bold, operand = 1, label = "Op=1"];
+FADD3212 -> Output13[color = black, style = bold, operand = 0, label = "Op=0"];
+yield4 -> for5[color = black, style = dashed, operand = 1, iterdist = 0, label = "Op=1, IterDist = 0"];
+yield6 -> for7[color = black, style = dashed, operand = 1, iterdist = 0, label = "Op=1, IterDist = 0"];
+yield8 -> for11[color = black, style = dashed, operand = 1, iterdist = 0, label = "Op=1, IterDist = 0"];
+}

@@ -1,0 +1,15 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="conv2d_kernel_0_1", size="3024", offset="0,0", pattern="4,7,120,7,120,3,-2900,29", color = black];
+Input1[opcode = "Input", ref_name="conv2d_kernel_0_2", size="1176", offset="0,0", pattern="4,7,4,7,4,3,-584,29", color = black];
+FMUL322[opcode = "FMUL32", color = black];
+FACC323[opcode = "FACC32", acc_params="0,147,1,1", acc_first=1, color = black];
+Input9[opcode = "Input", ref_name="conv2d_kernel_0_0", size="120", offset="0,0", pattern="0,7,0,7,0,3,4,29", color = yellow];
+FADD3212[opcode = "FADD32", color = yellow];
+Output13[opcode = "Output", ref_name="conv2d_kernel_0_3", size="120", offset="0,0", pattern="0,7,0,7,0,3,4,29", color = yellow];
+Input0 -> FMUL322[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> FMUL322[color = black, style = bold, operand = 1, label = "Op=1"];
+FMUL322 -> FACC323[color = black, style = bold, operand = 0, label = "Op=0"];
+Input9 -> FADD3212[color = black, style = bold, operand = 1, label = "Op=1"];
+FADD3212 -> Output13[color = black, style = bold, operand = 0, label = "Op=0"];
+FACC323 -> FADD3212[color = black, style = bold, operand = 0, label = "Op=0"];
+}

@@ -81,8 +81,14 @@ void eliminateUnusedIndices(Operation *op);
 ::llvm::SmallDenseMap<mlir::Value, unsigned> getOperandInRank(Operation *op, unsigned rank);
 SmallVector<mlir::Operation*>  getAllUsesInRegion(const mlir::Value beused, ::mlir::Region* region);
 SmallVector<mlir::Operation*>  getAllUsesInBlock(const mlir::Value beused, ::mlir::Block* block);
+
+mlir::Operation* GetTheSourceOperationOfBlockStore(ADORA::DataBlockStoreOp store);
+
 void ResetIndexOfBlockAccessOpInFunc(func::FuncOp& func);
 inline bool opIsContainedByKernel(mlir::Operation* op);
+
+void LLVM_ATTRIBUTE_UNUSED 
+ simplifyMapWithOperands(AffineMap &map, ArrayRef<mlir::Value> operands);
 
 ///// following 3 functions are defined to simplify AffineApplyOp
 void simplifyConstantAffineApplyOpsInRegion(::mlir::Region& region);

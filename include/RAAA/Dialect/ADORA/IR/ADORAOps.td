@@ -173,6 +173,11 @@ def ADORA_DataBlockLoadOp: ADORA_Op<"BlockLoad", []>{
     //   return this->getOperation()->getAttr("BlockLen")
     //     .cast<IntegerAttr>().getValue().getSExtValue();
     // }
+
+    bool hasKernelName(){
+      return this->getOperation()->hasAttr("KernelName");
+    }
+
     StringRef getKernelName() {
       Attribute KnNameAttr = this->getOperation()->getAttr("KernelName");
       if(KnNameAttr == nullptr)
@@ -184,6 +189,10 @@ def ADORA_DataBlockLoadOp: ADORA_Op<"BlockLoad", []>{
       StringAttr KernelNameAttr = StringAttr::get(getOperation()->getContext(),s);
       getOperation()->setAttr(getKernelNameAttrStr(), KernelNameAttr);
     }
+
+    SmallVector<std::string> getKernelNameAsStrVector();
+
+    std::string addAnotherKernelName(const std::string& newKernel);
 
     StringRef getId() {
       return this->getOperation()->getAttr("Id")
@@ -271,10 +280,19 @@ def ADORA_DataBlockStoreOp: ADORA_Op<"BlockStore", []>{
     //   return this->getOperation()->getAttr("BlockLen")
     //     .cast<IntegerAttr>().getValue().getSExtValue();
     // }
-    StringRef getKernelName() {
-      return this->getOperation()->getAttr("KernelName")
-        .cast<StringAttr>().strref();
+
+    bool hasKernelName(){
+      return this->getOperation()->hasAttr("KernelName");
     }
+
+    StringRef getKernelName() {
+      Attribute KnNameAttr = this->getOperation()->getAttr("KernelName");
+      if(KnNameAttr == nullptr)
+        return "";
+      else
+        return KnNameAttr.cast<StringAttr>().strref();
+    }
+    
     void setKernelName(std::string s) {
       StringAttr KernelNameAttr = StringAttr::get(getOperation()->getContext(),s);
       getOperation()->setAttr(getKernelNameAttrStr(), KernelNameAttr);
@@ -359,6 +377,13 @@ def LocalMemAllocOp : ADORA_Op<"LocalMemAlloc", []>{
     //   return this->getOperation()->getAttr("BlockLen")
     //     .cast<IntegerAttr>().getValue().getSExtValue();
     // }
+
+    /////////////////////////////////
+    /// Handles of kernel name
+    /////////////////////////////////
+    bool hasKernelName(){
+      return this->getOperation()->hasAttr("KernelName");
+    }
     StringRef getKernelName() {
       Attribute KnNameAttr = this->getOperation()->getAttr("KernelName");
       if(KnNameAttr == nullptr)
@@ -366,11 +391,20 @@ def LocalMemAllocOp : ADORA_Op<"LocalMemAlloc", []>{
       else
         return KnNameAttr.cast<StringAttr>().strref();
     }
+
     void setKernelName(std::string s) {
       StringAttr KernelNameAttr = StringAttr::get(getOperation()->getContext(),s);
       getOperation()->setAttr(getKernelNameAttrStr(), KernelNameAttr);
     }
 
+    SmallVector<std::string> getKernelNameAsStrVector();
+
+    std::string addAnotherKernelName(const std::string& newKernel);
+
+
+    /////////////////////////////////
+    /// Handles of ID
+    /////////////////////////////////
     StringRef getId() {
       return this->getOperation()->getAttr("Id")
         .cast<StringAttr>().strref();
@@ -538,11 +572,11 @@ def MergeOp : ADORA_Op<"merge">{
       return getOut();
     }
 
-    ::mlir::VectorType getOutVectorType(){
+    ::mlir::VectorType getOutVectorType() {
       return ::llvm::cast<VectorType>(getOut().getType());
     }
 
-    ArrayRef<int64_t> getOutVectorShape() const {
+    ArrayRef<int64_t> getOutVectorShape() {
       return getOutVectorType().getShape();
     }
 

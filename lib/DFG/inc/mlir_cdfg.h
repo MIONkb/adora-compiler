@@ -100,6 +100,7 @@ public:
     LLVMCDFGNode* node_lparg(int level);
     void addNode(LLVMCDFGNode *node);
     LLVMCDFGNode* addNode(mlir::Operation *op);
+    LLVMCDFGNode* addNode(mlir::Operation *op, std::string typeName);
     LLVMCDFGNode* addNode(mlir::Block* block, int level);
     LLVMCDFGNode* addNode(Instruction *ins); // create node according to instruction and add node
     LLVMCDFGNode* addNode(std::string customIns, BasicBlock *BB); // create node according to the custom instruction and add node

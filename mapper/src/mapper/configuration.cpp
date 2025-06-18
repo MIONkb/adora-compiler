@@ -2,6 +2,7 @@
 #include "mapper/configuration.h"
 #define IsConstStrExpr(_str) (_str == "__const__" || _str == "-" || _str.empty())
 
+
 void addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, uint32_t data){
     CfgData loc_data(loc.high - loc.low + 1, data);
     cfg[loc.low] = loc_data;
@@ -23,6 +24,59 @@ void addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, const std::v
     CfgData loc_data(loc.high - loc.low + 1, data);
     cfg[loc.low] = loc_data;
 }
+
+
+std::map<int, int> Configuration::addAdditionalDelayForMERGEOp(DFGNode* dfgNode,std::map<int, int>& delayUsed){
+    if(dfgNode->operation() == "MERGE4"){
+        delayUsed[1] += 1;
+        delayUsed[2] += 2;
+        delayUsed[3] += 3;
+    }
+    else if(dfgNode->operation() == "MERGE3"){
+        delayUsed[1] += 1;
+        delayUsed[2] += 2;
+    }  
+    else if(dfgNode->operation() == "MERGE2"){
+        delayUsed[1] += 1;
+        delayUsed[2] += 2;
+    }  
+    // int totalDelay = 0;
+    // for(auto elem : delayUsed){
+    //     totalDelay += elem.second;
+    // }
+    // assert(totalDelay <= _mapping->mappedNode(dfgNode)->id());
+
+    return delayUsed;
+}
+
+int Configuration::addAdditionalLatencyForMERGEOp(DFGNode* dfgNode, int latency){
+    if(dfgNode->operation() == "MERGE4"){
+        return latency + 3;
+    }
+    else if(dfgNode->operation() == "MERGE3"){
+        return latency + 2;
+    }  
+    else if(dfgNode->operation() == "MERGE2"){
+        return latency + 1;
+    }  
+    // int totalDelay = 0;
+    // for(auto elem : delayUsed){
+    //     totalDelay += elem.second;
+    // }
+    // assert(totalDelay <= _mapping->mappedNode(dfgNode)->id());
+
+    return latency;
+}
+int Configuration::addAdditionalLatencyForAfterMERGEOutputOp(DFGNode* dfgNode, int latency){
+    if(dfgNode->operation() == "OUTPUT"){
+        if(dfgNode->inputEdges().size() == 1){
+            int srcnodeid = _mapping->getDFG()->edge(dfgNode->inputEdge(0))->srcId();
+            return addAdditionalLatencyForMERGEOp(_mapping->getDFG()->node(srcnodeid), latency);
+        }
+    }
+    return latency;
+}
+
 
 // get config data for GPE, return<LSB-location, CfgData>
 std::map<int, CfgData> Configuration::getGpeCfgData(GPENode* node){
@@ -48,7 +102,7 @@ std::map<int, CfgData> Configuration::getGpeCfgData(GPENode* node){
         varconfig = getConfigVariable(node);
         varconfig->print();
     }
-    
+
     for(auto& elem : dfgNode->inputEdges()){
         int eid = elem.second;
         auto& edgeAttr = _mapping->dfgEdgeAttr(eid);
@@ -62,6 +116,7 @@ std::map<int, CfgData> Configuration::getGpeCfgData(GPENode* node){
         int rduPort = rduPair->second;
         auto rdu = subAdg->node(rduId);   
         delayUsed[rduPort] = edgeAttr.delay; // delay cycles used by this port
+
         auto aluPair = rdu->output(rduPort).begin();  // RDU has the same input/output index
         aluId = aluPair->first;
         // int aluPort = aluPair->second;
@@ -72,6 +127,10 @@ std::map<int, CfgData> Configuration::getGpeCfgData(GPENode* node){
         // CfgData muxCfg((muxCfgLoc.high - muxCfgLoc.low + 1), (uint32_t)muxCfgData);
         // cfg[muxCfgLoc.low] = muxCfg;    
     }
+
+    //// @jhlou: for merge op, add additional delay 
+    delayUsed = addAdditionalDelayForMERGEOp(dfgNode, delayUsed);
+
     if(aluId == -1){ // in case that some node has no input
         auto muxPair = subAdg->input(0).begin(); // one input only connected to one Mux
         int muxId = muxPair->first;
@@ -134,6 +193,10 @@ std::map<int, CfgData> Configuration::getGpeCfgData(GPENode* node){
         auto& dfgNodeAttr = _mapping->dfgNodeAttr(dfgNode->id());
         int latency = dfgNodeAttr.lat - dfgNode->opLatency(); 
         int latencyId = node->cfgIdMap["Latency"];
+
+        //// @jhlou: for merge op, add additional latency(acr counting 3 more cycles) 
+        latency = addAdditionalLatencyForMERGEOp(dfgNode, latency);
+
         addCfgData(cfg, node->configInfo(latencyId), (uint32_t)latency);
         // CfgDataLoc latencyCfgLoc = node->configInfo(latencyId);
         // int latencyCfgLen = latencyCfgLoc.high - latencyCfgLoc.low + 1;
@@ -251,6 +314,10 @@ std::map<int, CfgData> Configuration::getIobCfgData(IOBNode* node){
     }
     int II = _mapping->II();
     int latency = dfgNodeAttr.lat - dfgNode->opLatency(); // substract load/store latency
+    
+    //// @jhlou: for merge op, add additional latency(acr counting 3 more cycles) 
+    latency = addAdditionalLatencyForAfterMERGEOutputOp(dfgNode, latency);
+
     int dataBytes = _mapping->getADG()->bitWidth() / 8;
     int baseAddr = _dfgIoSpadAddrs[dfgNode->id()];
     int offset = dfgIONode->reducedMemOffset() / dataBytes;

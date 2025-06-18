@@ -63,6 +63,64 @@ void Graphviz::drawDFG(){
             int operandIdx = edge->dstPortIdx();
             auto& edgeAttr = _mapping->dfgEdgeAttr(eid);
             int edgeLat = edgeAttr.lat; // edge latency not including delay unit
+
+            /// @jhlou: add rdu delay information to dfgdot
+            int portDelay = edgeAttr.delay; // delay cycles used by this port
+
+            std::string srcName = dfg->node(srcNodeId)->name();
+            std::string quoteSrcName = "\"" + srcName + "\"";
+            ofs << quoteSrcName << "->" << quoteName << "[label = \"lat=" << edgeLat << 
+                                                "\\nop=" << operandIdx <<
+                                                "\\nrdudelay=" << portDelay << "\"];\n";
+        }
+    }
+    ofs << "}\n";
+}
+
+
+void Graphviz::originaldrawDFG(){
+    std::string filename = _dirname + "/mapped_dfg.dot";
+    std::ofstream ofs(filename);
+    DFG* dfg = _mapping->getDFG();
+    int dfgId = dfg->id();
+    ofs << "Digraph G {\n";
+    // the input/output latency is the latency of valid data, 
+    // not when start to load or have stored the data in SRAM
+    // for(auto& elem : dfg->inputs()){
+    //     std::string name = getDfgNodeName(dfgId, elem.first);
+    //     std::string quoteName = "\"" + name + "\"";
+    //     int lat = _mapping->dfgInputAttr(elem.first).lat;
+    //     ofs << quoteName << "[label = \"\\N\\nlat=" << lat << "\"];\n";
+    // }
+    // for(auto& elem : dfg->outputs()){
+    //     std::string name = getDfgNodeName(dfgId, elem.first, false);
+    //     std::string quoteName = "\"" + name + "\"";
+    //     int srcNodeId = elem.second.first;
+    //     std::string srcName = getDfgNodeName(srcNodeId, elem.second.second);
+    //     std::string quoteSrcName = "\"" + srcName + "\"";
+    //     int lat = _mapping->dfgOutputAttr(elem.first).lat;
+    //     ofs << quoteName << "[label = \"\\N\\nlat=" << lat << "\"];\n";
+    //     ofs << quoteSrcName << "->" << quoteName << std::endl;
+    // }
+    for(auto& elem : dfg->nodes()){
+        auto node = elem.second;
+        auto& attr = _mapping->dfgNodeAttr(node->id());
+        auto name = node->name();
+        std::string quoteName = "\"" + name + "\"";
+        ofs << quoteName << "[label = \"\\N\\nlat=" << attr.lat << "\"];\n";
+        // for(auto& input : node->inputs()){
+        //     int srcNodeId = input.second.first;
+        //     std::string srcName = dfg->node(srcNodeId)->name();
+        //     std::string quoteSrcName = "\"" + srcName + "\"";
+        //     ofs << quoteSrcName << "->" << quoteName << ";\n";
+        // }
+        for(auto& elem : node->inputEdges()){
+            int eid = elem.second;
+            DFGEdge* edge = dfg->edge(eid);
+            int srcNodeId = edge->srcId();
+            int operandIdx = edge->dstPortIdx();
+            auto& edgeAttr = _mapping->dfgEdgeAttr(eid);
+            int edgeLat = edgeAttr.lat; // edge latency not including delay unit
             std::string srcName = dfg->node(srcNodeId)->name();
             std::string quoteSrcName = "\"" + srcName + "\"";
             ofs << quoteSrcName << "->" << quoteName << "[label = \"lat=" << edgeLat << "\\nop=" << operandIdx << "\"];\n";
@@ -70,7 +128,6 @@ void Graphviz::drawDFG(){
     }
     ofs << "}\n";
 }
-
 
 
 // // create name for ADG node

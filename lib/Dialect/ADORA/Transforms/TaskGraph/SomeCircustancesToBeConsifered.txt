@@ -1,0 +1,7 @@
+一些未考虑的情况:
+
+1 blockstore-load 同一空间，但store后面还要用到，所以datablockStore不能省略
+
+2 load的广播
+
+3 config怎么优化

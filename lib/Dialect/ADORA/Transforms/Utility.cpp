@@ -1156,8 +1156,8 @@ static void simplifyExprAndOperands(AffineExpr &expr, unsigned numDims,
 /// Simplify the map while exploiting information on the values in `operands`.
 //  Use "unused attribute" marker to silence warning stemming from the inability
 //  to see through the template expansion.
-static void LLVM_ATTRIBUTE_UNUSED
-simplifyMapWithOperands(AffineMap &map, ArrayRef<mlir::Value> operands) {
+void LLVM_ATTRIBUTE_UNUSED
+ADORA::simplifyMapWithOperands(AffineMap &map, ArrayRef<mlir::Value> operands) {
   assert(map.getNumInputs() == operands.size() && "invalid operands for map");
   SmallVector<AffineExpr> newResults;
   newResults.reserve(map.getNumResults());
@@ -2099,8 +2099,8 @@ bool mlir::ADORA::LoadStoreSameMemAddr(AffineLoadOp loadop, AffineStoreOp storeo
 }
 
 /// @param ld a block load or localmemalloc operation
-/// @return the block store operation which access the same tile of a block load or localalloc
-///         If no this store operation, return nullopt.
+/// @return The block store operation that accesses the same tile as a block load or local allocation.
+///         If no such store operation exists, return nullopt.
 template<typename ldormalloc>
 static std::optional<ADORA::DataBlockStoreOp> GetBlockStoreOfSameTile(ldormalloc ld, SmallVector<ADORA::DataBlockStoreOp> stores){
   for(auto& blkst : stores){
@@ -2108,9 +2108,73 @@ static std::optional<ADORA::DataBlockStoreOp> GetBlockStoreOfSameTile(ldormalloc
       && dyn_cast<ldormalloc>(blkst.getSourceMemref().getDefiningOp()) == ld)
       return blkst;
   }
+
+  //// TODO: judge index and memory shape
+  //// TODO: judge index and memory shape
+  //// TODO: judge index and memory shape
+  
   return std::nullopt;
 }
 
+// template<typename ldormalloc>
+// static SmallVector<ADORA::DataBlockStoreOp> GetBlockStoreOfSameTile(ldormalloc ld, SmallVector<ADORA::DataBlockStoreOp> stores){
+//   SmallVector<ADORA::DataBlockStoreOp> results;
+//   for(auto& blkst : stores){
+//     if(isa<ldormalloc>(blkst.getSourceMemref().getDefiningOp())
+//         && dyn_cast<ldormalloc>(blkst.getSourceMemref().getDefiningOp()) == ld
+//         && )
+//     {      
+//       results.push_back(blkst);
+//     }
+//   }
+
+//   //// TODO: judge index and memory shape
+//   //// TODO: judge index and memory shape
+//   //// TODO: judge index and memory shape
+  
+//   return std::nullopt;
+// }
+
+/// @brief Retrieves the block store operation that accesses the same tile as the provided block load or local memory allocation operation.
+/// 
+/// This function searches for all block load and local memory allocation operations within the same parent function
+/// as the given block store operation. It checks if any of these operations share the same kernel name and ID
+/// as the provided store operation. If exactly one matching operation is found, it is returned; otherwise, an assertion will trigger.
+///
+/// @param store A block store operation whose corresponding block load or local memory allocation operation is to be found.
+/// 
+/// @return The block load operation or local memory allocation operation that accesses the same tile as the input store operation.
+///         If no such operation exists, the behavior is undefined due to the assertion.
+mlir::Operation* ::mlir::ADORA::GetTheSourceOperationOfBlockStore(ADORA::DataBlockStoreOp store){
+  func::FuncOp parentfunc = store.getOperation()->getParentOfType<func::FuncOp>();
+  SmallVector<mlir::Operation*> allLoadsMalloc;
+  SmallVector<mlir::Operation*> result;
+
+  parentfunc.walk([&](mlir::Operation* op){
+    if(isa<ADORA::DataBlockLoadOp>(op) || isa<ADORA::LocalMemAllocOp>(op))
+      allLoadsMalloc.push_back(op);
+  });  
+
+  for(auto& op : allLoadsMalloc){
+    if(isa<ADORA::DataBlockLoadOp>(op)){
+      ADORA::DataBlockLoadOp load = dyn_cast<ADORA::DataBlockLoadOp>(op);
+      if(findElement(load.getKernelNameAsStrVector(), store.getKernelName().str()) != -1
+        && load.getId() == store.getId()){
+        result.push_back(op);
+      }
+    }
+    else if(isa<ADORA::LocalMemAllocOp>(op)){
+      ADORA::LocalMemAllocOp alloc = dyn_cast<ADORA::LocalMemAllocOp>(op);
+      if(findElement(alloc.getKernelNameAsStrVector(), store.getKernelName().str()) != -1
+        && alloc.getId() == store.getId()){
+        result.push_back(op);
+      }
+    }
+  }
+
+  assert(result.size() == 1);
+  return result[0];
+}
 
 /// @brief reset all Ids in blockload/blockstore/localalloc op
 void ADORA::ResetIndexOfBlockAccessOpInFunc(func::FuncOp& func){

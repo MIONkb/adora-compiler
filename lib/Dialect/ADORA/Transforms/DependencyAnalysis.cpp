@@ -432,5 +432,54 @@ SmallDenseMap<unsigned, SmallVector<Operation* >>
   return ReuseGroups;
 }
 
+
+
+//////////////////////////////////
+///// Dependency analysis for data block operations
+//////////////////////////////////
+
+/// @brief check the dependency between two data block op.
+///    Two data blocks are dependent under the following conditions:
+///       1. 
+///       2.
+/// @param store  
+/// @param load  
+/// @return 
+bool checkDependencyBetweenBlockStoreAndBlockLoad(ADORA::DataBlockStoreOp& store, ADORA::DataBlockLoadOp& load) {
+  if(store.getTargetMemref() == load.getOriginalMemref()){
+    return true;
+  }
+
+  return false;
+}
+
+bool AccessSameDataBlock(ADORA::DataBlockLoadOp& op1, ADORA::DataBlockLoadOp& op2){
+  
+}
+
+bool AccessSameDataBlock(ADORA::DataBlockStoreOp& op1, ADORA::DataBlockLoadOp& op2){
+  if(op1.getTargetMemref() == op2.getOriginalMemref()){
+    /// check affine map
+    AffineMap map1 = op1.getAffineMap();
+    AffineMap map2 = op2.getAffineMap();
+
+    simplifyMapWithOperands(map1, SmallVector<mlir::Value> (op1.getMapOperands()));
+    simplifyMapWithOperands(map2, SmallVector<mlir::Value> (op2.getMapOperands()));
+
+    if(map1 != map2) return false;
+
+    for(int idx = 0; idx < op1.getMapOperands().size(); idx++){
+      if(op1.getMapOperands() [idx] != op2.getMapOperands() [idx]){
+        return false;
+      } 
+    }
+
+    assert(op1.getMapOperands().size() == op2.getMapOperands().size());
+    return true;
+  }
+
+  return false;
+}
+
 }
 }

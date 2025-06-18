@@ -7,6 +7,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
@@ -42,6 +43,7 @@ int _variable_config_cnt = 0;
 
 using namespace mlir;
 using namespace mlir::affine;
+using namespace mlir::vector;
 using namespace mlir::ADORA;
 
 #define DEBUG_TYPE "adora-dfg-gen"
@@ -2113,6 +2115,7 @@ static void HandleSelfCycle(LLVMCDFG* CDFG, bool verbose = true){
   }
 }
 
+
 static bool HandlCompareNode(LLVMCDFG* CDFG, bool verbose = true){
   auto nodes = CDFG->nodes();
   for(auto &elem : nodes){
@@ -2132,6 +2135,112 @@ static bool HandlCompareNode(LLVMCDFG* CDFG, bool verbose = true){
 }
 
 
+/// @brief Handles vector extract nodes in the CDFG.
+/// 
+/// This function iterates through all nodes in the CDFG and looks for operations 
+/// of type "vector.extract". If such an operation is found, it checks if its 
+/// inputs are nodes of type "MERGE". If they are, it connects the output nodes 
+/// to the input nodes and deletes the extract node from the CDFG.
+/// 
+/// @param CDFG A pointer to the LLVMCDFG representing the current control data flow graph.
+/// @param verbose A boolean indicating whether to print detailed information (default is true).
+void HandleVectorExtractNode(LLVMCDFG* CDFG, bool verbose = true){
+  auto nodes = CDFG->nodes();
+  for(auto &elem : nodes){
+    LLVMCDFGNode* node = elem.second;
+    mlir::Operation* op = node->operation();
+    if(op->getName().getStringRef() == "vector.extract"){
+      mlir::vector::ExtractOp extractop = dyn_cast<mlir::vector::ExtractOp>(op);
+      mlir::Operation* vecop = extractop.getVector().getDefiningOp();
+
+      if(isa<ADORA::MergeOp>(vecop)){
+        auto outnodes = node->outputNodes();
+        auto innodes = node->inputNodes();
+        for(LLVMCDFGNode* innode : innodes){
+          if(innode->getTypeName().substr(0,5) == "MERGE"){
+            for(LLVMCDFGNode* outnode : outnodes){
+              int edgeidx = node->getInputIdx(innode);
+              outnode->addInputNode(innode, edgeidx, /*isBackEdge=*/false);
+              innode->addOutputNode(outnode, /*isBackEdge=*/false);
+              CDFG->addEdge(innode, outnode);   
+            }
+          }
+          else if(innode->getTypeName() == "for"){
+            continue;
+          }
+          else {
+            assert(false && "Vector extract op could only support input as merge op.");
+          }
+        }
+        CDFG->delNode(node);  
+      }
+      else{
+        assert(false && "Vector extract op could only support input as merge op.");
+      }
+    }
+  }
+  return;
+}
+
+
+/// @brief Fixes the linear access pattern of vector store nodes in the CDFG.
+/// Based on the number of merge inputs, it fixes the linear access pattern 
+/// associated with the merge operation and updates the linear access string of that node.
+/// 
+/// @param CDFG A pointer to the LLVMCDFG representing the current control data flow graph.
+/// @param verbose A boolean indicating whether to print detailed information (default is true).
+void FixLinearAccessOfVectorStoreNode(LLVMCDFG* CDFG, bool verbose = true){
+  auto nodes = CDFG->nodes();
+  for(auto &elem : nodes){
+    LLVMCDFGNode* node = elem.second;
+    mlir::Operation* op = node->operation();
+    if(op->getName().getStringRef() == "affine.vector_store"){
+      mlir::affine::AffineVectorStoreOp vecstoreop = dyn_cast<mlir::affine::AffineVectorStoreOp>(op);
+      mlir::Operation* vecop = vecstoreop.getValue().getDefiningOp();
+      int ElementBytes = vecstoreop.getMemRefType().getElementTypeBitWidth()/8;
+
+      if(isa<ADORA::MergeOp>(vecop)){
+        /// get the input num of merge
+        int mergeNum = dyn_cast<ADORA::MergeOp>(vecop).getMergeNumber();
+
+        /// fix linear access of extractop
+        assert(node->isLSaffine() && node->getTypeName() == "Output");
+        std::string linearAccess = node->getLinearAccess();
+
+        std::stringstream ss(node->getLinearAccess());
+        std::string step, count;
+
+        SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
+        newLinearAccess.push_back(std::pair(ElementBytes, mergeNum));
+        // newLinearAccess.push_back(std::pair( -1 * ElementBytes * mergeNum, 1));
+
+        int level = 0;
+        while (std::getline(ss, step, ',')) {
+          std::getline(ss, count, ',');
+
+          if(level == 1){
+            int newstep = std::stoi(step) - ElementBytes * mergeNum + ElementBytes;
+            newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
+          }
+          else if(level != 0) {
+            newLinearAccess.push_back(std::pair(std::stoi(step), std::stoi(count)));
+          }
+
+          level++;
+        }
+
+        assert (!newLinearAccess.empty());
+        
+        node->setLinearAccess(LinearAccessToStr(newLinearAccess));
+      }
+      else{
+        assert(false && "vectorstore op could only support input as merge op right now.");
+      }
+    }
+  }
+  return;
+}
+
 bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp kernel, bool verbose){
   if(verbose) {kernel.dump();}
   _kernel_toDFG = &kernel;
@@ -2146,9 +2255,10 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
       int Innermost = 1;
       op->walk([&](affine::AffineForOp temp_forop)
       { 
+        temp_forop.dump();
         if(For_loop_level.count(temp_forop) == 0 && temp_forop != dyn_cast<affine::AffineForOp>(op)){ // Don't count the scf::For itself
           Innermost = 0;
-        // llvm::errs() << "Not innermost"  <<std::endl;    
+          llvm::errs() << "Not innermost"  << "\n";    
         } 
       });
       if (Innermost)
@@ -2250,6 +2360,51 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           // // TODO: settle this
           return WalkResult::advance();
         } 
+        else if(op->getName().getStringRef() == "ADORA.merge"){
+          ADORA::MergeOp mergeop = dyn_cast<ADORA::MergeOp>(op);
+          int mergenum = mergeop.getMergeNumber();
+          std::string mergetypename = "MERGE" + std::to_string(mergenum);
+          LLVMCDFGNode* node = CDFG->addNode(op, /*typeName=*/mergetypename); 
+          node->setLoopLevel(level);
+
+          //// set acc for merge op
+          SmallVector<std::string, 3> count_interval_repeat = {"1", "1", "1"};///count/interval/repeat
+          node->setAcc();
+          node->setACCinit("0");
+          node->setACCcount(count_interval_repeat[0]);
+          node->setACCinterval(count_interval_repeat[1]);
+          node->setACCrepeat(count_interval_repeat[2]);    
+          // // TODO: settle this
+          return WalkResult::advance();
+        } 
+        else if (op->getName().getStringRef() == "affine.vector_store" ){
+          LLVMCDFGNode* node = CDFG->addNode(op); 
+          node->setLoopLevel(level);
+          affine::AffineVectorStoreOp vecstore = dyn_cast<affine::AffineVectorStoreOp>(op);
+          std::string linearaccess_str = LinearAccessToStr(GetLinearAccess(vecstore, For_loop_level));
+          // std::string initAddr_str = std::to_string(GetInitAddr(vecstore, For_loop_level));
+          std::string initAddr_str = "0";
+          int memrefsize = GetMemrefSize(vecstore);
+          mlir::Operation* mrefop = vecstore.getMemref().getDefiningOp();
+          std::string ref_name;
+          if(isa<ADORA::DataBlockLoadOp>(mrefop)){
+            ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(Bload.getId());
+          }
+          else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
+            ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(BAlloc.getId());
+          }
+          else{
+            assert(0);
+          }
+          // op->getResult(0).addAttribute("LinearAccess", b.getStringAttr(linearaccess_str));
+          node->setLinearAccess(linearaccess_str);
+          node->setInitAddr(initAddr_str);
+          node->setMemrefSize(memrefsize);
+          node->setMemrefName(ref_name);
+          node->setLSaffine(true);
+        }
         else if (op->getName().getStringRef() == "affine.load"){
           LLVMCDFGNode* node = CDFG->addNode(op); 
           node->setLoopLevel(level);
@@ -2261,11 +2416,11 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           std::string ref_name;
           if(isa<ADORA::DataBlockLoadOp>(mrefop)){
             ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
-            ref_name = std::string(Bload.getKernelName()) + "_" + std::string(Bload.getId());
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(Bload.getId());
           }
           else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
             ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
-            ref_name = std::string(BAlloc.getKernelName()) + "_" + std::string(BAlloc.getId());
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(BAlloc.getId());
           }
           else
             assert(0);
@@ -2290,11 +2445,11 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           std::string ref_name;
           if(isa<ADORA::DataBlockLoadOp>(mrefop)){
             ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
-            ref_name = std::string(Bload.getKernelName()) + "_" + std::string(Bload.getId());
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(Bload.getId());
           }
           else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
             ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
-            ref_name = std::string(BAlloc.getKernelName()) + "_" + std::string(BAlloc.getId());
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(BAlloc.getId());
           }
           else{
             assert(0);
@@ -2339,11 +2494,11 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
       std::string ref_name;
       if(isa<ADORA::DataBlockLoadOp>(mrefop)){
         ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
-        ref_name = std::string(Bload.getKernelName()) + "_" + std::string(Bload.getId());
+        ref_name = std::string(kernel.getKernelName()) + ":" + std::string(Bload.getId());
       }
       else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
         ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
-        ref_name = std::string(BAlloc.getKernelName()) + "_" + std::string(BAlloc.getId());
+        ref_name = std::string(kernel.getKernelName()) + ":" + std::string(BAlloc.getId());
       }
       else
         assert(0);
@@ -2364,11 +2519,11 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
       std::string ref_name;
       if(isa<ADORA::DataBlockLoadOp>(mrefop)){
         ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
-        ref_name = std::string(Bload.getKernelName()) + "_" + std::string(Bload.getId());
+        ref_name = std::string(kernel.getKernelName()) + ":" + std::string(Bload.getId());
       }
       else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
         ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
-        ref_name = std::string(BAlloc.getKernelName()) + "_" + std::string(BAlloc.getId());
+        ref_name = std::string(kernel.getKernelName()) + ":" + std::string(BAlloc.getId());
       }
       else{
         assert(0);
@@ -2568,11 +2723,21 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
   ////////////////////////
   /// Handle compare node
   ////////////////////////
-  auto result = HandlCompareNode(CDFG, verbose);
+  bool result = HandlCompareNode(CDFG, verbose);
   if(!result) return false;
 
   ////////////////////////
-  /// Remove redundant nodes: bitcast for trunc
+  /// Handle vector_extract node && Maybe useless
+  ////////////////////////
+  HandleVectorExtractNode(CDFG, verbose);
+
+  ////////////////////////
+  /// Handle affine.vector_store node
+  ////////////////////////
+  FixLinearAccessOfVectorStoreNode(CDFG, verbose);
+
+  ////////////////////////
+  /// Remove redundant nodes: bitcast, for with no source and sink, truncf
   ////////////////////////
   bool removing = true;
   while(removing){
@@ -2584,8 +2749,10 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
       if(node->getTypeName() == "bitcast"){
         assert(node->inputNodes().size() == 1);
         LLVMCDFGNode* AnceNode = node->getInputPort(0);
-        for(LLVMCDFGNode* output : node->outputNodes())
+        for(int edgeid : node->outputEdges())
         {
+          LLVMCDFGNode* output = CDFG->edge(edgeid)->dst();
+          assert(output != NULL);
           int edgeidx = output->getInputIdx(node);
           bool isbackedge = output->isInputBackEdge(node);
           output->addInputNode(AnceNode,  edgeidx, isbackedge);
@@ -2710,45 +2877,46 @@ void ADORALoopCdfgGenPass::runOnOperation()
   unsigned cnt = 0;
   for (auto FuncOp : getOperation().getOps<func::FuncOp>())
   {
-    cnt++;
+    // cnt++;
     Func = FuncOp;
-  }
-  assert(cnt == 1 && "There should be only 1 topFunc in IR Module.");
-  std::string funcname = Func.getSymName().str();
+    std::string funcname = Func.getSymName().str();
 
-  // Get loop level from scf ForOP
-  /// Generating DFG
-  std::string GeneralOpNameFile_str;
-  if (GeneralOpNameFile == nullptr) {
-    std::cerr << "Environment variable \" GENERAL_OP_NAME_ENV \" is not set." << std::endl;
-    GeneralOpNameFile_str = "/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt";
-    std::cerr << "Using \" GENERAL_OP_NAME_ENV \" = \"/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt\"" << std::endl;
-  }
-  else
-    GeneralOpNameFile_str = GeneralOpNameFile;
-  // LLVMCDFG *CDFG = new LLVMCDFG(funcname, GeneralOpNameFile_str);
-
-  // ADORA::KernelOp kernel;
-  // OpBuilder b(m);
-  // m->walk([&](ADORA::KernelOp k){
-  //   kernel = k;
-  //   WalkResult::interrupt();
-  // });
-  int kernel_cnt = 0;
-  m->walk([&](ADORA::KernelOp kernel) {
-    std::string kernelName = kernel.getKernelName();
-    if(kernelName.empty()){
-      kernelName = "kernel_" + std::to_string(kernel_cnt);
+    // Get loop level from scf ForOP
+    /// Generating DFG
+    std::string GeneralOpNameFile_str;
+    if (GeneralOpNameFile == nullptr) {
+      std::cerr << "Environment variable \" GENERAL_OP_NAME_ENV \" is not set." << std::endl;
+      GeneralOpNameFile_str = "/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt";
+      std::cerr << "Using \" GENERAL_OP_NAME_ENV \" = \"/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt\"" << std::endl;
     }
-    LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile_str);
-    generateCDFGfromKernel(CDFG, kernel, /*verbose=*/false);
-    CDFG->CDFGtoDOT(kernelName + "_CDFG.dot");
-    kernel_cnt++;
-  });   
+    else
+      GeneralOpNameFile_str = GeneralOpNameFile;
+    // LLVMCDFG *CDFG = new LLVMCDFG(funcname, GeneralOpNameFile_str);
 
-  // generateCDFGfromKernel(CDFG, kernel);
+    // ADORA::KernelOp kernel;
+    // OpBuilder b(m);
+    // m->walk([&](ADORA::KernelOp k){
+    //   kernel = k;
+    //   WalkResult::interrupt();
+    // });
+    int kernel_cnt = 0;
+    m->walk([&](ADORA::KernelOp kernel) {
+      std::string kernelName = kernel.getKernelName();
+      if(kernelName.empty()){
+        kernelName = "kernel_" + std::to_string(kernel_cnt);
+      }
+      LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile_str);
+      generateCDFGfromKernel(CDFG, kernel, /*verbose=*/false);
+      CDFG->CDFGtoDOT(kernelName + "_CDFG.dot");
+      kernel_cnt++;
+    });   
 
-  // CDFG->CDFGtoDOT(CDFG->name_str()+"_CDFG.dot");
+    // generateCDFGfromKernel(CDFG, kernel);
+
+    // CDFG->CDFGtoDOT(CDFG->name_str()+"_CDFG.dot");
+  }
+  // assert(cnt == 1 && "There should be only 1 topFunc in IR Module.");
+
 }
 
 std::unique_ptr<OperationPass<ModuleOp>> mlir::ADORA::createADORALoopCdfgGenPass()

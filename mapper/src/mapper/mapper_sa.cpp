@@ -428,24 +428,76 @@ int MapperSA::tryCandidates(Mapping* mapping, DFGNode* dfgNode, const std::vecto
     return -1;
 }
 
+// // find candidates for one DFG node based on current mapping status
+// std::vector<ADGNode*> MapperSA::findCandidates(Mapping* mapping, DFGNode* dfgNode, int range, int maxCandidates){
+//     std::vector<ADGNode*> candidates;
+//     for(auto& elem : mapping->getADG()->nodes()){
+//         auto adgNode = elem.second;
+//         //select FU node
+//         if(adgNode->type() == "GIB"){  
+//             continue;
+//         }
+//         FUNode* fuNode = dynamic_cast<FUNode*>(adgNode);
+//         // check if the DFG node operationis supported
+//         if(!fuNode->opCapable(dfgNode->operation())){
+//             continue;
+//         }
+//         if(!mapping->isMapped(fuNode)){
+//             candidates.push_back(fuNode);
+//         }
+//     }
+//     // randomly select candidates
+//     std::random_shuffle(candidates.begin(), candidates.end());
+//     int num = std::min((int)candidates.size(), range);
+//     candidates.erase(candidates.begin()+num, candidates.end());
+//     // sort candidates according to their distances with the mapped src and dst ADG nodes of this DFG node 
+//     std::vector<int> sortedIdx = sortCandidates(mapping, dfgNode, candidates);
+//     int cdtNum = std::min(num, maxCandidates);
+//     std::vector<ADGNode*> sortedCandidates;
+//     for(int i = 0; i < cdtNum; i++){
+//         sortedCandidates.push_back(candidates[sortedIdx[i]]);
+//     }
+//     return sortedCandidates;
+// }
+
+// @jhlou:
 // find candidates for one DFG node based on current mapping status
 std::vector<ADGNode*> MapperSA::findCandidates(Mapping* mapping, DFGNode* dfgNode, int range, int maxCandidates){
     std::vector<ADGNode*> candidates;
-    for(auto& elem : mapping->getADG()->nodes()){
-        auto adgNode = elem.second;
-        //select FU node
-        if(adgNode->type() == "GIB"){  
-            continue;
-        }
-        FUNode* fuNode = dynamic_cast<FUNode*>(adgNode);
-        // check if the DFG node operationis supported
-        if(!fuNode->opCapable(dfgNode->operation())){
-            continue;
-        }
-        if(!mapping->isMapped(fuNode)){
-            candidates.push_back(fuNode);
+    if(!getPlacementConstraints(dfgNode).empty()){
+        for(auto& adgNode : getPlacementConstraints(dfgNode)){
+            //select FU node
+            if(adgNode->type() == "GIB"){  
+                continue;
+            }
+            FUNode* fuNode = dynamic_cast<FUNode*>(adgNode);
+            // check if the DFG node operationis supported
+            if(!fuNode->opCapable(dfgNode->operation())){
+                continue;
+            }
+            if(!mapping->isMapped(fuNode)){
+                candidates.push_back(fuNode);
+            }
         }
     }
+    else{
+        for(auto& elem : mapping->getADG()->nodes()){
+            auto adgNode = elem.second;
+            //select FU node
+            if(adgNode->type() == "GIB"){  
+                continue;
+            }
+            FUNode* fuNode = dynamic_cast<FUNode*>(adgNode);
+            // check if the DFG node operationis supported
+            if(!fuNode->opCapable(dfgNode->operation())){
+                continue;
+            }
+            if(!mapping->isMapped(fuNode)){
+                candidates.push_back(fuNode);
+            }
+        }
+    }
+ 
     // randomly select candidates
     std::random_shuffle(candidates.begin(), candidates.end());
     int num = std::min((int)candidates.size(), range);
@@ -459,7 +511,6 @@ std::vector<ADGNode*> MapperSA::findCandidates(Mapping* mapping, DFGNode* dfgNod
     }
     return sortedCandidates;
 }
-
 
 // get the shortest distance between ADG node and the available IOB
 int MapperSA::getAdgNode2IODist(Mapping* mapping, int id){

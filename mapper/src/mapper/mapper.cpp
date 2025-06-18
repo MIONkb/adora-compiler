@@ -87,6 +87,27 @@ void Mapper::initializeDfg(){
 //     candidatesCnt = cdt.cnt();
 // }
 
+/// @jhlou: 
+void Mapper::preestablishPlacementConstraints(DFGNode* dfgnode, std::vector<ADGNode*> adgnodes){
+    _prePlacementConstraints[dfgnode] = adgnodes;
+}
+
+/// @brief Retrieves the placement constraints associated with a given DFG node.
+/// @param dfgnode A pointer to the DFGNode for which placement constraints are to be retrieved.
+/// @return A vector of ADGNode pointers associated with the specified DFGNode. 
+/// If no constraints exist, an empty vector is returned.
+std::vector<ADGNode*> Mapper::getPlacementConstraints(DFGNode* dfgnode) {
+    // Check if the DFGNode exists in the pre-placement constraints map.
+    auto it = _prePlacementConstraints.find(dfgnode);
+    
+    // If found, return the associated vector of ADGNode pointers.
+    if (it != _prePlacementConstraints.end()) {
+        return it->second; // Return the vector of ADGNode*.
+    }
+    
+    // If not found, return an empty vector.
+    return std::vector<ADGNode*>(); // Return an empty vector if no constraints exist.
+}
 
 // // sort dfg nodes in reversed topological order
 // // depth-first search

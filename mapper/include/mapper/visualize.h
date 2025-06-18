@@ -18,6 +18,7 @@ public:
     ~Graphviz(){}  
     // draw scheduled DFG with latency annotated
     void drawDFG();    
+    void originaldrawDFG();
     // draw mapped ADG with mapped DFG annotated
     void drawADG();
     // dump mapped DFG IO ports with mapped ADG IO and latency annotated

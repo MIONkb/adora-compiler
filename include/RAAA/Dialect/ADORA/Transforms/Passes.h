@@ -26,7 +26,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createSimplifyLoadStoreInLoopNestPa
 std::unique_ptr<OperationPass<func::FuncOp>> createAffineLoopReorderPass();
 std::unique_ptr<OperationPass<ModuleOp>> createADORALoopUnrollAndJamPass();
 std::unique_ptr<OperationPass<ModuleOp>> createADORAAutoUnrollPass();
-std::unique_ptr<OperationPass<ModuleOp>> createScheduleADORATasksPass();
+std::unique_ptr<OperationPass<func::FuncOp>> createScheduleADORATasksPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

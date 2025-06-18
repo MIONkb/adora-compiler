@@ -1,0 +1,19 @@
+Digraph G {
+"Input1"[label = "\N\nlat=3"];
+"Input2"[label = "\N\nlat=3"];
+"MUL3"[label = "\N\nlat=4"];
+"Input2"->"MUL3"[label = "lat=0\nop=0"];
+"Input4"[label = "\N\nlat=3"];
+"MUL5"[label = "\N\nlat=4"];
+"Input4"->"MUL5"[label = "lat=0\nop=0"];
+"ADD6"[label = "\N\nlat=6"];
+"MUL3"->"ADD6"[label = "lat=1\nop=0"];
+"MUL5"->"ADD6"[label = "lat=0\nop=1"];
+"MUL7"[label = "\N\nlat=8"];
+"Input1"->"MUL7"[label = "lat=0\nop=0"];
+"ADD6"->"MUL7"[label = "lat=1\nop=1"];
+"ADD8"[label = "\N\nlat=9"];
+"MUL7"->"ADD8"[label = "lat=0\nop=0"];
+"Output9"[label = "\N\nlat=10"];
+"ADD8"->"Output9"[label = "lat=0\nop=0"];
+}

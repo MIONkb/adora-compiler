@@ -1077,6 +1077,8 @@ int Mapping::getAvailDelay(FUNode* fuNode, DFGNode* dfgNode){
     // }
     if(numOp == 0) return 0;
     int availDelay;
+
+    /// already used this fu as delay unit
     if(_fuDelayAttr.count(fuNode->id())){
         auto& attr = _fuDelayAttr[fuNode->id()];
         int leftOps = numOp - attr.delayUsed.size();
@@ -1087,6 +1089,32 @@ int Mapping::getAvailDelay(FUNode* fuNode, DFGNode* dfgNode){
     return availDelay;
 }
 
+
+// @jhlou: pre assign delay pipe for MERGE node
+void Mapping::preAssignRdu(){
+    for(auto elem : _adgNodeAttr){
+        int adgnodeId = elem.first;     
+
+        if(isMapped(_adg->node(adgnodeId))){
+            DFGNode* dfgnode = elem.second.dfgNode;
+            if(dfgnode->operation() == "MERGE4"){
+                // _fuDelayAttr[adgnodeId].delayUsed[1] = 1;
+                // _fuDelayAttr[adgnodeId].delayUsed[2] = 2;
+                // _fuDelayAttr[adgnodeId].delayUsed[2] = 3;
+                 _fuDelayAttr[adgnodeId].totalDelayUsed = 6;
+            }
+            else if(dfgnode->operation() == "MERGE3"){
+                // _fuDelayAttr[adgnodeId].delayUsed[1] = 1;
+                // _fuDelayAttr[adgnodeId].delayUsed[2] = 2;
+                _fuDelayAttr[adgnodeId].totalDelayUsed = 3;
+            }        
+            else if(dfgnode->operation() == "MERGE2"){
+                // _fuDelayAttr[adgnodeId].delayUsed[1] = 1;
+                _fuDelayAttr[adgnodeId].totalDelayUsed = 1;
+            }
+        }    
+    }
+}
 
 // calculate the routing latency of each edge, not inlcuding the RDU
 void Mapping::calEdgeRouteLat(){
@@ -1125,6 +1153,7 @@ void Mapping::latencyBound(){
     // }
     for(auto nodeId : _dfg->topoNodes()){
         DFGNode *node = _dfg->node(nodeId);
+        // node->printDfgNode();
         int maxLat = 0; // max latency of the input ports
         int nodeOpLat = _dfg->node(nodeId)->opLatency(); // operation latency
         for(auto& elem : node->inputEdges()){
@@ -1185,6 +1214,9 @@ void Mapping::latencySchedule(){
     auto& topoNodes = _dfg->topoNodes();
     std::list<int> unscheduledNodes(topoNodes.rbegin(), topoNodes.rend());        
 
+    // @jhlou set pre-assigned RDU for some node:Merge
+    preAssignRdu();
+
     // calculate the routing latency of each edge, not inlcuding the RDU
     calEdgeRouteLat();
     // calculate the DFG node latency bounds, finding the max-latency path 
@@ -1197,11 +1229,13 @@ void Mapping::latencySchedule(){
     // int inputLat = _adg->loadLatency(); // IOB input latency 
     while(dfgNode){ // until getting to the input port
         int nodeId = dfgNode->id();     
+        // std::cout << "critical path node name: "<< dfgNode->name()<<" id: " << nodeId  << std::endl;
         // std::cout << "id: " << nodeId << std::endl;   
         // use the latency lower bound as the target latency
         int inPortLat = _dfgNodeAttr[nodeId].lat - _dfg->node(nodeId)->opLatency(); // input port latency
         FUNode* fuNode = dynamic_cast<FUNode*>(_dfgNodeAttr[nodeId].adgNode); // mapped FU node (GPE/IOB)
         DFGNode* srcNode = nullptr;
+        // dfgNode->printDfgNode();
         int inPort;
         int delayRequired = 0;
         int maxArriveLat = -1;
@@ -1254,11 +1288,16 @@ void Mapping::latencySchedule(){
         }
     }
     // unscheduledNodes.erase(iterEnd, unscheduledNodes.end());
+    
+    // std::cout << " schedule critical path done!!  unscheduledNodes size: " << unscheduledNodes.size() << " scheduledNodeIds size: " <<scheduledNodeIds.size()<< std::endl;
     // schedule the DFG nodes not in the max-latency path
     while(!unscheduledNodes.empty()){
         for(auto iter = unscheduledNodes.begin(); iter != unscheduledNodes.end();){           
             int nodeId = *iter;
             dfgNode = _dfg->node(nodeId);
+            // dfgNode->printDfgNode();
+            // std::cout << "unschedule node: " << dfgNode->name() << " id: " << nodeId << " unscheduledNodes size: " << unscheduledNodes.size() << std::endl;
+            
             // std::cout << "id: " << nodeId << std::endl;
             int maxLat = 0x3fffffff;
             int minLat = 0;
@@ -1273,6 +1312,7 @@ void Mapping::latencySchedule(){
                     // if(dstNodeId == _dfg->id()){ // connected to DFG output port
                     //     continue;
                     // }
+                    // std::cout << "output node: " << _dfg->node(dstNodeId)->name() << std::endl;
                     if(scheduledNodeIds.count(dstNodeId)){ // already scheduled  
                         if(edge->isBackEdge()){     
                             routeLat -= _II * edge->iterDist(); // latency due to iteration distance
@@ -1316,6 +1356,7 @@ void Mapping::latencySchedule(){
             _dfgNodeAttr[nodeId].maxLat = maxInportLat;   
             scheduledNodeIds.emplace(nodeId); // latency fixed
             iter = unscheduledNodes.erase(iter);
+            // std::cout << "unscheduledNodes size: " << unscheduledNodes.size() << std::endl;
             // update the delay status and minLat of the this node if its srcNode already scheduled
             FUNode* fuNode = dynamic_cast<FUNode*>(_dfgNodeAttr[nodeId].adgNode); // mapped FU node (GPE/IOB)
             for(auto& elem : dfgNode->inputEdges()){
@@ -1433,6 +1474,7 @@ void Mapping::calEdgeLatVio(){
     _vioDfgEdges.clear(); // DFG edges with latency violation
     for(auto nodeId : _dfg->topoNodes()){
         DFGNode *node = _dfg->node(nodeId);
+        // node->printDfgNode();
         // int minLat = _dfgNodeAttr[nodeId].minLat; // min latency of the input ports
         int maxLat = _dfgNodeAttr[nodeId].maxLat; // max latency of the input ports =  latency - operation_latency
         int Nodelat = _dfgNodeAttr[nodeId].lat;

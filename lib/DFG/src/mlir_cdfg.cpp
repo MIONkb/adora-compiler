@@ -26,16 +26,13 @@ LLVMCDFGNode* LLVMCDFG::node_lparg(int level)
     return NULL;
 }
 
-LLVMCDFGNode* LLVMCDFG::addNode(mlir::Operation *op)
-{
+LLVMCDFGNode* LLVMCDFG::addNode(mlir::Operation *op, std::string TypeName){
     if(_opNodeMap.count(op)){
         return _opNodeMap[op];
     }
     // create new node
     // errs() <<"[ADDNodes!] StringRef:" << op->getName().getStringRef();
     errs() <<"[ADDNodes!] ";
-    
-    std::string TypeName = _OpNameCovertMap[op->getName().getStringRef().str()];
     
     LLVMCDFGNode *node = new LLVMCDFGNode(op, TypeName, this);
     int id = 0; /// node start from 1 not 0
@@ -49,6 +46,17 @@ LLVMCDFGNode* LLVMCDFG::addNode(mlir::Operation *op)
 
     node->operation()->dump();    
     return node;
+}
+
+LLVMCDFGNode* LLVMCDFG::addNode(mlir::Operation *op)
+{
+    if(_opNodeMap.count(op)){
+        return _opNodeMap[op];
+    }
+
+    std::string TypeName = _OpNameCovertMap[op->getName().getStringRef().str()];
+    
+    return addNode(op, TypeName);
 }
 
 LLVMCDFGNode* LLVMCDFG::addNode(mlir::Block* block, int level)
@@ -156,8 +164,8 @@ void LLVMCDFG::CDFGtoDOT(std::string fileName) {
         std::string NodeName = TypeName + std::to_string(node_id);
         // mlir::Operation* op = node->operation();
         if(TypeName == ""){
-            ofs << NodeName << "[opcode = \"";
-            ofs << "\"";
+            ofs << NodeName << "[opcode = \"undefined";
+            ofs << "\"]\n";
             continue;
         }
         ofs << NodeName << "[opcode = \"" << TypeName;

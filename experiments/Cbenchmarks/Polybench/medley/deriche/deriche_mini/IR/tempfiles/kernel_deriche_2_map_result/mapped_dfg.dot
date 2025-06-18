@@ -1,0 +1,9 @@
+Digraph G {
+"Input1"[label = "\N\nlat=3"];
+"Input2"[label = "\N\nlat=3"];
+"FADD323"[label = "\N\nlat=5"];
+"Input1"->"FADD323"[label = "lat=1\nop=0"];
+"Input2"->"FADD323"[label = "lat=0\nop=1"];
+"Output4"[label = "\N\nlat=6"];
+"FADD323"->"Output4"[label = "lat=0\nop=0"];
+}

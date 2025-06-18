@@ -371,7 +371,7 @@ def AffineLoopReorder :
 //===----------------------------------------------------------------------===//
 // Loop Reorder
 //===----------------------------------------------------------------------===//
-def ScheduleADORATasks: Pass<"adora-schedule-tasks", "ModuleOp"> {
+def ScheduleADORATasks: Pass<"adora-schedule-tasks", "func::FuncOp"> {
   let summary = "schedule CGRA tasks after";
   let description = [{
     Schedule CGRA tasks, simplify data movement. 
