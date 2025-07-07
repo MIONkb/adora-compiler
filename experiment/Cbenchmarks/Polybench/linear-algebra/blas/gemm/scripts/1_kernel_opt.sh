@@ -3,9 +3,6 @@
 ## User define args 
 ###################
 unroll=0 # 1: auto unroll, 0: Don't unroll
-# c=(${unroll} -e 1)
-# echo $c
-# exit
 ###################
 ## Don't touch other part
 ###################
@@ -51,7 +48,7 @@ for file in "$srcfolder"/*; do
           --adora-simplify-loadstore \
           --adora-math-rewrite \
           --adora-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
-           --adora-auto-unroll="cgra-adg=${CGRA_ADG_PATH}/cgra_adg.json" \
+          --adora-auto-unroll="cgra-adg=${CGRA_ADG_PATH}/cgra_adg.json" \
           "$file" -o $tarfolder/"$filename"_opt.mlir
       else
          cgra-opt \

@@ -142,6 +142,19 @@ static bool ValueIsInOperands(mlir::Value value, mlir::Operation* op){
   return false;
 }
 
+static void SetACCOperandIdx(LLVMCDFGNode* node){
+  assert(node->isAcc());
+  assert(node->inputNodes().size() <= 2);
+  for(auto innode : node->inputNodes()){
+    if(isa<AffineForOp>(innode->operation())){
+      continue;
+    }
+    else{
+      node->setInputIdx(innode, 0);
+    }
+  }
+}
+
 
 template <typename DataT>
 DataT DataAttrValue2NewType(mlir::Attribute constattr){
@@ -884,8 +897,8 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
         assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
         // IterArgConsumer->dump();
-        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
-          continue;
+        // if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+        //   continue;
         assert(isa<arith::AddFOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
         IterArgConsumer->replaceAllUsesWith(AnotherOperand.getDefiningOp());
@@ -2086,6 +2099,9 @@ static void HandleSelfCycle(LLVMCDFG* CDFG, bool verbose = true){
         ComputeNode->setACCcount(count_interval_repeat[0]);
         ComputeNode->setACCinterval(count_interval_repeat[1]);
         ComputeNode->setACCrepeat(count_interval_repeat[2]);    
+
+        //// Change operand idx of acc op
+        SetACCOperandIdx(ComputeNode);
       }
     }
   }

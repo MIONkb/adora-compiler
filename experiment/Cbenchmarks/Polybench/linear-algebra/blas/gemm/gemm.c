@@ -15,7 +15,7 @@
 // #include <math.h>
 
 /* Include polybench common header. */
-#include "rocket_polybench.h"
+// #include "rocket_polybench.h"
 
 /* Include benchmark-specific header. */
 #include "gemm.h"

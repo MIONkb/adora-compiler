@@ -17,6 +17,8 @@ Adora includes two compilers designed for the FDRA CGRA SoC:
 
 -Generates RISC-V execution files for the Rocket+CGRA SoC.
 
+#### If you have any issues related to this repository, please don't hesitate to get in touch!
+
 ## Directories:
 - **`tools`** : Contains the main functions for `cgra-opt` and `cgra-mapper`
 
@@ -26,7 +28,7 @@ Adora includes two compilers designed for the FDRA CGRA SoC:
 
 - **`build_tools`** : Bash scripts for building LLVM and Adora
 
-- **`experiment`** : Includes ML benchmarks and C benchmarks (e.g., Polybench). Follow the instructions below to run them.
+- **`experiment`** : Includes ML benchmarks and C benchmarks (e.g., Polybench). Follow the instructions below to run them. More benchmarks will be added soon.
 
 - **`env.sh`** : Change the environment variables to your own, and source it.
 ---
@@ -56,7 +58,7 @@ After making the changes, run `build_cgraopt.sh`.
 ### 3 Rocket+CGRA SoC
 
 You can download and install the Rocket+CGRA SoC from the appropriate repository:  
-xxxxxxxxxxxxxxxxxxxxx
+[FDRA Repository](https://github.com/MIONkb/FDRA)
 
 ### 4 Other Dependencies You May Need
 

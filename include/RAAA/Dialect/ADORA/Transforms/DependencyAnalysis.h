@@ -235,6 +235,13 @@ SmallDenseMap<affine::AffineStoreOp, SmallVector<affine::AffineLoadOp>>
                                 
 SmallDenseMap<unsigned, SmallVector<Operation* > >
                  getReuseGroupsForLoop(AffineForOp forOp);
+
+
+//////////////////////////////////
+///// Dependency analysis for data block operations
+//////////////////////////////////
+bool checkDependencyBetweenBlockStoreAndBlockLoad(ADORA::DataBlockStoreOp& store, ADORA::DataBlockLoadOp& load) ;
+
 } // namespace ADORA
 } // namespace mlir
 

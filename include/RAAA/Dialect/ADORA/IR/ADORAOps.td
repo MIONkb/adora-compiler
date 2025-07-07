@@ -173,6 +173,11 @@ def ADORA_DataBlockLoadOp: ADORA_Op<"BlockLoad", []>{
     //   return this->getOperation()->getAttr("BlockLen")
     //     .cast<IntegerAttr>().getValue().getSExtValue();
     // }
+
+    bool hasKernelName(){
+      return this->getOperation()->hasAttr("KernelName");
+    }
+
     StringRef getKernelName() {
       Attribute KnNameAttr = this->getOperation()->getAttr("KernelName");
       if(KnNameAttr == nullptr)
@@ -271,10 +276,19 @@ def ADORA_DataBlockStoreOp: ADORA_Op<"BlockStore", []>{
     //   return this->getOperation()->getAttr("BlockLen")
     //     .cast<IntegerAttr>().getValue().getSExtValue();
     // }
-    StringRef getKernelName() {
-      return this->getOperation()->getAttr("KernelName")
-        .cast<StringAttr>().strref();
+
+    bool hasKernelName(){
+      return this->getOperation()->hasAttr("KernelName");
     }
+
+    StringRef getKernelName() {
+      Attribute KnNameAttr = this->getOperation()->getAttr("KernelName");
+      if(KnNameAttr == nullptr)
+        return "";
+      else
+        return KnNameAttr.cast<StringAttr>().strref();
+    }
+    
     void setKernelName(std::string s) {
       StringAttr KernelNameAttr = StringAttr::get(getOperation()->getContext(),s);
       getOperation()->setAttr(getKernelNameAttrStr(), KernelNameAttr);
@@ -538,11 +552,11 @@ def MergeOp : ADORA_Op<"merge">{
       return getOut();
     }
 
-    ::mlir::VectorType getOutVectorType(){
+    ::mlir::VectorType getOutVectorType() {
       return ::llvm::cast<VectorType>(getOut().getType());
     }
 
-    ArrayRef<int64_t> getOutVectorShape() const {
+    ArrayRef<int64_t> getOutVectorShape() {
       return getOutVectorType().getShape();
     }
 

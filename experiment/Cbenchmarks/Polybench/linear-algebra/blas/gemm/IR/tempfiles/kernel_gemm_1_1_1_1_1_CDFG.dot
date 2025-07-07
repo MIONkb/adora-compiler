@@ -16,12 +16,12 @@ Input0 -> FMUL321[color = black, style = bold, operand = 0, label = "Op=0"];
 CONST13 -> FMUL321[color = black, style = bold, operand = 1, label = "Op=1"];
 FMUL321 -> FMUL323[color = black, style = bold, operand = 0, label = "Op=0"];
 Input2 -> FMUL323[color = black, style = bold, operand = 1, label = "Op=1"];
-for6 -> FADD324[color = black, style = dashed, operand = 0, iterdist = 0, label = "Op=0, IterDist = 0"];
-FMUL323 -> FADD324[color = black, style = bold, operand = 1, label = "Op=1"];
+FMUL323 -> FADD324[color = black, style = bold, operand = 0, label = "Op=0"];
+for6 -> FADD324[color = black, style = dashed, operand = 1, iterdist = -1981848320, label = "Op=1, IterDist = -1981848320"];
 FADD324 -> yield5[color = black, style = bold, operand = 0, label = "Op=0"];
 CONST8 -> for6[color = black, style = bold, operand = 0, label = "Op=0"];
 for6 -> FADD329[color = black, style = bold, operand = 0, label = "Op=0"];
 Input7 -> FADD329[color = black, style = bold, operand = 1, label = "Op=1"];
 FADD329 -> Output10[color = black, style = bold, operand = 0, label = "Op=0"];
-yield5 -> for6[color = black, style = dashed, operand = 1, iterdist = 0, label = "Op=1, IterDist = 0"];
+yield5 -> for6[color = black, style = dashed, operand = 0, iterdist = 0, label = "Op=0, IterDist = 0"];
 }

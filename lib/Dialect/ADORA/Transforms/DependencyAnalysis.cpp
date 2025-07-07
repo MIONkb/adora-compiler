@@ -432,5 +432,28 @@ SmallDenseMap<unsigned, SmallVector<Operation* >>
   return ReuseGroups;
 }
 
+
+
+//////////////////////////////////
+///// Dependency analysis for data block operations
+//////////////////////////////////
+
+/// @brief check the dependency between two data block op.
+///    Two data blocks are dependent under the following conditions:
+///       1. 
+///       2.
+/// @param store  
+/// @param load  
+/// @return 
+bool checkDependencyBetweenBlockStoreAndBlockLoad(ADORA::DataBlockStoreOp& store, ADORA::DataBlockLoadOp& load) {
+  if(store.getTargetMemref() == load.getOriginalMemref()){
+    return true;
+  }
+
+  return false;
+}
+
+
+
 }
 }

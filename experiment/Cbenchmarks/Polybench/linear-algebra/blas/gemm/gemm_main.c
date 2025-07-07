@@ -160,7 +160,7 @@ int main(int argc, char** argv)
   // polybench_start_instruments;
 
   /* Run kernel. */
-  printf("\nstart kernel\n");
+  printf("\nstart kernel unroll\n");
   start = rdcycle();
   gemm (C1,A,B);
   end = rdcycle();

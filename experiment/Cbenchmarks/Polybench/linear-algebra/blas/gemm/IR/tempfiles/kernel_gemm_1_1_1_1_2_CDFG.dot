@@ -14,7 +14,7 @@ Input0 -> FMUL321[color = black, style = bold, operand = 0, label = "Op=0"];
 CONST13 -> FMUL321[color = black, style = bold, operand = 1, label = "Op=1"];
 FMUL321 -> FMUL323[color = black, style = bold, operand = 0, label = "Op=0"];
 Input2 -> FMUL323[color = black, style = bold, operand = 1, label = "Op=1"];
-FMUL323 -> FACC324[color = black, style = bold, operand = 1, label = "Op=1"];
+FMUL323 -> FACC324[color = black, style = bold, operand = 0, label = "Op=0"];
 Input7 -> FADD329[color = black, style = bold, operand = 1, label = "Op=1"];
 FADD329 -> Output10[color = black, style = bold, operand = 0, label = "Op=0"];
 FACC324 -> FADD329[color = black, style = bold, operand = 0, label = "Op=0"];

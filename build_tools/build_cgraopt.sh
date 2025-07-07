@@ -1,4 +1,5 @@
 #!/bin/bash
+### set LLVM_BUILD_DIR to your own llvm path
 LLVM_BUILD_DIR=/home/jhlou/CGRVOPT/llvm-project-Polygeist/build
 LLVM_INSTALL_DIR=/home/jhlou/CGRVOPT/llvm-project-Polygeist/build
 
