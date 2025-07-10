@@ -79,6 +79,9 @@ bool ScheduleADORATasksPass::BlockContainsKernelOp(mlir::Block* b){
 void generateTaskGraphFromBlock(TaskGraph* graph, mlir::Block* block){
   graph->setParentOp(block->getParentOp());
   /// validloads : data block which has already been loaded to on-chip memory
+  std::map<ADORA::LocalMemAllocOp, LocalAllocNode*> validallocs; 
+
+  /// validloads : data block which has already been loaded to on-chip memory
   std::map<ADORA::DataBlockLoadOp, BlockLoadNode*> validloads; 
 
   /// dirtystores : data block which has not been written back to main memory
@@ -109,6 +112,12 @@ void generateTaskGraphFromBlock(TaskGraph* graph, mlir::Block* block){
 
       /// handle load-after-load dependency here
 
+    }
+    else if(isa<ADORA::LocalMemAllocOp>(op)){
+      ADORA::LocalMemAllocOp allocop = dyn_cast<ADORA::LocalMemAllocOp>(op);
+      LocalAllocNode* allocnode = new LocalAllocNode(allocop);
+      graph->AddNodeAndAnalyzeDefaultDependency(allocnode);
+      validallocs[allocop] = allocnode;
     }
     else if(isa<ADORA::DataBlockStoreOp>(op)){
       ADORA::DataBlockStoreOp blockstoreop = dyn_cast<ADORA::DataBlockStoreOp>(op);
@@ -148,6 +157,8 @@ void analyzeDependencyInGraph(TaskGraph* graph){
 }
 
 
+
+
 /// @brief A wrapper
 /// @param func 
 void ScheduleADORATasksPass::ScheduleADORATasksInFunction(func::FuncOp func){
@@ -180,26 +191,30 @@ void ScheduleADORATasksPass::ScheduleADORATasksInFunction(func::FuncOp func){
     block->dump();
     graph->dumpGraph();
 
-    std::string filename = "Block_" + std::to_string(idx) + "_TaskGraph.dot";
+    std::string filename = "Block_" + std::to_string(idx) + "_TaskGraph_0.dot";
     graph->dumpGraphAsDot(filename);   
 
     //////////////
     /// 3rd step: analyze dependency of transfered data block
     ///   Following dependencies will be analyzed:
-    ///   
+    ///   g
     //////////////
     analyzeDependencyInGraph(graph);
 
+    //////////////
+    /// 4th step: simplify redundant data block transfer op
+    //////////////
+    //// move out redundant blockload
+
+    //// remove redundant blockstore-blockload
+    graph->RemoveRedundantBlockStoreLoadPair();
+
+    block->dump();
+    filename = "Block_" + std::to_string(idx) + "_TaskGraph_1.dot";
+    graph->dumpGraphAsDot(filename);   
+    
     idx++;
   }
-
-
-
-  //////////////
-  /// 4th step: simplify redundant data block transfer op
-  //////////////
-  //// move out redundant blockload
-
 }
 
 void ScheduleADORATasksPass::runOnOperation()

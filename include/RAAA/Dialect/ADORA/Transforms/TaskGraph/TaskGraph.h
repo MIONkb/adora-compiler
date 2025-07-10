@@ -26,6 +26,9 @@ private:
   
 public:
   void JustAddNode(TaskNode* node);
+  void JustDeleteNode(TaskNode* node);
+  void DeleteNodeOperation(TaskNode* node);
+
   void AddNodeAndAnalyzeDefaultDependency(TaskNode* node);
   template <typename T> void AddNodeAndAnalyzeDefaultDependency(T* node){
     AddNodeAndAnalyzeDefaultDependency(dyn_cast<TaskNode>(node));
@@ -35,10 +38,17 @@ public:
   mlir::Operation* getParentOp(){return _parentOp;}
 
   std::vector<TaskNode *> getAllNodes();
+  TaskNode* getNode(mlir::Operation* op);
+
+  ////////////////////////////////////////////////////
+  //// rewrite task graph through dependency analysis
+  ////////////////////////////////////////////////////
+  //// blockstore -> blockload dependency exists, and access same data block
+  void RemoveRedundantBlockStoreLoadPair();
 
   void dumpGraph() const;
   void dumpGraphAsDot(std::string& filename) const;
-
+  void dumpNode(TaskNode* node) const;
 private:
   int getMaxNodeIdx();
 

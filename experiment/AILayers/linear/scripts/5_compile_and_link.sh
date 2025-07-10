@@ -8,8 +8,8 @@ asmfolder="$rootfolder/$IRfolder/4_asms"
 tarfolder="$rootfolder/$IRfolder/5_obj"
 # tarfolder="$CHIPYARD_DIR/generators/fdra/software/tests/bareMetalC"
 tempfolder="$rootfolder/$IRfolder/tempfiles"
-main_file="deriche_main.c"
-baremetal_file_name="deriche_mini"
+main_file="gemm_main.c"
+baremetal_file_name="gemm_mini_unroll"
 DATASET_Size="MINI_DATASET"
 
 if [ ! -d "$tarfolder" ]; then

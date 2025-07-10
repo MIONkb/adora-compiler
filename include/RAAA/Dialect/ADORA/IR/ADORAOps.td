@@ -373,6 +373,9 @@ def LocalMemAllocOp : ADORA_Op<"LocalMemAlloc", []>{
     //   return this->getOperation()->getAttr("BlockLen")
     //     .cast<IntegerAttr>().getValue().getSExtValue();
     // }
+    bool hasKernelName(){
+      return this->getOperation()->hasAttr("KernelName");
+    }
     StringRef getKernelName() {
       Attribute KnNameAttr = this->getOperation()->getAttr("KernelName");
       if(KnNameAttr == nullptr)

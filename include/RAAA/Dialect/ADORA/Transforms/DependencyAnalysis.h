@@ -242,6 +242,9 @@ SmallDenseMap<unsigned, SmallVector<Operation* > >
 //////////////////////////////////
 bool checkDependencyBetweenBlockStoreAndBlockLoad(ADORA::DataBlockStoreOp& store, ADORA::DataBlockLoadOp& load) ;
 
+bool AccessSameDataBlock(ADORA::DataBlockLoadOp& op1, ADORA::DataBlockLoadOp& op2); // load-load
+bool AccessSameDataBlock(ADORA::DataBlockStoreOp& op1, ADORA::DataBlockLoadOp& op2); // store-load
+
 } // namespace ADORA
 } // namespace mlir
 

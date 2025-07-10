@@ -25,6 +25,7 @@ class BlockStoreNode;
 enum depType{ 
   NoDep,    // parallelizable
   Default,  // default dependency: load->config->execution->store
+  SourceToStore, // a special default dependency: blockload->corresponding store or alloc->store 
   Depend,    //
   Undefine 
 };
@@ -46,6 +47,8 @@ public:
   mlir::Operation* getOperation() const { return _operation;};
   mlir::Operation* Operation(){ return _operation;};
 
+  void delNodeOperation();
+
   void addInNode(TaskNode* node);
   void addInNode(TaskNode* node, depType dep);
   void delInNode(TaskNode* node);
@@ -55,6 +58,10 @@ public:
   void addOutNode(TaskNode* node);
   void delOutNode(TaskNode* node);
   std::vector<TaskNode *> getOutNodes();
+
+  TaskNode* ReplaceAllUsesWith(TaskNode* newnode);
+
+  // virtual void dump();
 
 public:
   TaskNode(mlir::Operation* operation){setOperation(operation);}
@@ -122,11 +129,37 @@ public:
   };
   ADORA::DataBlockLoadOp getDataBlockLoadOp(){ return _blockloadop;}
 
+  std::vector<KernelNode*> getKernelNodes(); 
+
   static bool classof(const TaskNode * node);
 
 public:
   BlockLoadNode(ADORA::DataBlockLoadOp& _){setBlockLoadOp(_);}
   ~BlockLoadNode(){}
+};
+
+//////////////////
+/// derived class for LocalMemAllocOp
+//////////////////
+class LocalAllocNode : public TaskNode
+{
+private:
+  ADORA::LocalMemAllocOp _localmemallocop;
+
+public:
+  void setLocalMemAllocOp(ADORA::LocalMemAllocOp& _) {
+    _localmemallocop = _; 
+    setOperation(_.getOperation());
+  };
+  ADORA::LocalMemAllocOp getLocalMemAllocOp(){ return _localmemallocop;}
+
+  std::vector<KernelNode*> getKernelNodes(); 
+
+  static bool classof(const TaskNode * node);
+
+public:
+  LocalAllocNode(ADORA::LocalMemAllocOp& _){setLocalMemAllocOp(_);}
+  ~LocalAllocNode(){}
 };
 
 //////////////////
@@ -143,6 +176,8 @@ public:
     setOperation(_.getOperation());
   };
   ADORA::DataBlockStoreOp getDataBlockStoreOp(){ return _blockstoreop;}
+
+  KernelNode* getKernelNode(); 
 
   static bool classof(const TaskNode * node);
 
