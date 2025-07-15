@@ -60,6 +60,9 @@ arith.divf FDIV32
 arith.mulf FMUL32
 arith.subf FSUB32 
 
+/// ADORA defined op
+ADORA.merge MERGE
+
 /// Load Store
 memref.load load
 memref.store store
@@ -69,3 +72,4 @@ affine.yield yield
 affine.for for
 scf.for scf_for
 scf.yield scf_yield
+vector.extract vector_extract

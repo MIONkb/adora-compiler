@@ -207,7 +207,7 @@ TaskNode* TaskGraph::getNode(mlir::Operation* op) {
 
         // Check if the current node's operation matches the given operation
         if (nodeOp == op) {
-            return node; // Found a matching node, return it
+          return node; // Found a matching node, return it
         }
     }
     
@@ -215,49 +215,8 @@ TaskNode* TaskGraph::getNode(mlir::Operation* op) {
     return nullptr;
 }
 
-/// @brief blockstore -> blockload dependency exists, and access same data block
-void TaskGraph::RemoveRedundantBlockStoreLoadPair(){
-  std::vector<TaskNode*> to_delete;
-  for (const auto& pair : _nodes) {
-    TaskNode* node = pair.first;
-    // dumpNode(node);
-    if(isa<BlockLoadNode>(node)){
-      /// Check each block store input to determine whether they access the same memory space.
-      for(auto innode : node->getInNodes()){
-        if(isa<BlockStoreNode>(innode)){
-          BlockStoreNode* storenode = dyn_cast<BlockStoreNode>(innode);
-          ADORA::DataBlockStoreOp store = storenode->getDataBlockStoreOp();
-          BlockLoadNode* loadnode = dyn_cast<BlockLoadNode>(node);
-          ADORA::DataBlockLoadOp load = loadnode->getDataBlockLoadOp();
-          
-          if(store.getTargetMemref() == load.getOriginalMemref()
-            && AccessSameDataBlock(store, load)){
-            mlir::Operation* source = GetTheSourceOperationOfBlockStore(store);
-            TaskNode* sourcenode = getNode(source);
-            assert(sourcenode != nullptr);
-
-            //// connect storenode's kernel to loadnode's kernel
-            KernelNode* sourcekernel = storenode->getKernelNode();
-            for(auto sinkkernel : loadnode->getKernelNodes()){
-              addConnectionBetweenTwoNode(sourcekernel, sinkkernel, /*dep=*/depType::Depend);
-            }
-
-            //// replace loadnode with sourcenode
-            loadnode->ReplaceAllUsesWith(sourcenode);
 
 
-            //// TODO:load去掉了，但得判断是从store开始连接还是store的源头malloc。
-            //// TODO:store是否要去掉？
-            to_delete.push_back(dyn_cast<TaskNode>(loadnode));
-          }
-        }
-      }
-    }
-  }
-  for(auto node : to_delete){
-    DeleteNodeOperation(node);
-  }
-}
 
 
 /// @brief print the graph to cout

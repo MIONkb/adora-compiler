@@ -7,6 +7,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
@@ -42,6 +43,7 @@ int _variable_config_cnt = 0;
 
 using namespace mlir;
 using namespace mlir::affine;
+using namespace mlir::vector;
 using namespace mlir::ADORA;
 
 #define DEBUG_TYPE "adora-dfg-gen"
@@ -2113,6 +2115,7 @@ static void HandleSelfCycle(LLVMCDFG* CDFG, bool verbose = true){
   }
 }
 
+
 static bool HandlCompareNode(LLVMCDFG* CDFG, bool verbose = true){
   auto nodes = CDFG->nodes();
   for(auto &elem : nodes){
@@ -2131,6 +2134,44 @@ static bool HandlCompareNode(LLVMCDFG* CDFG, bool verbose = true){
   return true;
 }
 
+
+void HandleVectorExtractNode(LLVMCDFG* CDFG, bool verbose = true){
+  auto nodes = CDFG->nodes();
+  for(auto &elem : nodes){
+    LLVMCDFGNode* node = elem.second;
+    mlir::Operation* op = node->operation();
+    if(op->getName().getStringRef() == "vector.extract"){
+      mlir::vector::ExtractOp extractop = dyn_cast<mlir::vector::ExtractOp>(op);
+      mlir::Operation* vecop = extractop.getVector().getDefiningOp();
+
+      if(isa<ADORA::MergeOp>(vecop)){
+        auto outnodes = node->outputNodes();
+        auto innodes = node->inputNodes();
+        for(LLVMCDFGNode* innode : innodes){
+          if(innode->getTypeName().substr(0,5) == "MERGE"){
+            for(LLVMCDFGNode* outnode : outnodes){
+              int edgeidx = node->getInputIdx(innode);
+              outnode->addInputNode(innode, edgeidx, /*isBackEdge=*/false);
+              innode->addOutputNode(outnode, /*isBackEdge=*/false);
+              CDFG->addEdge(innode, outnode);   
+            }
+          }
+          else if(innode->getTypeName() == "for"){
+            continue;
+          }
+          else {
+            assert(false && "Vector extract op could only support input as merge op.");
+          }
+        }
+        CDFG->delNode(node);  
+      }
+      else{
+        assert(false && "Vector extract op could only support input as merge op.");
+      }
+    }
+  }
+  return;
+}
 
 bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp kernel, bool verbose){
   if(verbose) {kernel.dump();}
@@ -2247,6 +2288,15 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
         else if(op->getName().getStringRef() == "affine.apply"){
           // LLVMCDFGNode* node = CDFG->addNode(op); 
           // node->setLoopLevel(level);
+          // // TODO: settle this
+          return WalkResult::advance();
+        } 
+        else if(op->getName().getStringRef() == "ADORA.merge"){
+          ADORA::MergeOp mergeop = dyn_cast<ADORA::MergeOp>(op);
+          int mergenum = mergeop.getMergeNumber();
+          std::string mergetypename = "MERGE" + std::to_string(mergenum);
+          LLVMCDFGNode* node = CDFG->addNode(op, /*typeName=*/mergetypename); 
+          node->setLoopLevel(level);
           // // TODO: settle this
           return WalkResult::advance();
         } 
@@ -2568,11 +2618,16 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
   ////////////////////////
   /// Handle compare node
   ////////////////////////
-  auto result = HandlCompareNode(CDFG, verbose);
+  bool result = HandlCompareNode(CDFG, verbose);
   if(!result) return false;
 
   ////////////////////////
-  /// Remove redundant nodes: bitcast for trunc
+  /// Handle vector_extract node
+  ////////////////////////
+  HandleVectorExtractNode(CDFG, verbose);
+
+  ////////////////////////
+  /// Remove redundant nodes: bitcast, for with no source and sink, truncf
   ////////////////////////
   bool removing = true;
   while(removing){
@@ -2584,8 +2639,10 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
       if(node->getTypeName() == "bitcast"){
         assert(node->inputNodes().size() == 1);
         LLVMCDFGNode* AnceNode = node->getInputPort(0);
-        for(LLVMCDFGNode* output : node->outputNodes())
+        for(int edgeid : node->outputEdges())
         {
+          LLVMCDFGNode* output = CDFG->edge(edgeid)->dst();
+          assert(output != NULL);
           int edgeidx = output->getInputIdx(node);
           bool isbackedge = output->isInputBackEdge(node);
           output->addInputNode(AnceNode,  edgeidx, isbackedge);

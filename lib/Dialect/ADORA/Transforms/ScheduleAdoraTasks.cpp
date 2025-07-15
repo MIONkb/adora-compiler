@@ -110,7 +110,14 @@ void generateTaskGraphFromBlock(TaskGraph* graph, mlir::Block* block){
         }
       }
 
-      /// handle load-after-load dependency here
+      // /// handle load-after-load dependency here
+      // for(auto& pair : validloads){
+      //   ADORA::DataBlockLoadOp visitedblockloadop = pair.first;
+      //   BlockLoadNode* blockloadnode = pair.second;
+      //   if(SameBlockLoad(visitedblockloadop, blockloadop)){
+      //     addConnectionBetweenTwoNode(blockstorenode, blockloadnode, /*dep=*/depType::Depend);
+      //   }
+      // }
 
     }
     else if(isa<ADORA::LocalMemAllocOp>(op)){
@@ -156,6 +163,96 @@ void analyzeDependencyInGraph(TaskGraph* graph){
   //// firstly, 
 }
 
+////////////////////////////////////////////////////
+//// rewrite task graph through dependency analysis
+////////////////////////////////////////////////////
+/// @brief Removes redundant pairs of BlockStoreNode and BlockLoadNode in the task graph.
+/// 
+/// This function iterates through the nodes in the task graph and identifies pairs
+/// of BlockLoadNode and BlockStoreNode that access the same memory block.
+/// If such pairs are found, it connects the store node's kernel to the load node's
+/// kernel, replaces the load node with the source node of the store, and schedules
+/// the load node for deletion to optimize memory access and reduce redundancy.
+void RemoveRedundantBlockStoreLoadPair(TaskGraph* graph){
+  std::vector<TaskNode*> to_delete;
+  std::vector<TaskNode*> nodes = graph->getAllNodes();
+  for (TaskNode* node : nodes) {
+    // dumpNode(node);
+    if(isa<BlockLoadNode>(node)){
+      /// Check each block store input to determine whether they access the same memory space.
+      for(auto innode : node->getInNodes()){
+        if(isa<BlockStoreNode>(innode)){
+          BlockStoreNode* storenode = dyn_cast<BlockStoreNode>(innode);
+          ADORA::DataBlockStoreOp store = storenode->getDataBlockStoreOp();
+          BlockLoadNode* loadnode = dyn_cast<BlockLoadNode>(node);
+          ADORA::DataBlockLoadOp load = loadnode->getDataBlockLoadOp();
+          
+          if(store.getTargetMemref() == load.getOriginalMemref()
+            && AccessSameDataBlock(store, load)){
+            mlir::Operation* source = GetTheSourceOperationOfBlockStore(store);
+            TaskNode* sourcenode = graph->getNode(source);
+            assert(sourcenode != nullptr);
+
+            //// connect storenode's kernel to loadnode's kernel
+            KernelNode* sourcekernel = storenode->getKernelNode();
+            for(auto sinkkernel : loadnode->getKernelNodes()){
+              addConnectionBetweenTwoNode(sourcekernel, sinkkernel, /*dep=*/depType::Depend);
+            }
+
+            //// replace loadnode with sourcenode
+            loadnode->ReplaceAllUsesWith(sourcenode);
+
+            //// TODO: remove store? don't.
+            to_delete.push_back(dyn_cast<TaskNode>(loadnode));
+          }
+        }
+      }
+    }
+  }
+  for(auto node : to_delete){
+    graph->DeleteNodeOperation(node);
+  }
+}
+
+void RemoveRedundantBlockLoads(TaskGraph* graph){
+  std::vector<TaskNode*> to_delete;
+  // std::vector<TaskNode*> nodes = graph->getAllNodes();
+  // std::unordered_map<mlir::Operation*, BlockLoadNode*> load_map; // Maps original loads to their corresponding BlockLoadNode
+
+  // for (TaskNode* node : nodes) {
+  //   if (isa<BlockLoadNode>(node)) {
+  //     BlockLoadNode* loadnode = dyn_cast<BlockLoadNode>(node);
+  //     ADORA::DataBlockLoadOp load = loadnode->getDataBlockLoadOp();
+
+  //     // Check if this load already exists in the map
+  //     auto it = load_map.find(load.getOriginalMemref());
+  //     if (it != load_map.end()) {
+  //       // If a previous load node exists, replace the current load node with it
+  //       BlockLoadNode* existing_loadnode = it->second;
+
+  //       // Connect the existing load node's kernel to any dependent kernels
+  //       KernelNode* existing_kernel = existing_loadnode->getKernelNode();
+  //       for (auto sinkkernel : loadnode->getKernelNodes()) {
+  //         addConnectionBetweenTwoNode(existing_kernel, sinkkernel, /*dep=*/depType::Depend);
+  //       }
+
+  //       // Replace the current load node with the existing one
+  //       loadnode->ReplaceAllUsesWith(existing_loadnode);
+
+  //       // Mark the current load node for deletion
+  //       to_delete.push_back(dyn_cast<TaskNode>(loadnode));
+  //     } else {
+  //       // If no existing load node, add this one to the map
+  //       load_map[load.getOriginalMemref()] = loadnode;
+  //     }
+  //   }
+  // }
+
+  // // Delete redundant load nodes
+  // for (auto node : to_delete) {
+  //   graph->DeleteNodeOperation(node);
+  // }
+}
 
 
 
@@ -207,7 +304,9 @@ void ScheduleADORATasksPass::ScheduleADORATasksInFunction(func::FuncOp func){
     //// move out redundant blockload
 
     //// remove redundant blockstore-blockload
-    graph->RemoveRedundantBlockStoreLoadPair();
+    RemoveRedundantBlockStoreLoadPair(graph);
+    //// remove redundant blockload-blockload
+    RemoveRedundantBlockLoads(graph);
 
     block->dump();
     filename = "Block_" + std::to_string(idx) + "_TaskGraph_1.dot";

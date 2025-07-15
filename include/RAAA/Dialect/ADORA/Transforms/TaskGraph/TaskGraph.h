@@ -40,12 +40,6 @@ public:
   std::vector<TaskNode *> getAllNodes();
   TaskNode* getNode(mlir::Operation* op);
 
-  ////////////////////////////////////////////////////
-  //// rewrite task graph through dependency analysis
-  ////////////////////////////////////////////////////
-  //// blockstore -> blockload dependency exists, and access same data block
-  void RemoveRedundantBlockStoreLoadPair();
-
   void dumpGraph() const;
   void dumpGraphAsDot(std::string& filename) const;
   void dumpNode(TaskNode* node) const;
