@@ -2767,45 +2767,46 @@ void ADORALoopCdfgGenPass::runOnOperation()
   unsigned cnt = 0;
   for (auto FuncOp : getOperation().getOps<func::FuncOp>())
   {
-    cnt++;
+    // cnt++;
     Func = FuncOp;
-  }
-  assert(cnt == 1 && "There should be only 1 topFunc in IR Module.");
-  std::string funcname = Func.getSymName().str();
+    std::string funcname = Func.getSymName().str();
 
-  // Get loop level from scf ForOP
-  /// Generating DFG
-  std::string GeneralOpNameFile_str;
-  if (GeneralOpNameFile == nullptr) {
-    std::cerr << "Environment variable \" GENERAL_OP_NAME_ENV \" is not set." << std::endl;
-    GeneralOpNameFile_str = "/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt";
-    std::cerr << "Using \" GENERAL_OP_NAME_ENV \" = \"/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt\"" << std::endl;
-  }
-  else
-    GeneralOpNameFile_str = GeneralOpNameFile;
-  // LLVMCDFG *CDFG = new LLVMCDFG(funcname, GeneralOpNameFile_str);
-
-  // ADORA::KernelOp kernel;
-  // OpBuilder b(m);
-  // m->walk([&](ADORA::KernelOp k){
-  //   kernel = k;
-  //   WalkResult::interrupt();
-  // });
-  int kernel_cnt = 0;
-  m->walk([&](ADORA::KernelOp kernel) {
-    std::string kernelName = kernel.getKernelName();
-    if(kernelName.empty()){
-      kernelName = "kernel_" + std::to_string(kernel_cnt);
+    // Get loop level from scf ForOP
+    /// Generating DFG
+    std::string GeneralOpNameFile_str;
+    if (GeneralOpNameFile == nullptr) {
+      std::cerr << "Environment variable \" GENERAL_OP_NAME_ENV \" is not set." << std::endl;
+      GeneralOpNameFile_str = "/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt";
+      std::cerr << "Using \" GENERAL_OP_NAME_ENV \" = \"/home/jhlou/CGRVOPT/cgra-opt/lib/DFG/Documents/GeneralOpName.txt\"" << std::endl;
     }
-    LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile_str);
-    generateCDFGfromKernel(CDFG, kernel, /*verbose=*/false);
-    CDFG->CDFGtoDOT(kernelName + "_CDFG.dot");
-    kernel_cnt++;
-  });   
+    else
+      GeneralOpNameFile_str = GeneralOpNameFile;
+    // LLVMCDFG *CDFG = new LLVMCDFG(funcname, GeneralOpNameFile_str);
 
-  // generateCDFGfromKernel(CDFG, kernel);
+    // ADORA::KernelOp kernel;
+    // OpBuilder b(m);
+    // m->walk([&](ADORA::KernelOp k){
+    //   kernel = k;
+    //   WalkResult::interrupt();
+    // });
+    int kernel_cnt = 0;
+    m->walk([&](ADORA::KernelOp kernel) {
+      std::string kernelName = kernel.getKernelName();
+      if(kernelName.empty()){
+        kernelName = "kernel_" + std::to_string(kernel_cnt);
+      }
+      LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile_str);
+      generateCDFGfromKernel(CDFG, kernel, /*verbose=*/false);
+      CDFG->CDFGtoDOT(kernelName + "_CDFG.dot");
+      kernel_cnt++;
+    });   
 
-  // CDFG->CDFGtoDOT(CDFG->name_str()+"_CDFG.dot");
+    // generateCDFGfromKernel(CDFG, kernel);
+
+    // CDFG->CDFGtoDOT(CDFG->name_str()+"_CDFG.dot");
+  }
+  // assert(cnt == 1 && "There should be only 1 topFunc in IR Module.");
+
 }
 
 std::unique_ptr<OperationPass<ModuleOp>> mlir::ADORA::createADORALoopCdfgGenPass()

@@ -584,7 +584,7 @@ void AdjustMemoryFootprintPass::
 
     /// Step 6: erase old KernelOp and get corresponding op of kernel after erasing
     mlir::Operation *new_OutforOp = ADORA::eraseKernel(topFunc, Kernel);
-    // llvm::errs() << "[debug] After erase:\n";topFunc.dump();
+    // llvm::errs() << "[debug] After erase:\n";FuncOp.dump();
 
     /// Step 7: get forOp from inner for-loop of new_OutforOp
     OutforOp = dyn_cast<AffineForOp>(*new_OutforOp);
@@ -592,7 +592,7 @@ void AdjustMemoryFootprintPass::
 
     /// Step 8: create new KernelOp
     (void)ADORA::SpecifiedAffineFortoKernel(forOp, kn_name);
-    // llvm::errs() << "[debug] After create:\n";topFunc.dump();
+    // llvm::errs() << "[debug] After create:\n";FuncOp.dump();
   }
 
   // forOp.erase();
@@ -1694,56 +1694,52 @@ mlir::affine::AffineForOp AdjustMemoryFootprintPass::
 
 void AdjustMemoryFootprintPass::runOnOperation()
 {
-  func::FuncOp topFunc;
-  unsigned cnt = 0;
   for (auto FuncOp : getOperation().getOps<func::FuncOp>())
   {
-    cnt++;
-    topFunc = FuncOp;
-  }
-  assert(cnt == 1 && "There should be only 1 topFunc in IR Module.");
+    unsigned part_factor = 1; /// A kernel shoule be parted to partition_factor subkernels
 
-  unsigned part_factor = 1; /// A kernel shoule be parted to partition_factor subkernels
+    ADORA::KernelOp KernelToPart = check_AllKernelMemoryFootprint(FuncOp, part_factor);
+    while (part_factor != 1)
+    { // KernelToPart != NULL
+      LLVM_DEBUG(errs() << "\n[debug]FuncOp:\n");
+      LLVM_DEBUG(FuncOp.dump());
 
-  ADORA::KernelOp KernelToPart = check_AllKernelMemoryFootprint(topFunc, part_factor);
-  while (part_factor != 1)
-  { // KernelToPart != NULL
-    LLVM_DEBUG(errs() << "\n[debug]topFunc:\n");
-    LLVM_DEBUG(topFunc.dump());
-
-    outloop_partition(topFunc, KernelToPart, part_factor);
-    KernelToPart = check_AllKernelMemoryFootprint(topFunc, part_factor);
-    // break; ///for debug
-  }
-  
-  /// simplify loop levels if possible
-  simplifyAffileLoopLevel(topFunc);
-
-
-  ///////////////
-  /// Generate explicit data block movement (load/store) for kernel to consume
-  ///////////////
-  if(ExplicitDataTrans==true){
-    /// generate explicit data movement around Kernel{...}
-    // topFunc.dump();
-    LLVM_DEBUG(llvm::errs() << "[dubug] Before ExplicitKernelDataBLockLoadStore: \n";topFunc.dump(););
-    topFunc.walk([&](ADORA::KernelOp kernel)
-    {
-      ExplicitKernelDataBLockLoadStore(kernel);
-    });
-    // topFunc.dump();
-    LLVM_DEBUG(llvm::errs() << "[dubug] After ExplicitKernelDataBLockLoadStore: \n";topFunc.dump(););
-
-    /// Eliminate the affine transformation of the upper/lower bound 
-    /// of most-out loop in Kernel{...}
-    topFunc.walk([&](ADORA::KernelOp kernel)
-    {
-      EliminateOuterLoopAffineTrans(kernel);
-    });
+      outloop_partition(FuncOp, KernelToPart, part_factor);
+      KernelToPart = check_AllKernelMemoryFootprint(FuncOp, part_factor);
+      // break; ///for debug
+    }
     
-    /// Remove unused arguments of Kernel's region
-    // Kernel.walk([&](Region *region){ removeUnusedRegionArgs(*region); });
+    /// simplify loop levels if possible
+    simplifyAffileLoopLevel(FuncOp);
+
+
+    ///////////////
+    /// Generate explicit data block movement (load/store) for kernel to consume
+    ///////////////
+    if(ExplicitDataTrans==true){
+      /// generate explicit data movement around Kernel{...}
+      // FuncOp.dump();
+      LLVM_DEBUG(llvm::errs() << "[dubug] Before ExplicitKernelDataBLockLoadStore: \n";FuncOp.dump(););
+      FuncOp.walk([&](ADORA::KernelOp kernel)
+      {
+        ExplicitKernelDataBLockLoadStore(kernel);
+      });
+      // FuncOp.dump();
+      LLVM_DEBUG(llvm::errs() << "[dubug] After ExplicitKernelDataBLockLoadStore: \n";FuncOp.dump(););
+
+      /// Eliminate the affine transformation of the upper/lower bound 
+      /// of most-out loop in Kernel{...}
+      FuncOp.walk([&](ADORA::KernelOp kernel)
+      {
+        EliminateOuterLoopAffineTrans(kernel);
+      });
+      
+      /// Remove unused arguments of Kernel's region
+      // Kernel.walk([&](Region *region){ removeUnusedRegionArgs(*region); });
+    }
   }
+
+  
 }
 
 std::unique_ptr<OperationPass<ModuleOp>>
