@@ -68,6 +68,7 @@ memref.load load
 memref.store store
 affine.load Input
 affine.store Output
+affine.vector_store Output
 affine.yield yield
 affine.for for
 scf.for scf_for

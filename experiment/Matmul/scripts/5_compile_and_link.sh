@@ -9,7 +9,7 @@ tarfolder="$rootfolder/$IRfolder/5_obj"
 # tarfolder="$CHIPYARD_DIR/generators/fdra/software/tests/bareMetalC"
 tempfolder="$rootfolder/$IRfolder/tempfiles"
 main_file="main.c"
-baremetal_file_name="merge4"
+baremetal_file_name="matmul"
 DATASET_Size="MINI_DATASET"
 
 if [ ! -d "$tarfolder" ]; then

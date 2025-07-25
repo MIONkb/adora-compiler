@@ -1158,12 +1158,12 @@ bool CGRACallEmitter::emitCGRACallFunction(llvm::raw_ostream &os) {
 
 #include "include/ISA.h"
 
-uint8_t _task_id = 0;
+static uint8_t _task_id = 0;
 
 #define LD_DEP_ST_LAST_TASK 1     // this load command depends on the store command of last task
 #define LD_DEP_EX_LAST_TASK 2     // this load command depends on the execute command of last task
 #define LD_DEP_ST_LAST_SEC_TASK 3 // this load command depends on the store command of last second task
-#define EX_DEP_ST_LAST_TASK 1     // this EXECUTE command depends on the store command of last task
+#define EX_DEP_ST_LAST_TASK 1     // this execute command depends on the store command of last task
 
 
 )XXX";
@@ -1192,6 +1192,7 @@ uint8_t _task_id = 0;
     emitBlock(funcop.getBody().front(), os);
 
     // / function tail
+    os << "  fence(1);\n";
     os << "}\n";
   }
 

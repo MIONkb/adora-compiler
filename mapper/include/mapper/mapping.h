@@ -214,6 +214,10 @@ public:
     int getAvailDelay(FUNode* fuNode, DFGNode* dfgNode);
     // // reset the latency bounds of each DFG node
     // void resetBound();
+
+    // @jhlou: pre assign delay pipe for MERGE node
+    void preAssignRdu();
+
     // calculate the routing latency of each edge, not inlcuding the RDU
     void calEdgeRouteLat();
     // calculate the DFG node latency bounds not considering the Delay components 

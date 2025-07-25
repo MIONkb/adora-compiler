@@ -173,7 +173,8 @@ public:
     void setisSCFForOp(bool is){ _isSCFForOp = is;}
     bool isSCFForOp(){ return _isSCFForOp;}
     bool isLinearAccess() {return (_operation->getName().getStringRef() == "affine.load" 
-                                    || _operation->getName().getStringRef() == "affine.store")
+                                    || _operation->getName().getStringRef() == "affine.store"
+                                    || _operation->getName().getStringRef() == "affine.vector_store")
                                 && _LinearAccess != "";}
     std::string getLinearAccess(){ return _LinearAccess;} 
     void setLinearAccess(std::string str) { _LinearAccess = str;}

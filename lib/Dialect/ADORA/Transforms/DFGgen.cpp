@@ -2135,6 +2135,15 @@ static bool HandlCompareNode(LLVMCDFG* CDFG, bool verbose = true){
 }
 
 
+/// @brief Handles vector extract nodes in the CDFG.
+/// 
+/// This function iterates through all nodes in the CDFG and looks for operations 
+/// of type "vector.extract". If such an operation is found, it checks if its 
+/// inputs are nodes of type "MERGE". If they are, it connects the output nodes 
+/// to the input nodes and deletes the extract node from the CDFG.
+/// 
+/// @param CDFG A pointer to the LLVMCDFG representing the current control data flow graph.
+/// @param verbose A boolean indicating whether to print detailed information (default is true).
 void HandleVectorExtractNode(LLVMCDFG* CDFG, bool verbose = true){
   auto nodes = CDFG->nodes();
   for(auto &elem : nodes){
@@ -2173,6 +2182,65 @@ void HandleVectorExtractNode(LLVMCDFG* CDFG, bool verbose = true){
   return;
 }
 
+
+/// @brief Fixes the linear access pattern of vector store nodes in the CDFG.
+/// Based on the number of merge inputs, it fixes the linear access pattern 
+/// associated with the merge operation and updates the linear access string of that node.
+/// 
+/// @param CDFG A pointer to the LLVMCDFG representing the current control data flow graph.
+/// @param verbose A boolean indicating whether to print detailed information (default is true).
+void FixLinearAccessOfVectorStoreNode(LLVMCDFG* CDFG, bool verbose = true){
+  auto nodes = CDFG->nodes();
+  for(auto &elem : nodes){
+    LLVMCDFGNode* node = elem.second;
+    mlir::Operation* op = node->operation();
+    if(op->getName().getStringRef() == "affine.vector_store"){
+      mlir::affine::AffineVectorStoreOp vecstoreop = dyn_cast<mlir::affine::AffineVectorStoreOp>(op);
+      mlir::Operation* vecop = vecstoreop.getValue().getDefiningOp();
+      int ElementBytes = vecstoreop.getMemRefType().getElementTypeBitWidth()/8;
+
+      if(isa<ADORA::MergeOp>(vecop)){
+        /// get the input num of merge
+        int mergeNum = dyn_cast<ADORA::MergeOp>(vecop).getMergeNumber();
+
+        /// fix linear access of extractop
+        assert(node->isLSaffine() && node->getTypeName() == "Output");
+        std::string linearAccess = node->getLinearAccess();
+
+        std::stringstream ss(node->getLinearAccess());
+        std::string step, count;
+
+        SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
+        newLinearAccess.push_back(std::pair(ElementBytes, mergeNum));
+        // newLinearAccess.push_back(std::pair( -1 * ElementBytes * mergeNum, 1));
+
+        int level = 0;
+        while (std::getline(ss, step, ',')) {
+          std::getline(ss, count, ',');
+
+          if(level == 1){
+            int newstep = std::stoi(step) - ElementBytes * mergeNum + ElementBytes;
+            newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
+          }
+          else if(level != 0) {
+            newLinearAccess.push_back(std::pair(std::stoi(step), std::stoi(count)));
+          }
+
+          level++;
+        }
+
+        assert (!newLinearAccess.empty());
+        
+        node->setLinearAccess(LinearAccessToStr(newLinearAccess));
+      }
+      else{
+        assert(false && "vectorstore op could only support input as merge op right now.");
+      }
+    }
+  }
+  return;
+}
+
 bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp kernel, bool verbose){
   if(verbose) {kernel.dump();}
   _kernel_toDFG = &kernel;
@@ -2187,9 +2255,10 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
       int Innermost = 1;
       op->walk([&](affine::AffineForOp temp_forop)
       { 
+        temp_forop.dump();
         if(For_loop_level.count(temp_forop) == 0 && temp_forop != dyn_cast<affine::AffineForOp>(op)){ // Don't count the scf::For itself
           Innermost = 0;
-        // llvm::errs() << "Not innermost"  <<std::endl;    
+          llvm::errs() << "Not innermost"  << "\n";    
         } 
       });
       if (Innermost)
@@ -2297,9 +2366,45 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           std::string mergetypename = "MERGE" + std::to_string(mergenum);
           LLVMCDFGNode* node = CDFG->addNode(op, /*typeName=*/mergetypename); 
           node->setLoopLevel(level);
+
+          //// set acc for merge op
+          SmallVector<std::string, 3> count_interval_repeat = {"1", "1", "1"};///count/interval/repeat
+          node->setAcc();
+          node->setACCinit("0");
+          node->setACCcount(count_interval_repeat[0]);
+          node->setACCinterval(count_interval_repeat[1]);
+          node->setACCrepeat(count_interval_repeat[2]);    
           // // TODO: settle this
           return WalkResult::advance();
         } 
+        else if (op->getName().getStringRef() == "affine.vector_store" ){
+          LLVMCDFGNode* node = CDFG->addNode(op); 
+          node->setLoopLevel(level);
+          affine::AffineVectorStoreOp vecstore = dyn_cast<affine::AffineVectorStoreOp>(op);
+          std::string linearaccess_str = LinearAccessToStr(GetLinearAccess(vecstore, For_loop_level));
+          // std::string initAddr_str = std::to_string(GetInitAddr(vecstore, For_loop_level));
+          std::string initAddr_str = "0";
+          int memrefsize = GetMemrefSize(vecstore);
+          mlir::Operation* mrefop = vecstore.getMemref().getDefiningOp();
+          std::string ref_name;
+          if(isa<ADORA::DataBlockLoadOp>(mrefop)){
+            ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
+            ref_name = std::string(Bload.getKernelName()) + "_" + std::string(Bload.getId());
+          }
+          else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
+            ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
+            ref_name = std::string(BAlloc.getKernelName()) + "_" + std::string(BAlloc.getId());
+          }
+          else{
+            assert(0);
+          }
+          // op->getResult(0).addAttribute("LinearAccess", b.getStringAttr(linearaccess_str));
+          node->setLinearAccess(linearaccess_str);
+          node->setInitAddr(initAddr_str);
+          node->setMemrefSize(memrefsize);
+          node->setMemrefName(ref_name);
+          node->setLSaffine(true);
+        }
         else if (op->getName().getStringRef() == "affine.load"){
           LLVMCDFGNode* node = CDFG->addNode(op); 
           node->setLoopLevel(level);
@@ -2622,9 +2727,14 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
   if(!result) return false;
 
   ////////////////////////
-  /// Handle vector_extract node
+  /// Handle vector_extract node && Maybe useless
   ////////////////////////
   HandleVectorExtractNode(CDFG, verbose);
+
+  ////////////////////////
+  /// Handle affine.vector_store node
+  ////////////////////////
+  FixLinearAccessOfVectorStoreNode(CDFG, verbose);
 
   ////////////////////////
   /// Remove redundant nodes: bitcast, for with no source and sink, truncf

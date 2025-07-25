@@ -8,10 +8,7 @@
 //     return;
 // }
 
-
-#define W 4
-#define N 4
-#define H 4
+#include "Matmul.h"
 
 
 void unroll_MATMUL(int a[W][N], int b[N][H], int c[W][H], int r[W][H]) {

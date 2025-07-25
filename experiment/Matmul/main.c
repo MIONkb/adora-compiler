@@ -6,77 +6,114 @@
 #include "include/encoding.h"
 #include "include/ISA.h"
 
-#define size 4
 
-// float* forward(float[3][3]);
-void kernel_merge4(int a[size], int b[size], int c[size], int d[size], int r[4*size]);
+#include "Matmul.h"
+
+static
+void print_2_2DMatrix(Dtype r0[W][H], Dtype r1[W][H])
+
+{
+  int i, j;
+   printf("Start printing.\n");
+
+  for (i = 0; i < W; i = i+1){
+    for (j = 0; j < H; j = j + 1) {
+      printf("[%d, %d]%x-%x," , i, j, r0[i][j], r1[i][j]);
+      // if((int)(10000 * imgOut1[i][j]) != (int)(10000 * imgOut2[i][j])){
+      //   printf("[%d, %d]%ld-%ld," , i, j, (int)(10000 * imgOut1[i][j]), (int)(10000 * imgOut2[i][j]));
+      //   printf("%x-%x\t", FpToHex(imgOut1[i][j]), FpToHex(imgOut2[i][j]));
+      // }
+    }
+    // printf("over one line:[%d, %d]%x-%x" , i, 0, FpToHex(imgOut1[i][0]), FpToHex(imgOut2[i][0]));
+    printf("\n");
+  }
+}
+
+
+void initialize_abc(Dtype a[W][N], Dtype b[N][H], Dtype c[W][H]) {
+    for (int i = 0; i < W; i++) {
+        for (int j = 0; j < N; j++) {
+            a[i][j] = i;  
+        }
+    }
+
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < H; j++) {
+            b[i][j] = j + 10; 
+        }
+    }
+
+    for (int i = 0; i < W; i++) {
+        for (int j = 0; j < H; j++) {
+            c[i][j] = i + 100; 
+        }
+    }
+}
+
+void initialize_r(Dtype r[W][H]) {
+    for (int i = 0; i < W; i++) {
+        for (int j = 0; j < H; j++) {
+            r[i][j] = 0;  
+        }
+    }
+}
+
+void cpu_MATMUL(Dtype a[W][N], Dtype b[N][H], Dtype c[W][H], Dtype r[W][H]) {
+    #pragma scop
+    for ( int i=0 ; i<W ; i++ ) {
+        for(int j=0 ; j<H ; j++){
+            r[i][j] = c[i][j];
+            for(int k=0 ; k<W ; k++){
+                r[i][j] += a[i][k] * b[k][j];
+            }
+        }
+    }      
+    #pragma endscop
+}
 
 int main(int argc, char** argv)
 {
-  printf("CGRA execute kernel_merge4!\n");
+  printf("CGRA execute merge_MATMUL and unroll_MATMUL!\n");
   long long unsigned start, cur;
   long long unsigned end;
-	// int a [500][10000], b[500];
-  // printf("a addr:%x\n", a);
-  // printf("b addr:%x\n", b);
 
 	int i , j;
 
-	// for(i = 0; i < 500; i++){
-  //   b[i] = i * 2;
-  //   for(j = 0; j < 10; j++){
-	// 	  a[i][j]=i + j;
-  //   }
-  // } 
-  // printf("start cycle 0:%d\n",start);
-  // for(i = 0; i < 400; i++){
-  //   for(j = 0; j < 100; j++){
-	// 	  a[i][j]= a[i][j] * b[i];
-  //   }
-  // } 
-
-  // cur = rdcycle();
-  // printf("cur cycle 1:%d\n",cur);
-  // float* b = (float*)forward(a);
-  // end = rdcycle();
-  int a[size], b[size], c[size], d[size];
-  int r[size * 4];
-
-
-  // int * na = (int *)malloc(8196 * sizeof(int));
-  // printf("na addr:%x\n", na);
   start = rdcycle();
-  for(i = 0; i < size; i++){
-		  a[i]= i * 4 ;
-		  b[i]= i * 4 + 1 ;
-		  c[i]= i * 4 + 2 ;
-		  d[i]= i * 4 + 3 ;
-  } 
+  Dtype a[W][N]; Dtype b[N][H]; Dtype c[W][H];
+  Dtype r0[W][H]; Dtype r1[W][H] ; Dtype r2[W][H];
+  initialize_abc(a, b, c);
+  initialize_r(r0);
+  initialize_r(r1);
+  initialize_r(r2);
   end = rdcycle();
   printf("It takes %d cycles for CPU to finish the initialization.\n", end - start);
 
-  start = rdcycle();
-  kernel_merge4(a, b, c, d, r);
-  fence(1);
-  end = rdcycle();
-  printf("It takes %d cycles for CGRA to finish the task.\n", end - start);
-
-  for ( int k=0 ; k<size*4 ; k++ ) {
-    printf("[%d]%d,", k, r[k]);
-  }      
-
+  printf("a: %x, b:%x, c: %x\n", &a, &b, &c);
 
   start = rdcycle();
-  for(i = 0; i < size; i++){
-		  r[i]= a[i];
-		  r[i * 4 + 1]= b[i];
-		  r[i * 4 + 2]= c[i];
-		  r[i * 4 + 3]= d[i];
-  } 
+  cpu_MATMUL(a, b, c, r0);
   end = rdcycle();
-  printf("It takes %d cycles for CPU to finish the initialization.\n", end - start);
+  printf("It takes %d cycles for CPU to finish the task.\n", end - start);
+
+  start = rdcycle();
+  unroll_MATMUL(a, b, c, r1);
+  end = rdcycle();
+  printf("It takes %d cycles for CGRA to finish the unroll_MATMUL task.\n", end - start);
+
+  start = rdcycle();
+  merge_MATMUL(a, b, c, r2);
+  end = rdcycle();
+  printf("It takes %d cycles for CGRA to finish the merge_MATMUL task.\n", end - start);
+
+  printf("Start print r0 r1\n");
+  print_2_2DMatrix(r0, r1);
+
+  printf("Start print r0 r2\n");
+  print_2_2DMatrix(r0, r2);
 
   printf("test complete!\n");
+
 
   return 0;
 }

@@ -126,6 +126,10 @@ public:
     // dump config data
     void dumpCfgData(std::ostream& os);
 
+    // @jhlou
+    std::map<int, int> addAdditionalDelayForMERGEOp(DFGNode* dfgNode,std::map<int, int>& delayUsed);
+    int addAdditionalLatencyForMERGEOp(DFGNode* dfgNode, int latency);
+    int addAdditionalLatencyForAfterMERGEOutputOp(DFGNode* dfgNode, int latency);
 
     /// For variable configurations
     VariableConfig* getConfigVariable(ADGNode* node);
