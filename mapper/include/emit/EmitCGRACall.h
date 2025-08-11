@@ -72,7 +72,16 @@ public:
 
   llvm::SmallVector<dfgIoInfo> getDfgIoInfosFromBlockLoad(ADORA::DataBlockLoadOp op) {return _LoadToDfgIoInfos[op];}
   dfgIoInfo getDfgIoInfosFromBlockStore(ADORA::DataBlockStoreOp op) {return _StoreToDfgIoInfo[op];}
+
+  llvm::SmallVector<std::pair<int, dfgIoInfo>> getSPMInfosFromBlockLoad(ADORA::DataBlockLoadOp op) {return _LoadToSPMInfos[op];}
+  std::pair<int, dfgIoInfo> getSPMInfosFromLocalAlloc(ADORA::LocalMemAllocOp op) {return _LocalAllocToSPMInfo[op];}
   
+
+  // @brief Establishes placement constraints for local memory allocations within a given kernel operation.
+  /// @param kernel A reference to an ADORA::KernelOp object representing the kernel operation.
+  /// @param mapper A pointer to a MapperSA object used for accessing the data flow graph (DFG) and architecture description graph (ADG).
+  void preestablishPlacementConstraints(ADORA::KernelOp& kernel, MapperSA* mapper);
+
   llvm::SmallDenseMap<ADORA::KernelOp, Configuration> KnToConfiguration;
   void setMapResult(ADORA::KernelOp k, MapperSA* mapper);
 
@@ -90,6 +99,9 @@ private:
   // uint64_t _iob_ens = 0;
   llvm::SmallDenseMap<ADORA::DataBlockLoadOp, llvm::SmallVector<dfgIoInfo>> _LoadToDfgIoInfos;
   llvm::SmallDenseMap<ADORA::DataBlockStoreOp, dfgIoInfo> _StoreToDfgIoInfo;
+
+  llvm::SmallDenseMap<ADORA::DataBlockLoadOp, llvm::SmallVector< std::pair<int, dfgIoInfo> > > _LoadToSPMInfos; // int : spm bank idx, dfgioinfo
+  llvm::SmallDenseMap<ADORA::LocalMemAllocOp, std::pair<int, dfgIoInfo>> _LocalAllocToSPMInfo;
 
   llvm::SmallDenseMap<mlir::Value, Op_Name_C> _value_name_list;
 

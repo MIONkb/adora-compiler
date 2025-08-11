@@ -2,12 +2,15 @@
 
 # 指定文件夹路径
 rootfolder=$(pwd)
-asmfolder="$rootfolder/4_asms"
-tarfolder="/home/jhlou/chipyard/generators/fdra/software/tests/bareMetalC"
-tempfolder="$rootfolder/tempfiles"
-kernel_basename="forward_kernel"
-top_call_name="forward"
-main_file="cholesky_main.c"
+IRfolder="IR"
+srcfolder="$rootfolder/$IRfolder/3_cgra_exes"
+asmfolder="$rootfolder/$IRfolder/4_asms"
+tarfolder="$rootfolder/$IRfolder/5_obj"
+# tarfolder="$CHIPYARD_DIR/generators/fdra/software/tests/bareMetalC"
+tempfolder="$rootfolder/$IRfolder/tempfiles"
+main_file="gemm_main.c"
+baremetal_file_name="gemm_mini"
+DATASET_Size="MINI_DATASET"
 
 if [ ! -d "$tarfolder" ]; then
   mkdir -p "$tarfolder"
@@ -17,103 +20,54 @@ if [ ! -d "$tempfolder" ]; then
   mkdir -p "$tempfolder"
   echo mkdir -p "$tempfolder"
 fi
-# cd $tempfolder
-# if [[ "$(pwd)" == "$tempfolder" ]]; then
-#   find "$tempfolder" -name "*.dot" -type f -delete
-#   find "$tempfolder" -name "*.text" -type f -delete
-#   cd -
-# fi
 
+if [ -z "$CHIPYARD_DIR" ]; then
+  echo "Environment variable CHIPYARD_DIR is not set. Please set it in env.sh and source env.sh."
+  exit
+fi
+
+source $CHIPYARD_SOURCE_ENV
+conda activate $CHIPYARD_DIR/.conda-env
+
+set -x
 
 # asm to object
-# asm_files=$(find "$asmfolder" -name "*.s" -type f)
-# cnt=0
-
-# sed -i -E 's/^(\s*)(\.file|\.loc)/\1#&/' $asmfolder/"$top_call_name.s"
-
-# for file in ${asm_files[@]}; do
-#     # 检查文件是否为普通文件
-#     filename=$(basename "$file" .s)
-#     echo "$filename"
-#     if [[ -f "$file" ]]; then
-#       echo $cnt
-#       ((cnt++))
-
-#       # gcc .c to .asm
-#       echo  riscv64-unknown-elf-as -march=rv64gc \
-#           $file -o $asmfolder/$filename.o 
-
-#       riscv64-unknown-elf-as -march=rv64gc \
-#           $file -o $asmfolder/$filename.o 
-#     fi
-# done
-# cnt=0
-
-# link objects
-object_files=$(find "$asmfolder" -name "*.s" -type f)
-
-echo \
-riscv64-unknown-elf-gcc \
-  -DROCKET_TARGET  \
-  -DLARGE_DATASET \
- -DPREALLOCATE=1 -DMULTITHREAD=1 -mcmodel=medany \
-  -O2 -ffast-math -fno-common -fno-builtin-printf \
- -fno-tree-loop-distribute-patterns -march=rv64gc -Wa,-march=rv64gc12 \
-  -lm -lgcc -nostdlib \
- -I/home/jhlou/chipyard/generators/fdra/software/tests//riscv-tests/benchmarks/common \
- -I/home/jhlou/chipyard/generators/fdra/software/tests/riscv-tests \
- -I/home/jhlou/chipyard/generators/fdra/software/tests//riscv-tests/env \
- -I/home/jhlou/chipyard/generators/fdra/software/tests/ \
-  -I/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/linear-algebra/solvers/cholesky \
-  -I/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities \
- -T/home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/my_test.ld \
- -DID_STRING= -nostartfiles -static  \
- -DBAREMETAL=1 -DDEFINE_MALLOC -e _start -g  \
- -o /home/jhlou/chipyard/generators/fdra/software/tests/build/bareMetalC/cholesky-large-baremetal \
- $rootfolder/$main_file \
- $object_files \
- /home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/syscalls.c \
-  /home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/CRunnerUtils.cpp \
-  /home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/tiny-malloc.c  
+asm_files=$(find "$asmfolder" -name "*.s" -type f)
+src_files=$(find "$srcfolder" -name "*.c" -type f)
 
 riscv64-unknown-elf-gcc \
-  -DROCKET_TARGET  \
-  -DLARGE_DATASET \
+ -DROCKET_TARGET -D${DATASET_Size} \
+ -Wl,--wrap,malloc \
  -DPREALLOCATE=1 -DMULTITHREAD=1 -mcmodel=medany \
-  -O2 -ffast-math -fno-common -fno-builtin-printf \
+ -O2 -ffast-math -fno-common -fno-builtin-printf \
  -fno-tree-loop-distribute-patterns -march=rv64gc -Wa,-march=rv64gc12 \
- -lm  \
- -I/home/jhlou/chipyard/generators/fdra/software/tests//riscv-tests/benchmarks/common \
- -I/home/jhlou/chipyard/generators/fdra/software/tests/riscv-tests \
- -I/home/jhlou/chipyard/generators/fdra/software/tests//riscv-tests/env \
- -I/home/jhlou/chipyard/generators/fdra/software/tests/ \
-  -I/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/linear-algebra/solvers/cholesky \
+ -lm \
+ -I$CHIPYARD_DIR/generators/fdra/software/tests//riscv-tests/benchmarks/common \
+ -I$CHIPYARD_DIR/generators/fdra/software/tests/riscv-tests \
+ -I$CHIPYARD_DIR/generators/fdra/software/tests//riscv-tests/env \
+ -I$CHIPYARD_DIR/generators/fdra/software/tests/ \
   -I/home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities \
- -T/home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/my_test.ld \
- -DID_STRING= -nostartfiles -static  \
+ -T$CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/my_test.ld \
+ -DID_STRING= -nostartfiles -static  -DDEFINE_MALLOC \
  -DBAREMETAL=1 -e _start -g  \
- -o /home/jhlou/chipyard/generators/fdra/software/tests/build/bareMetalC/cholesky-large-baremetal \
+ -o $tarfolder/${baremetal_file_name}-baremetal \
  $rootfolder/$main_file \
- $object_files \
- /home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/syscalls.c \
-  /home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/CRunnerUtils.cpp \
-  /home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/tiny-malloc.c 
+ /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/medley/deriche/deriche_mini/cpu_deriche.c \
+ $src_files  $asm_files\
+ $CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/syscalls.c \
+ $CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/CRunnerUtils.cpp \
+ $CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/tiny-malloc.c
 
 
-# -DDEFINE_MALLOC -lgcc
-#  /home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/tiny-malloc.c \
-#  /home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/CRunnerUtils.cpp 
+cp $tarfolder/${baremetal_file_name}-baremetal $CHIPYARD_DIR/generators/fdra/software/tests/build/bareMetalC/
+
+set +x
+
+#  -lgcc  -fno-builtin-malloc -fno-builtin-free  -fno-builtin \
+#  $CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/tiny-malloc.c \
+#  $CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/CRunnerUtils.cpp 
 #  /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/utilities/rocket_polybench.c
-#  /home/jhlou/chipyard/generators/fdra/software/tests//riscv-tests/benchmarks/common/syscalls.c \
-#  /home/jhlou/chipyard/generators/fdra/software/tests/gemm/crt.S \
-#  /home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/CRunnerUtils.cpp
-#  /home/jhlou/chipyard/generators/fdra/software/tests/UtilSrc/tiny-malloc.c 
-
-
-
-#  "$asmfolder"/forward_kernel_1.s \
-#  "$asmfolder"/forward_kernel_0.s \
-#  "$asmfolder"/syscalls.s \
-#  "$asmfolder"/crt.s \
-#  "$asmfolder"/forward_kernel_2.s\
-#  "$asmfolder"/forward.s \
+#  $CHIPYARD_DIR/generators/fdra/software/tests//riscv-tests/benchmarks/common/syscalls.c \
+#  $CHIPYARD_DIR/generators/fdra/software/tests/gemm/crt.S \
+#  $CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/CRunnerUtils.cpp
+#  $CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/tiny-malloc.c 

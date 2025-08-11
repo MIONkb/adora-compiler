@@ -127,7 +127,7 @@ void kernel_gemm_cpu(int ni, int nj, int nk,
 	    {
         C[i][j] += alpha * A[i][k] * B[k][j];
         printf("A[%d, %d]:%x,", i, k, FpToHex(A[i][k]));
-        printf("B[%d, %d]:%x,", i, j, FpToHex(B[k][j]));
+        printf("B[%d, %d]:%x,", k, j, FpToHex(B[k][j]));
         printf("C[%d, %d]:%x\n", i, j, FpToHex(C[i][j]));
       }
     }

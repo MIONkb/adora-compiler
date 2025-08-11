@@ -29,6 +29,8 @@ private:
     // shortest distance between ADG node (GPE node) and the ADG IO
     // std::map<int, std::pair<int, int>> _adgNode2IODist; // <node-id, <2input-dist, 2output-dist>>
 
+    // @jhlou: pre set constraints
+    std::map <DFGNode*, std::vector<ADGNode*>> _prePlacementConstraints;
 protected:
     Mapping* _mapping = nullptr;
     IOScheduler* _sched;
@@ -109,8 +111,11 @@ public:
     int getMaxLat();
 
 
-    // A friend class for MLIR C emitter
+    // @jhlou: A friend class for MLIR C emitter
     friend class CGRACallEmitter;
+    void preestablishPlacementConstraints(DFGNode* dfgnode, std::vector<ADGNode*> adgnodes);
+    std::vector<ADGNode*> getPlacementConstraints(DFGNode* dfgnode);
+    void clearPlacementConstraints(){_prePlacementConstraints.clear();};
 };
 
 

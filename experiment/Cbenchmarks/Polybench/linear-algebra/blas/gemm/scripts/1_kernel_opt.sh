@@ -49,12 +49,14 @@ for file in "$srcfolder"/*; do
           --adora-math-rewrite \
           --adora-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
           --adora-auto-unroll="cgra-adg=${CGRA_ADG_PATH}/cgra_adg.json" \
+          --adora-schedule-tasks \
           "$file" -o $tarfolder/"$filename"_opt.mlir
       else
          cgra-opt \
           --adora-simplify-loadstore \
           --adora-math-rewrite \
           --adora-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
+          --adora-schedule-tasks \
           "$file" -o $tarfolder/"$filename"_opt.mlir
       fi
 

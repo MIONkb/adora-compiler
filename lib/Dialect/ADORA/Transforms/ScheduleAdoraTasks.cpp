@@ -308,12 +308,21 @@ void ScheduleADORATasksPass::ScheduleADORATasksInFunction(func::FuncOp func){
     //// remove redundant blockload-blockload
     RemoveRedundantBlockLoads(graph);
 
+    //////////////
+    /// 5th step: fix id of data transfer 
+    //////////////
+
+
     block->dump();
     filename = "Block_" + std::to_string(idx) + "_TaskGraph_1.dot";
     graph->dumpGraphAsDot(filename);   
     
     idx++;
   }
+
+  func.dump();
+  ResetIndexOfBlockAccessOpInFunc(func);
+  func.dump();
 }
 
 void ScheduleADORATasksPass::runOnOperation()

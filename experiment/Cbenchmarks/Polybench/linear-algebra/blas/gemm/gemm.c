@@ -61,3 +61,39 @@ void gemm(
 #pragma endscop
 
 }
+
+
+
+void gemm_opt(
+		//  DATA_TYPE alpha,
+		//  DATA_TYPE beta,
+		 DATA_TYPE C[NI][NJ], /// 1000 1100
+		 DATA_TYPE A[NI][NK], /// 1000 1200
+		 DATA_TYPE B[NK][NJ]) /// 1200 1100
+{
+  int i, j, k;
+  DATA_TYPE alpha = 1.5;
+  DATA_TYPE beta = 1.2;
+//BLAS PARAMS
+//TRANSA = 'N'
+//TRANSB = 'N'
+// => Form C := alpha*A*B + beta*C,
+//A is NIxNK
+//B is NKxNJ
+//C is NIxNJ
+#pragma scop
+  for (i = 0; i < NI; i++) {
+    for (j = 0; j < NJ; j++){
+	    C[i][j] = C[i][j] * beta;
+    }
+  }
+  for (i = 0; i < NI; i++) {
+    for (j = 0; j < NJ; j++){
+      for (k = 0; k < NK; k++) {
+	      C[i][j] += alpha * A[i][k] * B[k][j];
+      }
+    }
+  }
+#pragma endscop
+
+}

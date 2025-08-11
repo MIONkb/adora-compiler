@@ -136,12 +136,34 @@ LLVMCDFG::LLVMCDFG(llvm::StringRef name, std::string OpNameFile): _name(name), _
     if (line.empty() || line.front() == '/' || line.front() == '#' ) {
       continue;
     }
+    else if(line.front() == '@') {
+        std::istringstream iss(line);
+        std::string fusableOp;
+        
+        getline(iss, fusableOp, ':');
+        std::string opNames;
+        getline(iss, opNames);
 
-    // store to 
-    std::istringstream iss(line);
-    std::string key, value;
-    iss >> key >> value;
-    _OpNameCovertMap[key] = value;
+        // remove blank
+        fusableOp.erase(remove_if(fusableOp.begin(), fusableOp.end(), isspace), fusableOp.end());
+        opNames.erase(remove_if(opNames.begin(), opNames.end(), isspace), opNames.end());
+
+        std::istringstream opStream(opNames);
+        std::string singleOp;
+
+        while (getline(opStream, singleOp, ',')) {
+            singleOp.erase(remove_if(singleOp.begin(), singleOp.end(), isspace), singleOp.end());
+            _fusableOp.insert(singleOp);
+            // std::cout << "Detected fusable operation: " << singleOp << std::endl;
+        }
+    }
+    else{
+        // store to 
+        std::istringstream iss(line);
+        std::string key, value;
+        iss >> key >> value;
+        _OpNameCovertMap[key] = value;
+    }
   }
 //   for(auto itr = _OpNameCovertMap.begin(); itr != _OpNameCovertMap.end(); itr++){
 //     errs() << (*itr).first <<": " << (*itr).second << " \n";
@@ -215,7 +237,7 @@ void LLVMCDFG::CDFGtoDOT(std::string fileName) {
         ofs << ", color = " << colors[node->getLoopLevel() % 4] << "];\n";
     }
 	// edges
-    std::map<std::pair<LLVMCDFGNode*, LLVMCDFGNode*>, int> edgestack;    
+    std::map<std::pair<LLVMCDFGNode*, LLVMCDFGNode*>, std::vector<int>> visited_edgeidx;    
     for(auto &elem : _edges){
         auto edge = elem.second;
         auto srcName = edge->src()->getName();
@@ -235,13 +257,39 @@ void LLVMCDFG::CDFGtoDOT(std::string fileName) {
         }else{
             ofs << ", style = bold";
         }
-        int opIdx = edge->dst()->getInputIdx(edge->src());
-        auto pair = std::make_pair(edge->src(), edge->dst());
-        if(edgestack.count(pair)){
-            opIdx = 1 - edgestack[pair];
-        }else{
-            edgestack[pair] = opIdx;
+        std::vector<int> opIndices = edge->dst()->getInputIndices(edge->src());
+        int opIdx;
+        if(opIndices.size() > 1){
+            for(int _ = 0; _ < opIndices.size(); _++){
+                if(visited_edgeidx.count(std::make_pair(edge->src(), edge->dst())) == 0){
+                    opIdx = opIndices[_];
+                    visited_edgeidx[std::make_pair(edge->src(), edge->dst())].push_back(opIdx);
+                    break;
+                }
+                else{
+                    auto& visitedPorts = visited_edgeidx[std::make_pair(edge->src(), edge->dst())];
+
+                    if (std::find(visitedPorts.begin(), visitedPorts.end(), opIndices[_]) == visitedPorts.end()) {
+                        visitedPorts.push_back(opIndices[_]);
+                        opIdx = opIndices[_];
+                        break; 
+                    }
+                }
+            }
         }
+        else if(opIndices.size() == 0){
+            opIdx = -1;
+        }
+        else{
+            opIdx = opIndices[0];
+        }
+
+        // auto pair = std::make_pair(edge->src(), edge->dst());
+        // if(edge_indices.count(pair)){
+        //     opIdx = 1 - edgestack[pair];
+        // }else{
+        //     edgestack[pair] = opIdx;
+        // }
         ofs << ", operand = " << opIdx;
         if(isBackEdge){
             ofs << ", iterdist = " << edge->IterDist();

@@ -125,6 +125,7 @@ int main(int argc, char **argv) {
   mlir::ADORA::registerConvertKernelCallToLLVMPass();
   mlir::ADORA::registerConvertADORAToSCFPass();
   mlir::ADORA::registerMathRewrite();
+  mlir::ADORA::registerLinalgToSystolicGEMMPass();
 
   mlir::registerSCFForLoopCanonicalizationPass();
   

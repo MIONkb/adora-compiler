@@ -25,6 +25,8 @@ private:
     int _dfgLat;
     int _mappedAdgNodeNum;
     long _ioDeps; // IO dependence on previous tasks
+
+    
 public:
     MapperSA(ADG* adg, int timeout_ms = 600000, int maxIter = 30, bool objOpt = true);
     // MapperSA(ADG* adg, DFG* dfg);

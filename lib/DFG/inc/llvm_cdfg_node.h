@@ -99,7 +99,8 @@ private:
     std::set<int> _inputEdges; // edge ids
     std::set<int> _outputEdges; // edge ids
     std::map<int, LLVMCDFGNode *> _inputPortMap;      // port correspond input node
-    std::map<LLVMCDFGNode *, NodeInfo> _inputInfoMap;  // back-edge : input -> this node
+    // std::map<LLVMCDFGNode *, NodeInfo> _inputInfoMap;  // back-edge : input -> this node
+    std::map<LLVMCDFGNode *, std::vector<NodeInfo>> _inputInfoMap;  // back-edge : input -> this node
     std::map<LLVMCDFGNode *, NodeInfo> _outputInfoMap; // back-edge :this node -> output
     std::map<LLVMCDFGNode *, DependInfo> _srcDepInfoMap; // loop-carried dependence source instructions
     std::map<LLVMCDFGNode *, DependInfo> _dstDepInfoMap; // loop-carried dependence destination instructions
@@ -188,6 +189,10 @@ public:
     void setACCcount(std::string str) { _ACCcount = str;}
     void setACCinterval(std::string str) { _ACCinterval = str;}
     void setACCrepeat (std::string str) { _ACCrepeat = str;}
+    std::string getACCinit() { return _ACCinit;}
+    std::string getACCcount() { return _ACCcount;}
+    std::string getACCinterval() { return _ACCinterval;}
+    std::string getACCrepeat () { return _ACCrepeat;}
     std::string getACCInfo_str() { std::string str = _ACCinit+","+_ACCcount+","+_ACCinterval+","+_ACCrepeat; return str;}
     /***************/
 
@@ -198,16 +203,22 @@ public:
     std::string getName();
     const std::vector<LLVMCDFGNode *>& inputNodes(){ return _inputNodes; }  // inputs : predecessor nodes
     const std::vector<LLVMCDFGNode *>& outputNodes(){ return _outputNodes; } // outputs : successor nodes
-    const std::map<LLVMCDFGNode *, NodeInfo>& inputInfoMap(){ return _inputInfoMap; }  // back-edge : input -> this node
+    // const std::map<LLVMCDFGNode *, NodeInfo>& inputInfoMap(){ return _inputInfoMap; }  // back-edge : input -> this node
+    const std::map<LLVMCDFGNode *, std::vector<NodeInfo>>& inputInfoMap(){ return _inputInfoMap;} // back-edge : input -> this node
     const std::map<LLVMCDFGNode *, NodeInfo>& outputInfoMap(){ return _outputInfoMap; } // back-edge :this node -> output
+    std::map<LLVMCDFGNode *, std::vector<NodeInfo>> getinputInfoMap(){ return _inputInfoMap;}
+    
     void addInputNode(LLVMCDFGNode *node, int idx = -1, bool isBackEdge = false, CondVal cond = UNCOND);  // inputs : predecessor nodes
     void addOutputNode(LLVMCDFGNode *node, bool isBackEdge = false, CondVal cond = UNCOND);// outputs : successor nodes
     void setInputIdx(LLVMCDFGNode *node, int idx);                // input index
+    // void setInputIndices(LLVMCDFGNode *node, int idx);             // @jhlou input index
+    // void addInputIdx(LLVMCDFGNode *node, int idx);                // @jhlou add another input index
     void setInputBackEdge(LLVMCDFGNode *node, bool isBackEdge);   // input -> this node is back-edge
     void setInputCondVal(LLVMCDFGNode *node, CondVal cond);       // conditional dependence between inputs and this node
     void setOutputBackEdge(LLVMCDFGNode *node, bool isBackEdge);  // this node -> output is back-edge
     void setOutputCondVal(LLVMCDFGNode *node, CondVal cond);      // conditional dependence between this node and output
     int getInputIdx(LLVMCDFGNode *node);           // input index
+    std::vector<int> getInputIndices(LLVMCDFGNode *node);           // @jhlou input index
     LLVMCDFGNode* getInputPort(int idx);           // get input node of idx port
     bool isInputBackEdge(LLVMCDFGNode *node);      // input -> this node is back-edge
     CondVal getInputCondVal(LLVMCDFGNode *node);   // conditional dependence between inputs and this node

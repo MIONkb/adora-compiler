@@ -9,7 +9,7 @@ tarfolder="$rootfolder/$IRfolder/5_obj"
 # tarfolder="$CHIPYARD_DIR/generators/fdra/software/tests/bareMetalC"
 tempfolder="$rootfolder/$IRfolder/tempfiles"
 main_file="gemm_main.c"
-baremetal_file_name="gemm_mini_unroll"
+baremetal_file_name="gemm_mini"
 DATASET_Size="MINI_DATASET"
 
 if [ ! -d "$tarfolder" ]; then

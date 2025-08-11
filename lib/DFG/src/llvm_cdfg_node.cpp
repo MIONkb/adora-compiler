@@ -74,8 +74,18 @@ void LLVMCDFGNode::addInputNode(LLVMCDFGNode *node, int idx, bool isBackEdge, Co
 {
     _inputPortMap[idx] = node;
     if(std::find(_inputNodes.begin(), _inputNodes.end(), node) != _inputNodes.end()){
-        errs()<<"%%%%%"<<this->getName()<<"'s inputlist already has "<<node->getName()<<"\n";
-        return;
+        NodeInfo info;
+        info.idx = idx;
+        info.isBackEdge = isBackEdge;
+        info.cond = cond;
+        std::vector<int> indices = getInputIndices(node);
+        if(std::find(indices.begin(), indices.end(), idx) != indices.end()){
+            errs()<<"%%%%%"<<this->getName()<<"'s inputlist already has "<<node->getName()<<"\n";
+            return;
+        }
+        else{
+            _inputInfoMap[node].push_back(info);
+        }
     }
     _inputNodes.push_back(node);
     // if(node->instruction() != NULL && dyn_cast<PHINode>(node->instruction())){
@@ -83,9 +93,11 @@ void LLVMCDFGNode::addInputNode(LLVMCDFGNode *node, int idx, bool isBackEdge, Co
     // }else{
     //     _inputInfoMap[node].isPHI = false;
     // }
-    _inputInfoMap[node].idx = idx;
-    _inputInfoMap[node].isBackEdge = isBackEdge;
-    _inputInfoMap[node].cond = cond;
+    NodeInfo info;
+    info.idx = idx;
+    info.isBackEdge = isBackEdge;
+    info.cond = cond;
+    _inputInfoMap[node].push_back(info);
 }
 
 
@@ -110,19 +122,61 @@ void LLVMCDFGNode::addOutputNode(LLVMCDFGNode *node, bool isBackEdge, CondVal co
 // input index
 void LLVMCDFGNode::setInputIdx(LLVMCDFGNode *node, int idx)
 {
-    _inputInfoMap[node].idx = idx;
+    // _inputInfoMap[node].idx = idx;
+
+    //@jhlou
+    if(_inputInfoMap[node].size() == 1){
+        _inputInfoMap[node][0].idx = idx;
+    }
+    else if(_inputInfoMap[node].size() == 0){
+        NodeInfo info;
+        info.idx = idx;
+        _inputInfoMap[node].push_back(info);
+    }
+    else{
+        /// set the last one;
+        _inputInfoMap[node].at(_inputInfoMap[node].size()-1).idx = idx;
+    }
+
 } 
+
 
 // input -> this node is back-edge
 void LLVMCDFGNode::setInputBackEdge(LLVMCDFGNode *node, bool isBackEdge)
 {
-    _inputInfoMap[node].isBackEdge = isBackEdge;
+    // _inputInfoMap[node].isBackEdge = isBackEdge;
+    //@jhlou
+    if(_inputInfoMap[node].size() == 1){
+        _inputInfoMap[node][0].isBackEdge = isBackEdge;
+    }
+    else if(_inputInfoMap[node].size() == 0){
+        NodeInfo info;
+        info.isBackEdge = isBackEdge;
+        _inputInfoMap[node].push_back(info);
+    }
+    else{
+        /// set the last one;
+        _inputInfoMap[node].at(_inputInfoMap[node].size()-1).isBackEdge = isBackEdge;
+    }
 } 
 
 // conditional dependence between inputs and this node
 void LLVMCDFGNode::setInputCondVal(LLVMCDFGNode *node, CondVal cond)
 {
-    _inputInfoMap[node].cond = cond;
+    // _inputInfoMap[node].cond = cond;
+
+    //@jhlou
+    if(_inputInfoMap[node].size() == 1){
+        _inputInfoMap[node][0].cond = cond;
+    }
+    else if(_inputInfoMap[node].size() == 0){
+        NodeInfo info;
+        info.cond = cond;
+        _inputInfoMap[node].push_back(info);
+    }
+    else{
+        _inputInfoMap[node].at(_inputInfoMap[node].size()-1).cond = cond;
+    }
 }   
 
 // this node -> output is back-edge
@@ -141,9 +195,23 @@ void LLVMCDFGNode::setOutputCondVal(LLVMCDFGNode *node, CondVal cond)
 int LLVMCDFGNode::getInputIdx(LLVMCDFGNode *node)
 {
     if(_inputInfoMap.count(node)){
-        return _inputInfoMap[node].idx;
+        return _inputInfoMap[node][0].idx;
     }
     return -1;
+}
+
+// @jhlou input index
+std::vector<int> LLVMCDFGNode::getInputIndices(LLVMCDFGNode *node)
+{  
+    std::vector<int> indices;
+    for(auto elem : _inputPortMap){
+        int idx = elem.first;
+        LLVMCDFGNode * inputnode = elem.second;
+        if(inputnode == node){
+            indices.push_back(idx);
+        }
+    }
+    return indices;
 }
 
 LLVMCDFGNode* LLVMCDFGNode::getInputPort(int idx)
@@ -155,7 +223,7 @@ LLVMCDFGNode* LLVMCDFGNode::getInputPort(int idx)
 bool LLVMCDFGNode::isInputBackEdge(LLVMCDFGNode *node)
 {
     if(_inputInfoMap.count(node)){
-        return _inputInfoMap[node].isBackEdge;
+        return _inputInfoMap[node][0].isBackEdge;
     }
     return false;
 }   
@@ -164,7 +232,7 @@ bool LLVMCDFGNode::isInputBackEdge(LLVMCDFGNode *node)
 CondVal LLVMCDFGNode::getInputCondVal(LLVMCDFGNode *node)
 {
     if(_inputInfoMap.count(node)){
-        return _inputInfoMap[node].cond;
+        return _inputInfoMap[node][0].cond;
     }
     return UNCOND;
 }
@@ -192,7 +260,8 @@ CondVal LLVMCDFGNode::getOutputCondVal(LLVMCDFGNode *node)
 int LLVMCDFGNode::delInputNode(LLVMCDFGNode *node)
 {
     _inputNodes.erase(std::remove(_inputNodes.begin(), _inputNodes.end(), node), _inputNodes.end());
-    int idx = _inputInfoMap[node].idx;
+    // int idx = _inputInfoMap[node].idx; //@jhlou
+    int idx = _inputInfoMap[node][0].idx;    
     _inputInfoMap.erase(node);
     return idx;
 } 

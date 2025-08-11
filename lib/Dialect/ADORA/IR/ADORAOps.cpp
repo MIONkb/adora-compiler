@@ -252,6 +252,42 @@ LogicalResult DataBlockLoadOp::verify() {
   return success();
 }
 
+SmallVector<std::string> DataBlockLoadOp::getKernelNameAsStrVector() {
+  Attribute KnNameAttr = this->getOperation()->getAttr("KernelName");
+  if(KnNameAttr == nullptr)
+    return SmallVector<std::string>();
+  else{
+    SmallVector<std::string> tokens;
+    std::string wholeattr = KnNameAttr.cast<StringAttr>().strref().str();
+    size_t start = 0;
+    size_t end = 0;
+    while ((end = wholeattr.find('+', start)) != std::string::npos) {
+        tokens.push_back(wholeattr.substr(start, end - start));
+        start = end + 1; 
+    }
+    std::string lastToken = wholeattr.substr(start);
+    if (!lastToken.empty()) { 
+      tokens.push_back(lastToken);
+    }
+    return tokens;
+  }
+}    
+std::string DataBlockLoadOp::addAnotherKernelName(const std::string& newKernel) {
+  std::string original = getKernelName().str();
+
+  if (original.empty()) {
+    setKernelName(newKernel);
+    return newKernel;
+  }
+  else if(findElement(getKernelNameAsStrVector(), newKernel) != -1){
+    return original;
+  }
+  else{
+    setKernelName(original + "+" + newKernel);
+    return original + "+" + newKernel;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // DataBlockStoreOp
 //===----------------------------------------------------------------------===//
@@ -413,6 +449,37 @@ LogicalResult LocalMemAllocOp::verify() {
   return success();
 }
 
+
+SmallVector<std::string> LocalMemAllocOp::getKernelNameAsStrVector() {
+  Attribute KnNameAttr = this->getOperation()->getAttr("KernelName");
+  if(KnNameAttr == nullptr)
+    return SmallVector<std::string>();
+  else{
+    SmallVector<std::string> tokens;
+    std::string wholeattr = KnNameAttr.cast<StringAttr>().strref().str();
+    size_t start = 0;
+    size_t end = 0;
+    while ((end = wholeattr.find('+', start)) != std::string::npos) {
+        tokens.push_back(wholeattr.substr(start, end - start));
+        start = end + 1; 
+    }
+    std::string lastToken = wholeattr.substr(start);
+    if (!lastToken.empty()) { 
+      tokens.push_back(lastToken);
+    }
+    return tokens;
+  }
+}    
+std::string LocalMemAllocOp::addAnotherKernelName(const std::string& newKernel) {
+  std::string original = getKernelName().str();
+  if (original.empty()) {
+    setKernelName(newKernel);
+    return newKernel;
+  }
+  
+  setKernelName(original + "+" + newKernel);
+  return original + "+" + newKernel;
+}
 
 // void AffineLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //                                                MLIRContext *context) {

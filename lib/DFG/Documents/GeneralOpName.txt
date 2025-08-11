@@ -74,3 +74,6 @@ affine.for for
 scf.for scf_for
 scf.yield scf_yield
 vector.extract vector_extract
+
+
+@fusableOp: MAC,FMAC32

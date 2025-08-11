@@ -1295,10 +1295,10 @@ void Mapping::latencySchedule(){
         for(auto iter = unscheduledNodes.begin(); iter != unscheduledNodes.end();){           
             int nodeId = *iter;
             dfgNode = _dfg->node(nodeId);
-            // dfgNode->printDfgNode();
-            // std::cout << "unschedule node: " << dfgNode->name() << " id: " << nodeId << " unscheduledNodes size: " << unscheduledNodes.size() << std::endl;
+            dfgNode->printDfgNode();
+            std::cout << "unschedule node: " << dfgNode->name() << " id: " << nodeId << " unscheduledNodes size: " << unscheduledNodes.size() << std::endl;
             
-            // std::cout << "id: " << nodeId << std::endl;
+            std::cout << "id: " << nodeId << std::endl;
             int maxLat = 0x3fffffff;
             int minLat = 0;
             int targetLat = _dfgNodeAttr[nodeId].lat; 
@@ -1312,7 +1312,7 @@ void Mapping::latencySchedule(){
                     // if(dstNodeId == _dfg->id()){ // connected to DFG output port
                     //     continue;
                     // }
-                    // std::cout << "output node: " << _dfg->node(dstNodeId)->name() << std::endl;
+                    std::cout << "output node: " << _dfg->node(dstNodeId)->name() << std::endl;
                     if(scheduledNodeIds.count(dstNodeId)){ // already scheduled  
                         if(edge->isBackEdge()){     
                             routeLat -= _II * edge->iterDist(); // latency due to iteration distance

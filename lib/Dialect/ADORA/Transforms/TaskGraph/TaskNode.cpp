@@ -153,19 +153,19 @@ TaskNode* TaskNode::ReplaceAllUsesWith(TaskNode* newnode){
       outop->walk([&](mlir::Operation* _op) {
         _op->replaceUsesOfWith(this->getOperation()->getResult(0), newop->getResult(0));
       });
-      
+      newnode->addOutNode(outnode);
+      dyn_cast<KernelNode>(outnode)->addInNode(newnode, dep);
     }
     else{
       outop->replaceUsesOfWith(this->getOperation()->getResult(0), newop->getResult(0));
+      newnode->addOutNode(outnode);
+      outnode->addInNode(newnode, dep);
     }
     // outop->dump();
 
     /// upgrade node connection
     delOutNode(outnode);
     outnode->delInNode(this);
-
-    newnode->addOutNode(outnode);
-    outnode->addInNode(newnode, dep);
   }
 
   return newnode;
@@ -180,6 +180,31 @@ bool KernelNode::classof(const TaskNode* node){
   }
   else{
     return false;
+  }
+}
+
+void KernelNode::addInNode(TaskNode* node){
+  if(_innodes.count(node) == 0){
+    /// is not an Input
+    _innodes[node] = depType::Undefine;
+  }
+  if(isa<LocalAllocNode>(node)){
+    dyn_cast<LocalAllocNode>(node)->getLocalMemAllocOp()
+        .addAnotherKernelName(this->getKernelOp().getKernelName());
+  }
+}
+
+void KernelNode::addInNode(TaskNode* node, depType dep){
+  if(_innodes.count(node) > 0){
+    /// is not an Input
+    _innodes[node] = judegeDep(dep, _innodes[node]);
+  }
+  else {
+    _innodes[node] = dep;
+  }
+  if(isa<LocalAllocNode>(node)){
+    dyn_cast<LocalAllocNode>(node)->getLocalMemAllocOp()
+        .addAnotherKernelName(this->getKernelOp().getKernelName());
   }
 }
 

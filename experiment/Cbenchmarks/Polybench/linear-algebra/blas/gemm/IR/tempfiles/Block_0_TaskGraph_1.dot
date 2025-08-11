@@ -1,13 +1,13 @@
 Digraph G {
-BlockStore9[type = "BlockStoreNode", KernelName = "kernel_gemm_1"];
-Kernel8[type = "KernelNode", KernelName = "kernel_gemm_1"];
-LocalAlloc7[type = "LocalAllocNode", KernelName = "kernel_gemm_1"];
-BlockLoad6[type = "BlockLoadNode", KernelName = "kernel_gemm_1"];
-BlockStore3[type = "BlockStoreNode", KernelName = "kernel_gemm_0"];
-Kernel2[type = "KernelNode", KernelName = "kernel_gemm_0"];
-LocalAlloc1[type = "LocalAllocNode", KernelName = "kernel_gemm_0"];
-BlockLoad5[type = "BlockLoadNode", KernelName = "kernel_gemm_1"];
-BlockLoad0[type = "BlockLoadNode", KernelName = "kernel_gemm_0"];
+Kernel8[type = "KernelNode", KernelName = "gemm_1"];
+LocalAlloc7[type = "LocalAllocNode", KernelName = "gemm_1"];
+BlockLoad6[type = "BlockLoadNode", KernelName = "gemm_1"];
+BlockStore3[type = "BlockStoreNode", KernelName = "gemm_0"];
+BlockStore9[type = "BlockStoreNode", KernelName = "gemm_1"];
+Kernel2[type = "KernelNode", KernelName = "gemm_0"];
+BlockLoad5[type = "BlockLoadNode", KernelName = "gemm_1"];
+LocalAlloc1[type = "LocalAllocNode", KernelName = "gemm_0+gemm_1"];
+BlockLoad0[type = "BlockLoadNode", KernelName = "gemm_0"];
 BlockLoad0 -> Kernel2[color = black, style = bold, deptype = Default, label = "deptype=Default"];
 LocalAlloc1 -> Kernel2[color = black, style = bold, deptype = Default, label = "deptype=Default"];
 LocalAlloc1 -> BlockStore3[color = blue, style = bold, deptype = SourceToStore, label = "deptype=SourceToStore"];

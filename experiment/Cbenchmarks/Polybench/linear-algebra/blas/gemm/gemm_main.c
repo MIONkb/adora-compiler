@@ -128,6 +128,13 @@ void gemm(
 		 DATA_TYPE A[NI][NK], /// 1000 1200
 		 DATA_TYPE B[NK][NJ]); /// 1200 1100
 
+void gemm_opt(
+		//  DATA_TYPE alpha,
+		//  DATA_TYPE beta,
+		 DATA_TYPE C[NI][NJ], /// 1000 1100
+		 DATA_TYPE A[NI][NK], /// 1000 1200
+		 DATA_TYPE B[NK][NJ]); /// 1200 1100
+
 int main(int argc, char** argv)
 {
   printf("CGRA start gemm mini!\n");
@@ -148,35 +155,38 @@ int main(int argc, char** argv)
   // POLYBENCH_2D_ARRAY_DECL(C,DATA_TYPE,NI,NJ,ni,nj);
   // POLYBENCH_2D_ARRAY_DECL(A,DATA_TYPE,NI,NK,ni,nk);
   // POLYBENCH_2D_ARRAY_DECL(B,DATA_TYPE,NK,NJ,nk,nj);
-  DATA_TYPE C1[NI][NJ], C2[NI][NJ];
+  DATA_TYPE C1[NI][NJ], C2[NI][NJ],  C3[NI][NJ];
   DATA_TYPE A[NI][NK];
   DATA_TYPE B[NK][NJ];
 
   /* Initialize array(s). */
-  init_array (ni, nj, nk, &alpha, &beta,
-	      C1, A, B);
+
 
   /* Start timer. */
   // polybench_start_instruments;
 
-  /* Run kernel. */
-  printf("\nstart kernel unroll\n");
-  start = rdcycle();
-  gemm (C1,A,B);
-  end = rdcycle();
-  printf("It takes %llu cycles for CGRA to finish the task.\n", end - start);
-
   init_array (ni, nj, nk, &alpha, &beta,
-	      C2, A, B);
+	      C1, A, B);
   printf("\nstart cpu kernel\n");
   start = rdcycle();
   kernel_gemm_cpu (ni, nj, nk,
 	       alpha, beta,
-	       C2,
+	       C1,
 	       A,
 	       B);
   end = rdcycle();
   printf("It takes %llu cycles for CPU to finish the task.\n", end - start);
+
+  /* Run kernel. */
+  init_array (ni, nj, nk, &alpha, &beta,
+	      C2, A, B);
+  printf("\nstart gemm\n");
+  start = rdcycle();
+  gemm (C2,A,B);
+  end = rdcycle();
+  printf("It takes %llu cycles for CGRA to finish the gemm.\n", end - start);
+
+
   /* Stop and print timer. */
   // polybench_stop_instruments;
   // polybench_print_instruments;
@@ -186,6 +196,17 @@ int main(int argc, char** argv)
      print_array(NI, NJ, C1, C2);
   // polybench_prevent_dce(print_array(ni, nj,  POLYBENCH_ARRAY(C)));
 
+
+  /* Run kernel. */
+  init_array (ni, nj, nk, &alpha, &beta,
+	      C3, A, B);
+  printf("\nstart gemm opt\n");
+  start = rdcycle();
+  gemm_opt (C3,A,B);
+  end = rdcycle();
+  printf("It takes %llu cycles for CGRA to finish the gemm_opt.\n", end - start);
+
+     print_array(NI, NJ, C1, C3);
   /* Be clean. */
   // POLYBENCH_FREE_ARRAY(C);
   // POLYBENCH_FREE_ARRAY(A);

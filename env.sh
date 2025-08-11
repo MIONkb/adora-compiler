@@ -4,7 +4,9 @@
 #### If you don't want need cgra hardware to execute simulation, CHIPYARD_SOURCE_ENV can be omit.
 ######################### 
 export CGRVOPT_PROJECT_PATH="/home/jhlou/CGRVOPT/cgra-opt"
-export CGRA_ADG_PATH="/home/jhlou/chipyard/generators/fdra/cgra-mg/src/main/resources"
+export CGRA_ADG_PATH="/home/jhlou/chipyard/generators/fdra/cgra-mg/src/main/resources/cgra_adg.json"
+### if you haven't installed chipyard yet, use following CGRA_ADG_PATH is also OK
+#  CGRA_ADG_PATH="${CGRVOPT_PROJECT_PATH}/lib/DFG/Documents/cgra_adg.json"
 export CHIPYARD_DIR="/home/jhlou/chipyard"
 
 ##########################
@@ -15,8 +17,8 @@ export ADORA_DIR=$CHIPYARD_DIR"/generators/fdra"
 ##########################
 #### Don't have to change paths beneath
 ######################### 
-export CGRA_OP_FILE_PATH=$CGRA_ADG_PATH
-export GeneralOpNameFile="$CGRVOPT_PROJECT_PATH/lib/DFG/Documents/GeneralOpName.txt"
+export CGRA_OP_FILE_PATH="${CGRA_ADG_PATH}/operations.json"
+export GeneralOpNameFile="${CGRVOPT_PROJECT_PATH}/lib/DFG/Documents/GeneralOpName.txt"
 
 export PATH=/home/jhlou/CGRVOPT/cgra-opt/build/bin:$PATH
 

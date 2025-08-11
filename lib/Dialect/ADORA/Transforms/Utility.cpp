@@ -667,8 +667,89 @@ func::FuncOp mlir::ADORA::
   return KernelFunc;
 }
 
+/// @brief ToFunc
+/// @param Op
+/// @param FnName
+/// @param operands
+/// @return
+template <typename OpT>
+static func::FuncOp ConvertOpTtoFunc(OpT op, llvm::SetVector<mlir::Value> &operands, std::string FnName)
+{
+  Location loc = op.getLoc();
+  // Create a builder with no insertion point, insertion will happen separately
+  // due to symbol table manipulation
+  OpBuilder builder(op.getContext());
+  // Identify uses from values defined outside of the scope of the launch
+  // operation.
+  // getUsedValuesDefinedAbove(KernelOpBody, operands);
+
+  // Create the func.func operation.
+  SmallVector<mlir::Type, 4> OperandTypes, ResultTypes;
+  OperandTypes.reserve(operands.size());
+  for (mlir::Value operand : operands)
+  {
+    // errs()  << "  operands:"; operand.dump();
+    OperandTypes.push_back(operand.getType());
+  }
 
 
+  for (mlir::Value result : op.getResults())
+  {
+    // errs()  << "  operands:"; operand.dump();
+    ResultTypes.push_back(result.getType());
+  }
+
+  mlir::FunctionType type =
+      mlir::FunctionType::get(op.getContext(), OperandTypes, ResultTypes);
+  func::FuncOp Func = builder.create<func::FuncOp>(loc, FnName, type);
+  std::cout << "[debug] after create:\n"; Func.dump();
+  // KernelFunc->setAttr(kernelFnName, builder.getUnitAttr());
+  // KernelFunc->setAttr("Kernel", builder.getUnitAttr());
+
+  /// Pass func arguements outside of KernelOp
+  Block *entryBlock = new Block;
+  for (mlir::Type argTy : type.getInputs())
+  {
+    entryBlock->addArgument(argTy, loc);
+  }
+
+  Func.getBody().getBlocks().push_back(entryBlock);
+
+  mlir::IRMapping mapping;
+  // // Block &entryBlock = KernelFunc.getBody().front();
+  for (unsigned index = 0; index < operands.size(); index++)
+  {
+    // errs()  << "  operands:" << operands[index] <<"\n";
+    mapping.map(operands[index], entryBlock->getArgument(index));
+  }
+  mlir::Operation* newop = op.getOperation()->clone(mapping);
+  entryBlock->push_back(newop);
+  builder.create<func::ReturnOp>(newop->getLoc(), dyn_cast<OpT>(newop).getResultTensors());
+
+  // Block &KernelOpEntry = KernelOpBody.front();
+  // Block *clonedKernelOpEntry = mapping.lookup(&KernelOpEntry);
+  // builder.setInsertionPointToEnd(entryBlock);
+  // builder.create<cf::BranchOp>(loc, clonedKernelOpEntry);
+
+  // KernelFunc.walk([](ADORA::TerminatorOp op) {
+  //   OpBuilder replacer(op);
+  //   replacer.create<func::ReturnOp>(op.getLoc());
+  //   op.erase(); 
+  // });
+  func::CallOp callop = builder.create<func::CallOp>(op.getLoc(), Func, operands.getArrayRef());
+  op.getOperation()->getBlock()->push_back(callop);
+  callop.getOperation()->moveBefore(op.getOperation());
+  op.getOperation()->replaceAllUsesWith(callop);
+  
+  std::cout << "[debug] func:\n"; Func.dump();
+  std::cout << "[debug] callop:\n"; callop.dump();
+  return Func;
+}
+
+func::FuncOp mlir::ADORA::
+    ConvertMatmulToFunc(mlir::linalg::MatmulOp op, llvm::SetVector<mlir::Value> &operands, std::string FnName){
+  return ConvertOpTtoFunc<mlir::linalg::MatmulOp>(op, operands, FnName);
+}
 
 /////////////////////////////////////////////
 ///// functions to simplify AffineApplyOp 
@@ -1470,6 +1551,8 @@ void ADORA::simplifyLoadAndStoreOpsInRegion(mlir::Region& region){
     rewriter.replaceOpWithNewOp<AffineApplyOp>(affineOp, map, resultOperands);
     
     // affineOp.getOperation()->getBlock()->dump();
+
+    return WalkResult::advance();
   });
   
   for(auto op : OpsToDel){
@@ -2108,8 +2191,32 @@ static std::optional<ADORA::DataBlockStoreOp> GetBlockStoreOfSameTile(ldormalloc
       && dyn_cast<ldormalloc>(blkst.getSourceMemref().getDefiningOp()) == ld)
       return blkst;
   }
+
+  //// TODO: judge index and memory shape
+  //// TODO: judge index and memory shape
+  //// TODO: judge index and memory shape
+  
   return std::nullopt;
 }
+
+// template<typename ldormalloc>
+// static SmallVector<ADORA::DataBlockStoreOp> GetBlockStoreOfSameTile(ldormalloc ld, SmallVector<ADORA::DataBlockStoreOp> stores){
+//   SmallVector<ADORA::DataBlockStoreOp> results;
+//   for(auto& blkst : stores){
+//     if(isa<ldormalloc>(blkst.getSourceMemref().getDefiningOp())
+//         && dyn_cast<ldormalloc>(blkst.getSourceMemref().getDefiningOp()) == ld
+//         && )
+//     {      
+//       results.push_back(blkst);
+//     }
+//   }
+
+//   //// TODO: judge index and memory shape
+//   //// TODO: judge index and memory shape
+//   //// TODO: judge index and memory shape
+  
+//   return std::nullopt;
+// }
 
 /// @brief Retrieves the block store operation that accesses the same tile as the provided block load or local memory allocation operation.
 /// 
@@ -2134,14 +2241,14 @@ mlir::Operation* ::mlir::ADORA::GetTheSourceOperationOfBlockStore(ADORA::DataBlo
   for(auto& op : allLoadsMalloc){
     if(isa<ADORA::DataBlockLoadOp>(op)){
       ADORA::DataBlockLoadOp load = dyn_cast<ADORA::DataBlockLoadOp>(op);
-      if(load.getKernelName() == store.getKernelName()
+      if(findElement(load.getKernelNameAsStrVector(), store.getKernelName().str()) != -1
         && load.getId() == store.getId()){
         result.push_back(op);
       }
     }
     else if(isa<ADORA::LocalMemAllocOp>(op)){
       ADORA::LocalMemAllocOp alloc = dyn_cast<ADORA::LocalMemAllocOp>(op);
-      if(alloc.getKernelName() == store.getKernelName()
+      if(findElement(alloc.getKernelNameAsStrVector(), store.getKernelName().str()) != -1
         && alloc.getId() == store.getId()){
         result.push_back(op);
       }
@@ -2237,7 +2344,7 @@ SmallVector<int> mlir::ADORA::getOperandDimensionsInMap(const int dim, const Aff
 /// @param CGRAadg file path of CGRA adg
 /// @param instype the kind of instance to be counted 
 /// @return 
-unsigned const mlir::ADORA::getInstanceNumFromADG  (const std::string& CGRAadg,const std::string& instype_to_count){
+unsigned mlir::ADORA::getInstanceNumFromADG  (const std::string& CGRAadg,const std::string& instype_to_count){
   unsigned count = 0;
   // Read target adg JSON file.
   std::string errorMessage;

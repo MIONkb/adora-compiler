@@ -1,0 +1,21 @@
+Digraph G {
+"Input1"[label = "\N\nlat=3"];
+"Input2"[label = "\N\nlat=3"];
+"Input3"[label = "\N\nlat=3"];
+"FMUL324"[label = "\N\nlat=7"];
+"Input2"->"FMUL324"[label = "lat=1\nop=0\nrdudelay=0"];
+"Input3"->"FMUL324"[label = "lat=0\nop=1\nrdudelay=1"];
+"FADD325"[label = "\N\nlat=8"];
+"Input1"->"FADD325"[label = "lat=0\nop=0\nrdudelay=4"];
+"FMUL324"->"FADD325"[label = "lat=0\nop=1\nrdudelay=0"];
+"Output6"[label = "\N\nlat=10"];
+"FADD325"->"Output6"[label = "lat=1\nop=0\nrdudelay=0"];
+"Input7"[label = "\N\nlat=3"];
+"FMUL328"[label = "\N\nlat=6"];
+"Input3"->"FMUL328"[label = "lat=0\nop=0\nrdudelay=0"];
+"Input7"->"FMUL328"[label = "lat=0\nop=1\nrdudelay=0"];
+"FACC329"[label = "\N\nlat=7"];
+"FMUL328"->"FACC329"[label = "lat=0\nop=0\nrdudelay=0"];
+"Output12"[label = "\N\nlat=9"];
+"FACC329"->"Output12"[label = "lat=1\nop=0\nrdudelay=0"];
+}

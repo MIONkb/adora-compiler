@@ -43,6 +43,7 @@ private:
     std::map<int, LLVMCDFGNode*> _lpidxNodeMap; // <loop index level, node>
     std::map<int, LLVMCDFGNode*> _lpargNodeMap; // <loop arg level, node>
     std::map< std::string, std::string> _OpNameCovertMap;
+    std::set<std::string> _fusableOp;
     // function annotation: size attribute
     std::map<std::string, int> _sizeAttrMap;
     // basic block pairs that there is a back edge in between, <srcBB, dstBB>
@@ -262,7 +263,10 @@ public:
     void debug_printBBs();// LJHdebug 
 
     /// LJH Define
+    std::set<std::string> getFusableOperatorTypes(){return _fusableOp;};
     void CDFGtoDOT(std::string fileName);
+
+
 };
 
 

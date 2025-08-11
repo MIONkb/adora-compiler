@@ -1726,7 +1726,7 @@ bool DeleteYield(LLVMCDFG* CDFG, LLVMCDFGNode* yieldnode){
   assert(SuccNode->getTypeName() == "for");
 
   for(LLVMCDFGNode* AnceNode : yieldnode->inputNodes()){
-    std::map<LLVMCDFGNode*, unsigned> OutputNodeToIdx;
+    std::map<LLVMCDFGNode*, std::vector<int>> OutputNodeToIdx;
     mlir::Operation* AnceOp = AnceNode->operation();
     
     assert(AnceOp->getResults().size() == 1);
@@ -1734,22 +1734,30 @@ bool DeleteYield(LLVMCDFG* CDFG, LLVMCDFGNode* yieldnode){
     
     /// get output nodes
     affine::AffineForOp forop = dyn_cast<affine::AffineForOp>(SuccNode->operation());
-    for(LLVMCDFGNode* outputnode : SuccNode->outputNodes()){
+    for(LLVMCDFGNode* outputnode : SuccNode->outputNodes()){ /// output from for
       mlir::Operation* OutputOp = outputnode->operation();
-      if( !outputnode->isInputBackEdge(SuccNode) && ValueIsInOperands(forop.getResult(YieldIndex), OutputOp)){
+      if( !outputnode->isInputBackEdge(SuccNode) 
+        && ValueIsInOperands(forop.getResult(YieldIndex), OutputOp)){
+        for(int operandidx = 0; operandidx < OutputOp->getOperands().size(); operandidx++){
+          /// only corresponding input port index should be connected
+          if(OutputOp->getOperand(operandidx) == forop.getResult(YieldIndex)){
+            OutputNodeToIdx[outputnode].push_back(operandidx);
+          }
+        }
         /// backedge is a loop-carried variable
         // AfterForNode = nextnode;
-        OutputNodeToIdx[outputnode] = outputnode->getInputIdx(SuccNode);
       }
     }
     
     /// connect AnceNode and output node
     for(auto _pair: OutputNodeToIdx){
       LLVMCDFGNode* outputnode = _pair.first;
-      unsigned idx = _pair.second;
-      outputnode->addInputNode(AnceNode,  idx, /*isBackEdge=*/false);
-      AnceNode->addOutputNode(outputnode, /*isBackEdge=*/false);
-      CDFG->addEdge(AnceNode, outputnode);   
+      std::vector<int> indices = _pair.second;
+      for(int idx : indices){
+        outputnode->addInputNode(AnceNode,  idx, /*isBackEdge=*/false);
+        AnceNode->addOutputNode(outputnode, /*isBackEdge=*/false);
+        CDFG->addEdge(AnceNode, outputnode);  
+      }
     }
   }
 
@@ -1765,9 +1773,6 @@ bool DeleteYield(LLVMCDFG* CDFG, LLVMCDFGNode* yieldnode){
   CDFG->delNode(yieldnode);
   CDFG->delNode(SuccNode);
 
-
-
-  
   return true;
   // }
   // else{
@@ -2159,10 +2164,17 @@ void HandleVectorExtractNode(LLVMCDFG* CDFG, bool verbose = true){
         for(LLVMCDFGNode* innode : innodes){
           if(innode->getTypeName().substr(0,5) == "MERGE"){
             for(LLVMCDFGNode* outnode : outnodes){
-              int edgeidx = node->getInputIdx(innode);
-              outnode->addInputNode(innode, edgeidx, /*isBackEdge=*/false);
-              innode->addOutputNode(outnode, /*isBackEdge=*/false);
-              CDFG->addEdge(innode, outnode);   
+              std::vector<NodeInfo> infos = outnode->getinputInfoMap()[innode];
+              for(NodeInfo info: infos){
+                int edgeidx = info.idx;
+                outnode->addInputNode(innode, edgeidx, /*isBackEdge=*/false);
+                innode->addOutputNode(outnode, /*isBackEdge=*/false);
+                CDFG->addEdge(innode, outnode); //To fix: Edge Type  
+              }
+              // int edgeidx = node->getInputIdx(innode);
+              // outnode->addInputNode(innode, edgeidx, /*isBackEdge=*/false);
+              // innode->addOutputNode(outnode, /*isBackEdge=*/false);
+              // CDFG->addEdge(innode, outnode);   
             }
           }
           else if(innode->getTypeName() == "for"){
@@ -2239,6 +2251,53 @@ void FixLinearAccessOfVectorStoreNode(LLVMCDFG* CDFG, bool verbose = true){
     }
   }
   return;
+}
+
+
+static void fuseMulAccToMAC(LLVMCDFG* CDFG, const std::string& mul_name, const std::string& acc_name, const std::string& mac_name){
+  auto nodes = CDFG->nodes();
+  for(auto &elem : nodes){
+    LLVMCDFGNode* accnode = elem.second;
+    if(accnode->getTypeName() == acc_name){
+      assert(accnode->inputNodes().size() == 1);
+      LLVMCDFGNode* mulnode = accnode->inputNodes()[0];
+      if(mulnode->getTypeName() == mul_name){
+        // fusable
+        accnode->setTypeName(mac_name);
+
+        LLVMCDFGNode* mulLHS = mulnode->getInputPort(0);
+        LLVMCDFGNode* mulRHS = mulnode->getInputPort(1);
+
+        accnode->addInputNode(mulLHS, 0, /*isBackEdge=*/false);
+        mulLHS->addOutputNode(accnode, /*isBackEdge=*/false);
+        CDFG->addEdge(mulLHS, accnode);   
+        accnode->addInputNode(mulRHS, 1, /*isBackEdge=*/false);
+        mulRHS->addOutputNode(accnode, /*isBackEdge=*/false);
+        CDFG->addEdge(mulRHS, accnode);   
+
+        CDFG->delNode(mulnode);
+      }
+    }
+
+  }
+}
+
+
+/// @brief fuse operators: MAC(int), FMAC32
+/// 
+/// @param CDFG A pointer to the LLVMCDFG representing the current control data flow graph.
+/// @param verbose A boolean indicating whether to print detailed information (default is true).
+static void FuseOperators(LLVMCDFG* CDFG, bool verbose){
+  if(CDFG->getFusableOperatorTypes().size() == 0)
+    return;
+  
+  if(CDFG->getFusableOperatorTypes().count("MAC") != 0){
+    fuseMulAccToMAC(CDFG, /*mul_name*/"MUL", /*acc_name*/"ACC", /*mac_name*/"MAC");
+  }
+ 
+  if(CDFG->getFusableOperatorTypes().count("FMAC32") != 0){
+    fuseMulAccToMAC(CDFG, /*mul_name*/"FMUL32", /*acc_name*/"FACC32", /*mac_name*/"FMAC32");
+  }
 }
 
 bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp kernel, bool verbose){
@@ -2389,11 +2448,11 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           std::string ref_name;
           if(isa<ADORA::DataBlockLoadOp>(mrefop)){
             ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
-            ref_name = std::string(Bload.getKernelName()) + "_" + std::string(Bload.getId());
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(Bload.getId());
           }
           else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
             ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
-            ref_name = std::string(BAlloc.getKernelName()) + "_" + std::string(BAlloc.getId());
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(BAlloc.getId());
           }
           else{
             assert(0);
@@ -2416,11 +2475,11 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           std::string ref_name;
           if(isa<ADORA::DataBlockLoadOp>(mrefop)){
             ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
-            ref_name = std::string(Bload.getKernelName()) + "_" + std::string(Bload.getId());
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(Bload.getId());
           }
           else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
             ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
-            ref_name = std::string(BAlloc.getKernelName()) + "_" + std::string(BAlloc.getId());
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(BAlloc.getId());
           }
           else
             assert(0);
@@ -2445,11 +2504,11 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           std::string ref_name;
           if(isa<ADORA::DataBlockLoadOp>(mrefop)){
             ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
-            ref_name = std::string(Bload.getKernelName()) + "_" + std::string(Bload.getId());
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(Bload.getId());
           }
           else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
             ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
-            ref_name = std::string(BAlloc.getKernelName()) + "_" + std::string(BAlloc.getId());
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(BAlloc.getId());
           }
           else{
             assert(0);
@@ -2494,11 +2553,11 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
       std::string ref_name;
       if(isa<ADORA::DataBlockLoadOp>(mrefop)){
         ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
-        ref_name = std::string(Bload.getKernelName()) + "_" + std::string(Bload.getId());
+        ref_name = std::string(kernel.getKernelName()) + ":" + std::string(Bload.getId());
       }
       else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
         ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
-        ref_name = std::string(BAlloc.getKernelName()) + "_" + std::string(BAlloc.getId());
+        ref_name = std::string(kernel.getKernelName()) + ":" + std::string(BAlloc.getId());
       }
       else
         assert(0);
@@ -2519,11 +2578,11 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
       std::string ref_name;
       if(isa<ADORA::DataBlockLoadOp>(mrefop)){
         ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
-        ref_name = std::string(Bload.getKernelName()) + "_" + std::string(Bload.getId());
+        ref_name = std::string(kernel.getKernelName()) + ":" + std::string(Bload.getId());
       }
       else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
         ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
-        ref_name = std::string(BAlloc.getKernelName()) + "_" + std::string(BAlloc.getId());
+        ref_name = std::string(kernel.getKernelName()) + ":" + std::string(BAlloc.getId());
       }
       else{
         assert(0);
@@ -2753,11 +2812,17 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
         {
           LLVMCDFGNode* output = CDFG->edge(edgeid)->dst();
           assert(output != NULL);
-          int edgeidx = output->getInputIdx(node);
-          bool isbackedge = output->isInputBackEdge(node);
-          output->addInputNode(AnceNode,  edgeidx, isbackedge);
-          AnceNode->addOutputNode(output, isbackedge);
-          CDFG->addEdge(AnceNode, output); //To fix: Edge Type     
+          const std::vector<NodeInfo> infos = output->getinputInfoMap()[AnceNode];
+          for(NodeInfo info: infos){
+            output->addInputNode(AnceNode, info.idx, info.isBackEdge);
+            AnceNode->addOutputNode(output, info.isBackEdge);
+            CDFG->addEdge(AnceNode, output); //To fix: Edge Type  
+          }
+          // int edgeidx = output->getInputIdx(node);
+          // bool isbackedge = output->isInputBackEdge(node);
+          // output->addInputNode(AnceNode,  edgeidx, isbackedge);
+          // AnceNode->addOutputNode(output, isbackedge);
+          // CDFG->addEdge(AnceNode, output); //To fix: Edge Type     
         }
         CDFG->delNode(node);
         removing = 1;
@@ -2814,6 +2879,12 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
       }
     }    
   }
+
+  ////////////////////////
+  /// fuse operators: MAC, FMAC32
+  ////////////////////////
+  if(verbose) { CDFG->CDFGtoDOT(CDFG->name_str()+"_3_CDFG.dot");}
+  FuseOperators(CDFG, verbose);
 
   return true;
 }

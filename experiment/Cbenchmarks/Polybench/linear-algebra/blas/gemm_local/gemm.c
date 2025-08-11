@@ -50,10 +50,10 @@ void gemm(
 #pragma scop
   for (i = 0; i < NI; i++) {
     for (j = 0; j < NJ; j++)
-	C[i][j] *= beta;
+	    C[i][j] *= beta;
     for (k = 0; k < NK; k++) {
-       for (j = 0; j < NJ; j++)
-	  C[i][j] += alpha * A[i][k] * B[k][j];
+      for (j = 0; j < NJ; j++)
+	      C[i][j] += alpha * A[i][k] * B[k][j];
     }
   }
 #pragma endscop

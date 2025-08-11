@@ -318,7 +318,6 @@ int main(int argc, char **argv) {
     /// Generating DFG
     // std::string fileName = kernel.getKernelName();
   
-
     std::string kernelName = kernel.getKernelName();
     if(kernelName.empty()){
       kernelName = "kernel_" + std::to_string(kernel_cnt);
@@ -341,6 +340,9 @@ int main(int argc, char **argv) {
     // dfg->print();
     // map DFG to ADG
     mapper->setDFG(dfg);
+
+    // some io nodes must be placed at some place
+    emitter.preestablishPlacementConstraints(kernel, mapper);
 
     std::filesystem::create_directory(kernelName + "_map_result");
     CDFG->CDFGtoDOT(kernelName + "_map_result/before_map_" + CDFG->name_str() + "_CDFG.dot");

@@ -107,6 +107,9 @@ public:
   };
   ADORA::KernelOp getKernelOp(){ return _kernelop;}
 
+  void addInNode(TaskNode* node);
+  void addInNode(TaskNode* node, depType dep);
+
   static bool classof(const TaskNode * node);
 
 public:

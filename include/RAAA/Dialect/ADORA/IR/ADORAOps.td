@@ -16,6 +16,7 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 
+include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
@@ -189,6 +190,10 @@ def ADORA_DataBlockLoadOp: ADORA_Op<"BlockLoad", []>{
       StringAttr KernelNameAttr = StringAttr::get(getOperation()->getContext(),s);
       getOperation()->setAttr(getKernelNameAttrStr(), KernelNameAttr);
     }
+
+    SmallVector<std::string> getKernelNameAsStrVector();
+
+    std::string addAnotherKernelName(const std::string& newKernel);
 
     StringRef getId() {
       return this->getOperation()->getAttr("Id")
@@ -373,6 +378,10 @@ def LocalMemAllocOp : ADORA_Op<"LocalMemAlloc", []>{
     //   return this->getOperation()->getAttr("BlockLen")
     //     .cast<IntegerAttr>().getValue().getSExtValue();
     // }
+
+    /////////////////////////////////
+    /// Handles of kernel name
+    /////////////////////////////////
     bool hasKernelName(){
       return this->getOperation()->hasAttr("KernelName");
     }
@@ -383,11 +392,20 @@ def LocalMemAllocOp : ADORA_Op<"LocalMemAlloc", []>{
       else
         return KnNameAttr.cast<StringAttr>().strref();
     }
+
     void setKernelName(std::string s) {
       StringAttr KernelNameAttr = StringAttr::get(getOperation()->getContext(),s);
       getOperation()->setAttr(getKernelNameAttrStr(), KernelNameAttr);
     }
 
+    SmallVector<std::string> getKernelNameAsStrVector();
+
+    std::string addAnotherKernelName(const std::string& newKernel);
+
+
+    /////////////////////////////////
+    /// Handles of ID
+    /////////////////////////////////
     StringRef getId() {
       return this->getOperation()->getAttr("Id")
         .cast<StringAttr>().strref();

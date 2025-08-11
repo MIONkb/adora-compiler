@@ -1,0 +1,21 @@
+Digraph G {
+BlockStore8[type = "BlockStoreNode", KernelName = "bicg"];
+BlockStore7[type = "BlockStoreNode", KernelName = "bicg"];
+Kernel6[type = "KernelNode", KernelName = "bicg"];
+LocalAlloc4[type = "LocalAllocNode", KernelName = "bicg"];
+BlockLoad3[type = "BlockLoadNode", KernelName = "bicg"];
+BlockLoad2[type = "BlockLoadNode", KernelName = "bicg"];
+BlockLoad1[type = "BlockLoadNode", KernelName = "bicg"];
+LocalAlloc5[type = "LocalAllocNode", KernelName = "bicg"];
+BlockLoad0[type = "BlockLoadNode", KernelName = "bicg"];
+BlockLoad0 -> Kernel6[color = black, style = bold, deptype = Default, label = "deptype=Default"];
+BlockLoad1 -> Kernel6[color = black, style = bold, deptype = Default, label = "deptype=Default"];
+BlockLoad2 -> Kernel6[color = black, style = bold, deptype = Default, label = "deptype=Default"];
+BlockLoad3 -> Kernel6[color = black, style = bold, deptype = Default, label = "deptype=Default"];
+LocalAlloc4 -> Kernel6[color = black, style = bold, deptype = Default, label = "deptype=Default"];
+LocalAlloc4 -> BlockStore8[color = blue, style = bold, deptype = SourceToStore, label = "deptype=SourceToStore"];
+LocalAlloc5 -> Kernel6[color = black, style = bold, deptype = Default, label = "deptype=Default"];
+LocalAlloc5 -> BlockStore7[color = blue, style = bold, deptype = SourceToStore, label = "deptype=SourceToStore"];
+Kernel6 -> BlockStore7[color = black, style = bold, deptype = Default, label = "deptype=Default"];
+Kernel6 -> BlockStore8[color = black, style = bold, deptype = Default, label = "deptype=Default"];
+}

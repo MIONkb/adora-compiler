@@ -631,17 +631,32 @@ DFG* DFGIR::parseDFGJFromMLIRCDFG(LLVMCDFG * CDFG){
         }
     }
     // parse edges
-    std::map<std::pair<LLVMCDFGNode*, LLVMCDFGNode*>, int> edgestack;    
+    std::map<std::pair<LLVMCDFGNode*, LLVMCDFGNode*>, std::vector<int>> visited_edgeidx;    
     std::map<int, LLVMCDFGEdge*> edges = CDFG->edges();
     for(auto &elem : edges){
         int edge_id = elem.first;
         LLVMCDFGEdge* edge = elem.second;
         int srcId = edge->src()->id() + 1;
         int dstId = edge->dst()->id() + 1;
-        int dstPort;
-        int srcPort; // default one output for each node
+        std::vector<int> dstPorts;
+        int srcPort, dstPort; // default one output for each node
 
-        dstPort = edge->dst()->getInputIdx(edge->src());
+        dstPorts = edge->dst()->getInputIndices(edge->src());
+        if(dstPorts.size() > 1){
+            for(int _ = 0; _ < dstPorts.size(); _++){
+                auto& visitedPorts = visited_edgeidx[std::make_pair(edge->src(), edge->dst())];
+
+                if (std::find(visitedPorts.begin(), visitedPorts.end(), dstPorts[_]) == visitedPorts.end()) {
+                    visitedPorts.push_back(dstPort);
+                    dstPort = dstPorts[_];
+                    break; 
+                }
+            }
+        }
+        else{
+            dstPort = dstPorts[0];
+        }
+
         srcPort = 0; // default one output for each node
 
         bool isBackEdge = edge->src()->isOutputBackEdge(edge->dst());

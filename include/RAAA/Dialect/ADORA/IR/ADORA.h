@@ -7,6 +7,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
@@ -104,11 +105,12 @@ ADORA::KernelOp getSingleKernelFromFunc(func::FuncOp func);
 ADORA::KernelOp getKernelFromCopiedModule(ModuleOp ModuleOp, ADORA::KernelOp kernel);
 
 func::FuncOp GenKernelFunc(ADORA::KernelOp KernelOp, llvm::SetVector<Value> &operands);
+func::FuncOp ConvertMatmulToFunc(mlir::linalg::MatmulOp op, llvm::SetVector<mlir::Value> &operands, std::string FnName);
 bool IsIterationSpaceSupported(mlir::affine::AffineForOp &forOp);
 
 bool LoadStoreSameMemAddr(::mlir::affine::AffineLoadOp loadop, ::mlir::affine::AffineStoreOp storeop);
 SmallVector<int> getOperandDimensionsInMap(const int dim, const ::mlir::AffineMap map);
-unsigned const getInstanceNumFromADG  (const std::string& CGRAadg, const std::string& instype_to_count);
+unsigned  getInstanceNumFromADG  (const std::string& CGRAadg, const std::string& instype_to_count);
 
 ADORA::IselOp ReplaceValueWithNewIselOp(OpBuilder b, Location loc, mlir::Value value);
 ADORA::IselOp ReplaceLoopCarryValueWithNewIselOp(affine::AffineForOp& forop, int IterRegionOperandIdx);

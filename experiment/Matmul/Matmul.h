@@ -1,6 +1,6 @@
-#define W 4
-#define N 4
-#define H 4
+#define W 36
+#define N 36
+#define H 36
 
 #define Dtype int
 

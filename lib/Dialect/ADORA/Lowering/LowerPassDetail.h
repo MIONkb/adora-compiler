@@ -7,6 +7,8 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "RAAA/Dialect/ADORA/IR/ADORA.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 

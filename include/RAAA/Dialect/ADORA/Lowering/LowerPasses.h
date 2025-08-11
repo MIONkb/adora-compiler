@@ -19,7 +19,9 @@ class OperationPass;
 class Pass;
 namespace ADORA {
 
-/// Creates a pass to convert the Func dialect into the LLVMIR dialect.
+/// Lower some operators in Linalg dialect to 
+std::unique_ptr<OperationPass<ModuleOp>> createLinalgToSystolicGEMMPass();
+
 std::unique_ptr<OperationPass<ModuleOp>> createConvertKernelCallToLLVMPass();
 std::unique_ptr<OperationPass<ModuleOp>> createConvertADORAToSCFPass();
 std::unique_ptr<OperationPass<ModuleOp>> createMathRewritePass();
