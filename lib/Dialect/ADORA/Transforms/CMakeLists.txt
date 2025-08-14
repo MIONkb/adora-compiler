@@ -1,5 +1,5 @@
 add_mlir_dialect_library(MLIRADORATransforms
-  DFGgen.cpp
+  DFGgenPass.cpp
   AffineForToKernelPass.cpp
   AffineLoopSimplify.cpp
   KernelToFuncPass.cpp
@@ -12,7 +12,6 @@ add_mlir_dialect_library(MLIRADORATransforms
   AffineLoopReorder.cpp
   DependencyAnalysis.cpp
   ScheduleAdoraTasks.cpp
-  Utility.cpp
   TaskGraph/TaskNode.cpp
   TaskGraph/TaskGraph.cpp
 
@@ -34,6 +33,7 @@ add_mlir_dialect_library(MLIRADORATransforms
   GeneralCDFGGen
   MLIRAffineDialect
   MLIRAffineToStandard
+  MLIRADORATransformsUtility
   )
 
 set(LIBS

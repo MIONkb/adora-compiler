@@ -30,33 +30,19 @@ set(LIBS
 
  
   # Transforms
-  # MLIRFuncTransforms
-  # MLIRLinalgTransforms
-  # MLIRAffineTransforms
-  # MLIRSCFTransforms
   MLIRReconcileUnrealizedCasts
-  # MLIRMemRefTransforms
 
   # Test Passes
-  # MLIRLinalgTestPasses
-  # MLIRAffineTransformsTestPasses
+
   
   # Conversion
-  # MLIRAffineToStandard
-  # MLIRSCFToControlFlow
-  # MLIRMemRefToLLVM
-  # MLIRMathToLLVM
-  # MLIRMathToLibm
-  # MLIRArithToLLVM
-  # MLIRFuncToLLVM
-  # MLIRLinalgToLLVM
-  # MLIRLinalgToStandard
 
   #ADORA
-  MLIRADORAMisc
   MLIRADORAOps
-  MLIRADORATransforms
-  MLIRADORALowerings
+  GeneralCDFGGen
+  # MLIRADORAMisc
+  # MLIRADORATransforms
+  # MLIRADORALowerings
 
   #Mapper
   CGRAMapperLIB

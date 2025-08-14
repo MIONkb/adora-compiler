@@ -4,7 +4,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "emit/Emit.h"
-#include "emit/EmitCGRACall.h"
+#include "emit/EmitPytest.h"
 #include "emit/OpVisitor.h"
 #include "mlir/Dialect/Affine/Utils.h"
 
@@ -17,7 +17,7 @@ using namespace mlir::ADORA;
 //===----------------------------------------------------------------------===//
 /// @brief Get a new id for new op which will be emit to C 
 /// @param value_name_list
-static int NewValueNameId(const llvm::SmallDenseMap<mlir::Value, Op_Name_C>& value_name_list){
+int NewValueNameId(const llvm::SmallDenseMap<mlir::Value, Op_Name_C>& value_name_list){
   int new_id = 0;
   for(auto& elem: value_name_list){
       new_id = new_id < elem.second.id ? elem.second.id : new_id;
@@ -43,10 +43,10 @@ static int NewValueNameId(const llvm::SmallDenseMap<mlir::Value, Op_Name_C>& val
 // }
 
 namespace {
-class CGRVOpEmitter : public MLIROpVisitorBase<CGRVOpEmitter, bool> {
+class PyOpEmitter : public MLIROpVisitorBase<PyOpEmitter, bool> {
 public:
-  CGRVOpEmitter(llvm::raw_ostream &os) : _os(os) {}
-  CGRVOpEmitter(CGRACallEmitter& emitter, llvm::raw_ostream &os) : 
+  PyOpEmitter(llvm::raw_ostream &os) : _os(os) {}
+  PyOpEmitter(PythonEmitter& emitter, llvm::raw_ostream &os) : 
       _cgracallemitter(&emitter) ,_os(os) {setIndent(emitter.getIndent());}
   using MLIROpVisitorBase::visitOp;
 
@@ -54,7 +54,7 @@ public:
   raw_ostream& indent(){return _os.indent(_indent);}
   void setIndent(unsigned newindent){ _indent = newindent;}
 
-  /// @brief emit a new op to C, add this one to op_name_list. 
+  /// @brief emit a new op to python, add this one to op_name_list. 
   /// @param mlirop the corresponding mlir operation
   /// @param type the C type of this operation
   /// @return 
@@ -818,7 +818,6 @@ public:
       op.emitError("has unsupported constant type.");
     
     // ConstOpToValueStr_print();
-    return true;
   }
 
   bool visitOp(arith::AddIOp op) {
@@ -910,11 +909,11 @@ CGRVOpEmitter* opEmitter;
 //   return op->emitError(message);
 // }
 //===----------------------------------------------------------------------===//
-// Members of CGRACallEmitter class
+// Members of PythonEmitter class
 //===----------------------------------------------------------------------===//
 /// @brief Emit the header of a function including function name, function args...
 /// @param os
-void CGRACallEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os) {
+void PytestEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os) {
   std::stringstream ostr;
   ostr << "void " << funcop.getSymName().str() << "(";
   // Funtion args
@@ -956,7 +955,7 @@ void CGRACallEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &
 
 /// @brief Emit a block (maybe a loop body, maybe a function body), especially the for loop structure
 /// @param os
-void CGRACallEmitter::emitBlock(mlir::Block &block, llvm::raw_ostream &os) {
+void PythonEmitter::emitBlock(mlir::Block &block, llvm::raw_ostream &os) {
   // std::stringstream ostr;
   addIndent();
 
@@ -995,36 +994,76 @@ void CGRACallEmitter::emitBlock(mlir::Block &block, llvm::raw_ostream &os) {
 /// @brief Emit the whole module op to CGRA Call function in C languange
 /// @param os
 /// @return Successful or not
-bool CGRACallEmitter::emitCGRACallFunction(llvm::raw_ostream &os) {
-  opEmitter = new CGRVOpEmitter(*this, os);
+bool PythonEmitter::emitCGRACallFunction(llvm::raw_ostream &os) {
+  opEmitter = new PyOpEmitter(*this, os);
   // ADORAEmitterState state(os);
   // ModuleEmitter(state).emitModule(module);
   // return failure(state.encounteredError);
   os << R"XXX(
-//===----------------------------------------------------------------------===//
-//
-// Automatically generated file for CGRA call function in ADORA.
-//
-//===----------------------------------------------------------------------===//
+"""
+Copyright (c) 2025 ADORA
+All rights reserved.
 
-#include "include/ISA.h"
+Automatically generated file for pytest/cocotb based CGRA call function from ADORA.
+"""
+from test_runif import DeviceData, DeviceConfig, DeviceStream, DeviceRuntime, aux_stream
+from typing import List
 
-static uint8_t _task_id = 0;
+async def aux_stream(
+    stream: DeviceStream, config: List[DeviceConfig], 
+    iptrs: List[DeviceData], idata: List, 
+    optrs: List[DeviceData], odata: List, olen: List):
+    """
+    Execute a device stream workflow.
 
-#define LD_DEP_ST_LAST_TASK 1     // this load command depends on the store command of last task
-#define LD_DEP_EX_LAST_TASK 2     // this load command depends on the execute command of last task
-#define LD_DEP_ST_LAST_SEC_TASK 3 // this load command depends on the store command of last second task
-#define EX_DEP_ST_LAST_TASK 1     // this execute command depends on the store command of last task
+    Parameters
+    ----------
+    stream : DeviceStream
+        The device stream instance to operate on.
+    config : List[DeviceConfig]
+        Configuration objects to apply before execution.
+    iptrs : List[DeviceData]
+        Device pointers for input buffers.
+    idata : List
+        Host-side input data corresponding to `iptrs`.
+    optrs : List[DeviceData]
+        Device pointers for output buffers.
+    odata : List
+        Host-side output data containers corresponding to `optrs`.
+    olen : List[int]
+        Expected output lengths for each output buffer.
+    """
+    # ------------------------------
+    # 1. Apply stream configuration
+    # ------------------------------
+    await stream.apply(config)
+    await stream.config(config_id=0)
+    # ------------------------------
+    # 2. Host -> Device transfer
+    # ------------------------------
+    for i in range(len(iptrs)):
+        await stream.memcpyHostToDevice(d_data=iptrs[i], h_data=idata[i], size=len(idata[i]), dtype='i')
+    # ------------------------------
+    # 3. Execute on device
+    # ------------------------------
+    await stream.execution_start()
+    await stream.execution_finish()
+    # ------------------------------
+    # 4. Device → Host transfer
+    # ------------------------------
+    for i in range(len(optrs)):
+        await stream.memcpyDeviceToHost(d_data=optrs[i], h_data=odata[i], size=olen[i], dtype='i')
 
+    finally:
+        # Always release the stream, even if an error occurs
+        await stream.release()
+        return";
 
-)XXX";
-
-  //// emit configuration data array
-  os << R"XXX(
 //===----------------------------------------------------------------------===//
 // Configuration Data 
 //===----------------------------------------------------------------------===//
 )XXX";  
+
   for(auto elem : KnToCfgData){
     os << elem.second << "\n";
   }
@@ -1231,4 +1270,3 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, MapperSA* m
   GenerateCGRACFGAndEXE(kernel, cfg, adg);
 }
 
-// CGRACallEmitter::~CGRACallEmitter(){}

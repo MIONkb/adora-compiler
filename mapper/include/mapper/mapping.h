@@ -10,6 +10,8 @@
 #include "dfg/dfg.h"
 #include "spdlog/spdlog.h"
 
+#define DebugMode(x) if(false) {x}
+
 
 // DFG node attributes used for mapping
 struct DFGNodeAttr

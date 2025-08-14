@@ -112,7 +112,9 @@ public:
 
 
     // @jhlou: A friend class for MLIR C emitter
+    friend class BaseEmitter;
     friend class CGRACallEmitter;
+    // friend class CGRACallEmitter;
     void preestablishPlacementConstraints(DFGNode* dfgnode, std::vector<ADGNode*> adgnodes);
     std::vector<ADGNode*> getPlacementConstraints(DFGNode* dfgnode);
     void clearPlacementConstraints(){_prePlacementConstraints.clear();};

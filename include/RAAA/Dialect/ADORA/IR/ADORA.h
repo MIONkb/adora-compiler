@@ -53,13 +53,12 @@ namespace ADORA {
 std::optional<int64_t> getSingleMemrefAccessSpace(::mlir::affine::AffineForOp forOp);
 
 ///////////////
-/// HoistLoadStore.cpp
+/// SimplifyLoadStore.cpp
 ///////////////
 enum class PositionRelationInLoop { SameLevel, LhsOuter, RhsOuter, NotInSameLoopNest}; 
 PositionRelationInLoop getPositionRelationship(Operation* lhs, Operation* rhs);
 template <typename LoadOrStoreT, typename OpToWalkT>
   SmallVector<LoadOrStoreT,  4> GetAllHoistOp(OpToWalkT op_tocheck);
-std::optional<mlir::affine::AffineForOp> MoveLoadStorePairOut(::mlir::affine::AffineLoadOp loadop, ::mlir::affine::AffineStoreOp storeop);
 
 ///////////////
 /// DFGgen.cpp
@@ -114,6 +113,8 @@ unsigned  getInstanceNumFromADG  (const std::string& CGRAadg, const std::string&
 
 ADORA::IselOp ReplaceValueWithNewIselOp(OpBuilder b, Location loc, mlir::Value value);
 ADORA::IselOp ReplaceLoopCarryValueWithNewIselOp(affine::AffineForOp& forop, int IterRegionOperandIdx);
+
+std::optional<mlir::affine::AffineForOp> MoveLoadStorePairOut(::mlir::affine::AffineLoadOp loadop, ::mlir::affine::AffineStoreOp storeop);
 
 //===----------------------------------------------------------------------===//
 // A templated find func for smallvector

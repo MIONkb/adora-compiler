@@ -56,6 +56,7 @@ set(LIBS
   MLIRADORAOps
   MLIRADORATransforms
   MLIRADORALowerings
+  GeneralCDFGGen
 )
 
 set(SOURCES
