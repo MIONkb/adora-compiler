@@ -30,10 +30,12 @@ static ParseResult ParseStrides(OpAsmParser &parser, SmallVector<int64_t>& strid
   do {
     int64_t stride;
     if (parser.parseInteger(stride)) return failure();
-      strides.push_back(stride);
+    
+    strides.push_back(stride);
+
   } while (parser.parseOptionalComma().succeeded());   
 
-  if (parser.parseRSquare()) return failure(); // Parse '[' 
+  if (parser.parseRSquare()) return failure(); // Parse ']' 
 
   return success();
 }
@@ -236,8 +238,9 @@ ParseResult DataBlockLoadOp::parse(OpAsmParser &parser, OperationState &result) 
   }
 
   // example: stride [2, 2] 
-  if(   parser.parseOptionalComma() &&
-        parser.parseOptionalKeyword("stride")){
+  std::string s = "stride";
+  if( parser.parseOptionalComma().succeeded() &&
+      parser.parseOptionalKeywordOrString(&s).succeeded()){
     
     SmallVector<int64_t> strides_vec;
     // Parse the integers inside the square brackets
@@ -276,14 +279,14 @@ void DataBlockLoadOp::print(OpAsmPrinter &p) {
 
   /// strides
   if(hasStrides()){
-    p << ", ";
+    p << ", stride ";
     ArrayRef<int64_t> strides = getStridesAsArrayRef();
     printStrides(p, strides);
   }
 
   // p << "{\""  << getKernelName() << "\"}";
   p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/{getMapAttrStr()});
+                          /*elidedAttrs=*/{getMapAttrStr(), getStridesAttrStr()});
   
 }
 
@@ -335,6 +338,12 @@ LogicalResult DataBlockLoadOp::verify() {
   if (getOriginalMemrefType().getElementType() != getResultType().getElementType())
     return emitOpError(
         "requires 2 memref types of the same elemental type");
+
+
+  if (hasStrides() &&
+      getOriginalMemrefType().getShape().size() != getStridesAsArrayRef().size())
+    return emitOpError(
+        "requires strides have the same dimension number to accessed memref");
 
   return success();
 }
@@ -447,10 +456,40 @@ void DataBlockStoreOp::build(OpBuilder &builder, OperationState &result,
 
 void DataBlockStoreOp::build(OpBuilder &builder, OperationState &result,
                             Value SourceMemref, Value TargetMemref, 
+                            AffineMap map, ValueRange mapOperands, DenseI64ArrayAttr strides, 
+                            std::string KernelName) {
+  build(builder, result, SourceMemref, TargetMemref, map, mapOperands, KernelName);
+  result.addAttribute("strides", strides);
+}
+
+void DataBlockStoreOp::build(OpBuilder &builder, OperationState &result,
+                            Value SourceMemref, Value TargetMemref, 
+                            AffineMap map, ValueRange mapOperands, ArrayRef<int64_t> strides, 
+                            std::string KernelName) {
+  build(builder, result, SourceMemref, TargetMemref, map, mapOperands, KernelName);
+  result.addAttribute("strides", DenseI64ArrayAttr::get(builder.getContext(), strides));
+}
+
+void DataBlockStoreOp::build(OpBuilder &builder, OperationState &result,
+                            Value SourceMemref, Value TargetMemref, 
                             AffineMap map, ValueRange mapOperands) {
   assert(map.getNumInputs() == mapOperands.size() && "inconsistent index info");
   std::string KernelName = ""/*"UnknownKernel"*/;
   build(builder, result, SourceMemref, TargetMemref, map, mapOperands, KernelName);
+}
+
+void DataBlockStoreOp::build(OpBuilder &builder, OperationState &result,
+                            Value SourceMemref, Value TargetMemref, 
+                            AffineMap map, ValueRange mapOperands, DenseI64ArrayAttr strides) {
+  build(builder, result, SourceMemref, TargetMemref, map, mapOperands);
+  result.addAttribute("strides", strides);
+}
+
+void DataBlockStoreOp::build(OpBuilder &builder, OperationState &result,
+                            Value SourceMemref, Value TargetMemref, 
+                            AffineMap map, ValueRange mapOperands, ArrayRef<int64_t> strides) {
+  build(builder, result, SourceMemref, TargetMemref, map, mapOperands);
+  result.addAttribute("strides", DenseI64ArrayAttr::get(builder.getContext(), strides));
 }
 
 ParseResult DataBlockStoreOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -465,15 +504,34 @@ ParseResult DataBlockStoreOp::parse(OpAsmParser &parser, OperationState &result)
   AffineMapAttr mapAttr;
   StringAttr KernelNameAttr;
   SmallVector<OpAsmParser::UnresolvedOperand, 1> mapOperands;
-  return failure(
-      parser.parseOperand(sourceInfo) || parser.parseComma() ||
-      parser.parseOperand(targetInfo) ||
-      parser.parseAffineMapOfSSAIds(mapOperands, mapAttr,
+
+  if(
+    parser.parseOperand(sourceInfo).failed() || parser.parseComma().failed() ||
+    parser.parseOperand(targetInfo).failed() ||
+    parser.parseAffineMapOfSSAIds(mapOperands, mapAttr,
                                     getMapAttrStr(),
-                                    result.attributes) ||
-      // parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColon() || parser.parseType(sourceType) ||
-      parser.parseArrow() || parser.parseType(targetType) ||
+                                    result.attributes).failed() ||
+    // parser.parseOptionalAttrDict(result.attributes) ||
+    parser.parseColon().failed() || parser.parseType(sourceType).failed() ||
+    parser.parseArrow().failed() || parser.parseType(targetType).failed() 
+  ){
+    return failure();
+  }
+
+  // example: stride [2, 2] 
+  std::string s = "stride";
+  if( parser.parseOptionalComma().succeeded() &&
+      parser.parseOptionalKeywordOrString(&s).succeeded()){
+    
+    SmallVector<int64_t> strides_vec;
+    // Parse the integers inside the square brackets
+    if(ParseStrides(parser, strides_vec).failed()) return failure();
+
+    result.addAttribute("strides", DenseI64ArrayAttr::get(builder.getContext(), ArrayRef<int64_t>(strides_vec)));
+  }
+
+  return failure(
+   
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.resolveOperand(sourceInfo, sourceType, result.operands) ||
       parser.resolveOperand(targetInfo, targetType, result.operands) ||
@@ -498,11 +556,16 @@ void DataBlockStoreOp::print(OpAsmPrinter &p) {
   p << " -> " << getTargetMemrefType() << ", ";
 
   ///// stride
-
+  /// strides
+  if(hasStrides()){
+    p << ", stride ";
+    ArrayRef<int64_t> strides = getStridesAsArrayRef();
+    printStrides(p, strides);
+  }
   
   // p << "{\""  << getKernelName() << "\"}";
   p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/{getMapAttrStr()});
+                          /*elidedAttrs=*/{getMapAttrStr(), getStridesAttrStr()});
 }
 
 
@@ -518,6 +581,11 @@ LogicalResult DataBlockStoreOp::verify() {
   if (getTargetMemrefType().getElementType() != getSourceMemrefType().getElementType())
     return emitOpError(
         "requires source and target memref types of the same elemental type");
+
+  if (hasStrides() &&
+      getSourceMemrefType().getShape().size() != getStridesAsArrayRef().size())
+    return emitOpError(
+        "requires strides have the same dimension number to accessed memref");
 
   return success();
 }

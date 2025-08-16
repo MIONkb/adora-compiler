@@ -147,6 +147,7 @@ def ADORA_DataBlockLoadOp: ADORA_Op<"BlockLoad", []>{
     /// Builds a block load op with the specified map and its operands.
     OpBuilder<(ins "Value":$DataBlock, "AffineMap":$map, "ValueRange":$operands, 
                    "MemRefType":$resultType , "std::string":$KernelName )>,
+
     //// with strides
     OpBuilder<(ins "Value":$DataBlock, "AffineMap":$map, "ValueRange":$operands, 
                    "MemRefType":$resultType, "DenseI64ArrayAttr":$strides, "std::string":$KernelName )>,
@@ -247,6 +248,7 @@ def ADORA_DataBlockLoadOp: ADORA_Op<"BlockLoad", []>{
     void setStrides(DenseI64ArrayAttr stride);
     Attribute getStrides();
     ArrayRef<int64_t> getStridesAsArrayRef();
+    static StringRef getStridesAttrStr() { return "strides"; }
 
   }];
 
@@ -275,9 +277,24 @@ def ADORA_DataBlockStoreOp: ADORA_Op<"BlockStore", []>{
     OpBuilder<(ins "Value":$SourceMemref, "Value":$TargetMemref, 
                    "AffineMap":$map, "ValueRange":$operands, 
                    "std::string":$KernelName )>,
+
+    OpBuilder<(ins "Value":$SourceMemref, "Value":$TargetMemref, 
+                   "AffineMap":$map, "ValueRange":$operands, "DenseI64ArrayAttr":$strides, 
+                   "std::string":$KernelName )>,    
+
+    OpBuilder<(ins "Value":$SourceMemref, "Value":$TargetMemref, 
+                   "AffineMap":$map, "ValueRange":$operands, "ArrayRef<int64_t>":$strides, 
+                   "std::string":$KernelName )>,
+
     // /// Builds an block load op without KernelName.
     OpBuilder<(ins "Value":$SourceMemref, "Value":$TargetMemref, 
                    "AffineMap":$map, "ValueRange":$operands)>,
+    
+    OpBuilder<(ins "Value":$SourceMemref, "Value":$TargetMemref, 
+                   "AffineMap":$map, "ValueRange":$operands, "DenseI64ArrayAttr":$strides)>,
+
+    OpBuilder<(ins "Value":$SourceMemref, "Value":$TargetMemref, 
+                   "AffineMap":$map, "ValueRange":$operands, "ArrayRef<int64_t>":$strides)>, 
   ];
 
 	//Ignore Variadic<Index>:$offset at this moment
@@ -360,6 +377,7 @@ def ADORA_DataBlockStoreOp: ADORA_Op<"BlockStore", []>{
     void setStrides(DenseI64ArrayAttr stride);
     Attribute getStrides();
     ArrayRef<int64_t> getStridesAsArrayRef();
+    static StringRef getStridesAttrStr() { return "strides"; }
 
   }];
 
