@@ -147,11 +147,22 @@ def ADORA_DataBlockLoadOp: ADORA_Op<"BlockLoad", []>{
     /// Builds a block load op with the specified map and its operands.
     OpBuilder<(ins "Value":$DataBlock, "AffineMap":$map, "ValueRange":$operands, 
                    "MemRefType":$resultType , "std::string":$KernelName )>,
+    //// with strides
+    OpBuilder<(ins "Value":$DataBlock, "AffineMap":$map, "ValueRange":$operands, 
+                   "MemRefType":$resultType, "DenseI64ArrayAttr":$strides, "std::string":$KernelName )>,
+    OpBuilder<(ins "Value":$DataBlock, "AffineMap":$map, "ValueRange":$operands, 
+                   "MemRefType":$resultType, "ArrayRef<int64_t>":$strides, "std::string":$KernelName )>,
     // OpBuilder<(ins "Value":$DataBlock, "AffineMap":$map, "ValueRange":$operands, 
     //                 "int64_t":$BlockLen, "std::string":$KernelName )>,
     // /// Builds an block load op without KernelName.
     OpBuilder<(ins "Value":$DataBlock, "AffineMap":$map, "ValueRange":$operands, 
                    "MemRefType":$resultType)>,
+
+    //// with strides
+    OpBuilder<(ins "Value":$DataBlock, "AffineMap":$map, "ValueRange":$operands, 
+                   "MemRefType":$resultType, "DenseI64ArrayAttr":$strides)>,
+    OpBuilder<(ins "Value":$DataBlock, "AffineMap":$map, "ValueRange":$operands, 
+                   "MemRefType":$resultType, "ArrayRef<int64_t>":$strides)>,
   ];
   
 	//Ignore Variadic<Index>:$offset at this moment
@@ -227,6 +238,15 @@ def ADORA_DataBlockLoadOp: ADORA_Op<"BlockLoad", []>{
     AffineMapAttr getAffineMapAttr() {
       return (*this)->getAttr(getMapAttrStr()).cast<AffineMapAttr>();
     }
+
+    /// stride
+    bool hasStrides();
+    bool hasStridesAttr();
+    void setStrides(ArrayRef<int64_t> stride);
+    void setStrides(Attribute stride);
+    void setStrides(DenseI64ArrayAttr stride);
+    Attribute getStrides();
+    ArrayRef<int64_t> getStridesAsArrayRef();
 
   }];
 
@@ -331,6 +351,15 @@ def ADORA_DataBlockStoreOp: ADORA_Op<"BlockStore", []>{
     AffineMapAttr getAffineMapAttr() {
       return (*this)->getAttr(getMapAttrStr()).cast<AffineMapAttr>();
     }
+
+    /// stride
+    bool hasStrides();
+    bool hasStridesAttr();
+    void setStrides(ArrayRef<int64_t> stride);
+    void setStrides(Attribute stride);
+    void setStrides(DenseI64ArrayAttr stride);
+    Attribute getStrides();
+    ArrayRef<int64_t> getStridesAsArrayRef();
 
   }];
 

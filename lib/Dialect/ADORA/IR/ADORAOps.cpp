@@ -4,6 +4,7 @@
 // #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 // #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -18,6 +19,35 @@ using namespace mlir;
 using namespace mlir::ADORA;
 using namespace mlir::func;
 using namespace mlir::affine;
+//===----------------------------------------------------------------------===//
+// Tool functions
+//===----------------------------------------------------------------------===//
+static ParseResult ParseStrides(OpAsmParser &parser, SmallVector<int64_t>& strides){
+  if (parser.parseLSquare()) return failure(); // Parse '['
+
+  strides.clear();
+  // SmallVector<int64_t> strides_vec;
+  do {
+    int64_t stride;
+    if (parser.parseInteger(stride)) return failure();
+      strides.push_back(stride);
+  } while (parser.parseOptionalComma().succeeded());   
+
+  if (parser.parseRSquare()) return failure(); // Parse '[' 
+
+  return success();
+}
+
+static void printStrides(OpAsmPrinter &p, const llvm::ArrayRef<int64_t> strides) {
+    p << "[";
+    for (size_t i = 0; i < strides.size(); ++i) {
+        if (i != 0) {
+            p << ", ";
+        }
+        p << strides[i];
+    }
+    p << "]";
+}
 
 //===----------------------------------------------------------------------===//
 // KernelOp
@@ -142,11 +172,40 @@ void DataBlockLoadOp::build(OpBuilder &builder, OperationState &result,
 
 void DataBlockLoadOp::build(OpBuilder &builder, OperationState &result,
                             Value OriginalMemref, AffineMap map, ValueRange mapOperands, 
+                            MemRefType resultType, DenseI64ArrayAttr strides, std::string KernelName){
+  build(builder, result, OriginalMemref, map, mapOperands, resultType, KernelName);
+  result.addAttribute("strides", strides);
+} 
+
+void DataBlockLoadOp::build(OpBuilder &builder, OperationState &result,
+                            Value OriginalMemref, AffineMap map, ValueRange mapOperands, 
+                            MemRefType resultType, ArrayRef<int64_t> strides, std::string KernelName){
+  build(builder, result, OriginalMemref, map, mapOperands, resultType, KernelName);
+  result.addAttribute("strides", DenseI64ArrayAttr::get(builder.getContext(), strides));
+} 
+
+void DataBlockLoadOp::build(OpBuilder &builder, OperationState &result,
+                            Value OriginalMemref, AffineMap map, ValueRange mapOperands, 
                             MemRefType resultType) {
   assert(map.getNumInputs() == mapOperands.size() && "inconsistent index info");
   std::string KernelName = ""/*"UnknownKernel"*/;
   build(builder, result, OriginalMemref, map, mapOperands, resultType, KernelName);
 }
+
+void DataBlockLoadOp::build(OpBuilder &builder, OperationState &result,
+                            Value OriginalMemref, AffineMap map, ValueRange mapOperands, 
+                            MemRefType resultType, DenseI64ArrayAttr strides) {
+  build(builder, result, OriginalMemref, map, mapOperands, resultType);
+  result.addAttribute("strides", strides);  
+}
+
+void DataBlockLoadOp::build(OpBuilder &builder, OperationState &result,
+                            Value OriginalMemref, AffineMap map, ValueRange mapOperands, 
+                            MemRefType resultType, ArrayRef<int64_t> strides) {
+  build(builder, result, OriginalMemref, map, mapOperands, resultType);
+  result.addAttribute("strides", DenseI64ArrayAttr::get(builder.getContext(), strides));
+}
+
 
 // static bool addKernelNameAttrInParse
 //               (OperationState &result, Builder &builder, const std::string KernelName){
@@ -167,13 +226,33 @@ ParseResult DataBlockLoadOp::parse(OpAsmParser &parser, OperationState &result) 
   // std::string* KernelName = nullptr;
   SmallVector<OpAsmParser::UnresolvedOperand, 1> mapOperands;
 
+  if(   parser.parseOperand(memrefInfo).failed() ||
+        parser.parseAffineMapOfSSAIds(mapOperands, mapAttr,
+                                     getMapAttrStr(),
+                                     result.attributes).failed() ||
+        parser.parseColon().failed() || parser.parseType(memrefType).failed() ||
+        parser.parseArrow().failed() || parser.parseType(resultType).failed()){
+    return failure();
+  }
+
+  // example: stride [2, 2] 
+  if(   parser.parseComma() ||
+        parser.parseOptionalKeyword("stride")){
+    
+    SmallVector<int64_t> strides_vec;
+    // Parse the integers inside the square brackets
+    if(ParseStrides(parser, strides_vec).failed()) return failure();
+
+    result.addAttribute("strides", DenseI64ArrayAttr::get(builder.getContext(), ArrayRef<int64_t>(strides_vec)));
+  }
+
   return failure(
-      parser.parseOperand(memrefInfo) ||
-      parser.parseAffineMapOfSSAIds(mapOperands, mapAttr,
-                                    getMapAttrStr(),
-                                    result.attributes) ||
-      parser.parseColon() || parser.parseType(memrefType) ||
-      parser.parseArrow() || parser.parseType(resultType) ||
+      // parser.parseOperand(memrefInfo) ||
+      // parser.parseAffineMapOfSSAIds(mapOperands, mapAttr,
+      //                               getMapAttrStr(),
+      //                               result.attributes) ||
+      // parser.parseColon() || parser.parseType(memrefType) ||
+      // parser.parseArrow() || parser.parseType(resultType) ||
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.resolveOperand(memrefInfo, memrefType, result.operands) ||
       parser.resolveOperands(mapOperands, indexTy, result.operands) ||
@@ -194,6 +273,14 @@ void DataBlockLoadOp::print(OpAsmPrinter &p) {
   p << "]";
   p << " : " << getOriginalMemrefType() ;
   p << " -> " << getResultType() << " ";
+
+  /// strides
+  if(hasStrides()){
+    p << ", ";
+    ArrayRef<int64_t> strides = getStridesAsArrayRef();
+    printStrides(p, strides);
+  }
+
   // p << "{\""  << getKernelName() << "\"}";
   p.printOptionalAttrDict((*this)->getAttrs(),
                           /*elidedAttrs=*/{getMapAttrStr()});
@@ -288,6 +375,57 @@ std::string DataBlockLoadOp::addAnotherKernelName(const std::string& newKernel) 
   }
 }
 
+bool DataBlockLoadOp::hasStridesAttr(){
+  mlir::Attribute attr = this->getOperation()->getAttr("strides");
+  if(attr != nullptr)
+    return true;
+  else
+    return false;
+}
+
+bool DataBlockLoadOp::hasStrides(){
+  if(!hasStridesAttr()){
+    return false;
+  }
+  ArrayRef<int64_t> strides = this->getStridesAsArrayRef();
+  for(int64_t stride : strides){
+    if(stride > 1){
+      return true;
+    }
+  }
+  return false;
+}
+
+void DataBlockLoadOp::setStrides(Attribute strides){
+  getOperation()->setAttr("strides", strides);
+}
+void DataBlockLoadOp::setStrides(DenseI64ArrayAttr strides){
+  getOperation()->setAttr("strides", strides);
+}
+
+void DataBlockLoadOp::setStrides(ArrayRef<int64_t> strides){
+  DenseI64ArrayAttr attr = DenseI64ArrayAttr::get(getOperation()->getContext(), strides);
+  getOperation()->setAttr("strides", attr);
+}
+
+Attribute DataBlockLoadOp::getStrides(){
+  if(!hasStridesAttr()){
+    return nullptr;
+  }
+
+  return this->getOperation()->getAttr("strides");
+}
+
+ArrayRef<int64_t> DataBlockLoadOp::getStridesAsArrayRef(){
+  if(!hasStridesAttr()){
+    return ArrayRef<int64_t>();
+  }
+
+  DenseI64ArrayAttr arrayattr = cast<DenseI64ArrayAttr>(this->getOperation()->getAttr("strides"));
+  return arrayattr.asArrayRef();
+}
+
+
 //===----------------------------------------------------------------------===//
 // DataBlockStoreOp
 //===----------------------------------------------------------------------===//
@@ -355,8 +493,13 @@ void DataBlockStoreOp::print(OpAsmPrinter &p) {
           (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStr()))
     p.printAffineMapOfSSAIds(mapAttr, getMapOperands());
   p << "]";
+
   p << " : " << getSourceMemrefType() ;
-  p << " -> " << getTargetMemrefType() << " ";
+  p << " -> " << getTargetMemrefType() << ", ";
+
+  ///// stride
+
+  
   // p << "{\""  << getKernelName() << "\"}";
   p.printOptionalAttrDict((*this)->getAttrs(),
                           /*elidedAttrs=*/{getMapAttrStr()});
@@ -377,6 +520,57 @@ LogicalResult DataBlockStoreOp::verify() {
         "requires source and target memref types of the same elemental type");
 
   return success();
+}
+
+
+bool DataBlockStoreOp::hasStridesAttr(){
+  mlir::Attribute attr = this->getOperation()->getAttr("strides");
+  if(attr != nullptr)
+    return true;
+  else
+    return false;
+}
+
+bool DataBlockStoreOp::hasStrides(){
+  if(!hasStridesAttr()){
+    return false;
+  }
+  ArrayRef<int64_t> strides = this->getStridesAsArrayRef();
+  for(int64_t stride : strides){
+    if(stride > 1){
+      return true;
+    }
+  }
+  return false;
+}
+
+void DataBlockStoreOp::setStrides(Attribute strides){
+  getOperation()->setAttr("strides", strides);
+}
+void DataBlockStoreOp::setStrides(DenseI64ArrayAttr strides){
+  getOperation()->setAttr("strides", strides);
+}
+
+void DataBlockStoreOp::setStrides(ArrayRef<int64_t> strides){
+  DenseI64ArrayAttr attr = DenseI64ArrayAttr::get(getOperation()->getContext(), strides);
+  getOperation()->setAttr("strides", attr);
+}
+
+Attribute DataBlockStoreOp::getStrides(){
+  if(!hasStridesAttr()){
+    return nullptr;
+  }
+
+  return this->getOperation()->getAttr("strides");
+}
+
+ArrayRef<int64_t> DataBlockStoreOp::getStridesAsArrayRef(){
+  if(!hasStridesAttr()){
+    return ArrayRef<int64_t>();
+  }
+
+  DenseI64ArrayAttr arrayattr = cast<DenseI64ArrayAttr>(this->getOperation()->getAttr("strides"));
+  return arrayattr.asArrayRef();
 }
 
 //===----------------------------------------------------------------------===//
@@ -646,6 +840,7 @@ ParseResult MergeOp::parse(OpAsmParser &parser, OperationState &result) {
 
   return parser.parseOptionalAttrDict(result.attributes);
 }
+
 
 #define GET_OP_CLASSES
 #include "RAAA/Dialect/ADORA/IR/ADORAOps.cpp.inc"
