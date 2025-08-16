@@ -236,7 +236,7 @@ ParseResult DataBlockLoadOp::parse(OpAsmParser &parser, OperationState &result) 
   }
 
   // example: stride [2, 2] 
-  if(   parser.parseComma() ||
+  if(   parser.parseOptionalComma() &&
         parser.parseOptionalKeyword("stride")){
     
     SmallVector<int64_t> strides_vec;
