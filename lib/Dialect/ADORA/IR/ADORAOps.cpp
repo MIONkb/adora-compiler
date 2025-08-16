@@ -553,7 +553,7 @@ void DataBlockStoreOp::print(OpAsmPrinter &p) {
   p << "]";
 
   p << " : " << getSourceMemrefType() ;
-  p << " -> " << getTargetMemrefType() << ", ";
+  p << " -> " << getTargetMemrefType() << " ";
 
   ///// stride
   /// strides
