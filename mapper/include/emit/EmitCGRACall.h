@@ -27,15 +27,6 @@ void SimplifyBlockAccessOp(mlir::ModuleOp m);
 } /// mlir
 
 
-class Op_Name_C{
-public:
-  int id;
-  std::string type;
-  std::string name(){return type + "_" + std::to_string(id);}
-  Op_Name_C(std::string type, int id): type(type) , id(id) {}
-  Op_Name_C(int id, std::string type): type(type) , id(id) {}
-  Op_Name_C(){}
-};
 
 // class CGRVOpEmitter;
 

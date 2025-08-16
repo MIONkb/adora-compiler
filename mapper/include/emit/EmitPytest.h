@@ -26,19 +26,9 @@ void SimplifyBlockAccessOp(mlir::ModuleOp m);
 } /// mlir
 
 
-class Op_Name_C{
-public:
-  int id;
-  std::string type;
-  std::string name(){return type + "_" + std::to_string(id);}
-  Op_Name_C(std::string type, int id): type(type) , id(id) {}
-  Op_Name_C(int id, std::string type): type(type) , id(id) {}
-  Op_Name_C(){}
-};
-
 // class CGRVOpEmitter;
 
-class PythonEmitter : public BaseEmitter{
+class PytestEmitter : public BaseEmitter{
 public:
   /////////////////////////////////
   // The following functions must be implemented in your derived class.
@@ -53,6 +43,7 @@ public:
   void GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, Configuration configuration, ADG* adg);
   bool emitCGRACallFunction(llvm::raw_ostream &os);
   /////////////////////////////////
+  bool emitPytest(llvm::raw_ostream &os);
 
   llvm::SmallDenseMap<mlir::Value, Op_Name_C> getValueNameList(){return _value_name_list;}
   void appendValueNameList(mlir::Value v, Op_Name_C info){_value_name_list[v] = info;}
@@ -65,7 +56,8 @@ public:
 
   std::string lookupVarConfigName(const std::string);
 
-  PythonEmitter(mlir::ModuleOp m): _moduleop(m){}
+  PytestEmitter(mlir::ModuleOp m): BaseEmitter(m){}
+  ~PytestEmitter(){};
 
   friend class PyOpEmitter;
 
@@ -78,8 +70,8 @@ private:
 
   /// reset Indent size for python emit
   // unsigned _currentIndent = 0;
-  void addIndent(){_currentIndent += 4;}
-  void reduceIndent(){_currentIndent = _currentIndent >= 4 ? _currentIndent - 4 : 0;}
+  void addIndent() override{_currentIndent += 4;}
+  void reduceIndent() override {_currentIndent = _currentIndent >= 4 ? _currentIndent - 4 : 0;}
 };
 
 namespace mlir {

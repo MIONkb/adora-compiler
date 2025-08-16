@@ -44,13 +44,72 @@ std::string getEmitType(const mlir::Value v);
 std::vector<int> spadBankToIobs(ADG* adg, int bankId);
 
 
+
 namespace mlir{
 namespace ADORA{
 /// @brief A function to simplify affine map of datablockload or datablockstore op
 /// @param op 
 void SimplifyBlockAccessOp(mlir::ModuleOp m);
+
+//////
+/// Check whether a DataBlockStoreOp is the last of one kernel in one Block.
+bool IsLastBlockStoreOp(ADORA::DataBlockStoreOp op);
 }}
 
+
+class Op_Name_C{
+public:
+  int id;
+  std::string type;
+  std::string name(){return type + "_" + std::to_string(id);}
+  Op_Name_C(std::string type, int id): type(type) , id(id) {}
+  Op_Name_C(int id, std::string type): type(type) , id(id) {}
+  Op_Name_C(){}
+};
+
+
+/**
+ * @class BYTES_LIST is a class designed to manage and manipulate an array of bytes.
+ * It allows dynamic setting and retrieval of bit values within the byte array.
+ * Additionally, it provides a method to output the current contents of the byte list for easy debugging and analysis.
+ * 
+ */ 
+class BYTES_LIST{
+public:
+  std::vector<std::string> bytes; /// TODO: change std::vector<std::string> to std::vector<char>
+
+  BYTES_LIST(){}
+  BYTES_LIST(int n){ bytes.resize(n ,"0x00");}
+  BYTES_LIST(int n, const std::string init){bytes.resize(n, init);}
+
+  void setBitTo(const int bit_idx, const bool bit);
+  int getBit(int bit_idx);
+
+  std::string getByte(int byte_idx){return bytes[byte_idx];}
+  std::string operator[](int byte_idx){return getByte(byte_idx);}
+
+  int size(){return bytes.size();}
+
+  std::vector<std::string> As32b();
+
+  void dump() const;
+
+private:
+  void ensureSize(int bit_idx);
+};
+
+
+
+/**
+ * @class BaseEmitter
+ * @brief A base class for implementing various emission strategies for kernels and data operations.
+ * 
+ * The BaseEmitter class serves as an abstract base class for emitting code from various 
+ * intermediate representations of kernels. It defines a set of pure virtual functions 
+ * that must be implemented by derived classes to provide specific emission logic 
+ * for functions, blocks, and configurations. 
+ * 
+ */
 class BaseEmitter{
 public:
   /////////////////////////////////
@@ -106,18 +165,18 @@ protected:
   // std::map<int, int> _dfgIoSpadAddrs;
   ADG* _adg;
 
-  std::map<KernelOp, uint64_t> _kernel_to_iob_ens;
+  std::map<KernelOp, BYTES_LIST> _kernel_to_iob_ens;
   // uint64_t _iob_ens = 0;
   llvm::SmallDenseMap<ADORA::DataBlockLoadOp, llvm::SmallVector<dfgIoInfo>> _LoadToDfgIoInfos;
   llvm::SmallDenseMap<ADORA::DataBlockStoreOp, dfgIoInfo> _StoreToDfgIoInfo;
 
   llvm::SmallDenseMap<ADORA::DataBlockLoadOp, llvm::SmallVector< std::pair<int, dfgIoInfo> > > _LoadToSPMInfos; // int : spm bank idx, dfgioinfo
-  llvm::SmallDenseMap<ADORA::LocalMemAllocOp, std::pair<int, dfgIoInfo>> _LocalAllocToSPMInfo;
+  llvm::SmallDenseMap<ADORA::LocalMemAllocOp, std::pair<int, dfgIoInfo>> _LocalAllocToSPMInfo; /// localmallocOp->(bank id, dfgio)
 
   /// Variables for emitting
   unsigned _currentIndent = 0;
-  void addIndent(){_currentIndent += 2;}
-  void reduceIndent(){_currentIndent = _currentIndent >= 2 ? _currentIndent - 2 : 0;}
+  virtual void addIndent(){_currentIndent += 2;}
+  virtual void reduceIndent(){_currentIndent = _currentIndent >= 2 ? _currentIndent - 2 : 0;}
 };
 
 

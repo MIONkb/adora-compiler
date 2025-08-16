@@ -177,9 +177,125 @@ void mlir::ADORA::SimplifyBlockAccessOp(mlir::ModuleOp m){
   });
 }
 
+//////
+/// Check whether a DataBlockStoreOp is the last of one kernel in one Block.
+///
+bool mlir::ADORA::IsLastBlockStoreOp(ADORA::DataBlockStoreOp op){
+  Block* parentBlock = op.getOperation()->getBlock();
+  bool behindThisOp = false;
+  for(auto it = parentBlock->begin(); it != parentBlock->end(); it++){
+    if(behindThisOp && isa<ADORA::DataBlockStoreOp>(it)){
+      ADORA::DataBlockStoreOp toCheck = dyn_cast<ADORA::DataBlockStoreOp>(it);
+      
+      if(toCheck.getKernelName() == op.getKernelName()){
+        //// this is not the last datablockop of one kernel in this block
+        return false;
+      }
+    }
+    if(&*it == op.getOperation()){
+      behindThisOp = true;
+    }
+  }
+  
+  return true;
+}
+
+/////////////////////////////////////////////
+//// BYTES_LIST class
+/////////////////////////////////////////////
+void BYTES_LIST::ensureSize(int bit_idx) {
+  int byte_idx = bit_idx / 8;
+  if (byte_idx >= bytes.size()) {
+    bytes.resize(byte_idx + 1, "0x00");
+  }
+}
+
+void BYTES_LIST::setBitTo(int bit_idx, bool bit) {
+  ensureSize(bit_idx);
+
+  int byte_idx = bit_idx / 8; 
+  int bit_position = bit_idx % 8;
+
+  std::stringstream ss;
+  ss << std::hex << bytes[byte_idx].substr(2);
+  unsigned int byte_val;
+  ss >> byte_val;
+
+  if (bit) {
+    byte_val |= (1 << bit_position); 
+  } else {
+    byte_val &= ~(1 << bit_position);
+  }
+
+  std::stringstream ss_out;
+  ss_out << "0x" << std::setw(2) << std::setfill('0') << std::hex << byte_val;
+  bytes[byte_idx] = ss_out.str();
+}
+
+// Converts a hex string to an integer
+static unsigned int hexStringToInt(const std::string &hexStr) {
+  std::stringstream ss;
+  ss << std::hex << hexStr.substr(2); // Skip "0x"
+  unsigned int result;
+  ss >> result;
+  return result;
+}
 
 
+int BYTES_LIST::getBit(int bit_idx) {
+  int byte_idx = bit_idx / 8;
+  int bit_position = bit_idx % 8;
 
+  // Check if the byte index is within the current size of bytes
+  if (byte_idx >= bytes.size()) {
+    return 0; // Assuming out-of-bounds bits are 0
+  }
+
+  // Get the byte value from the vector
+  unsigned int byte_val = hexStringToInt(bytes[byte_idx]);
+
+  // Extract the bit value
+  int bit_val = (byte_val >> bit_position) & 1;
+
+  return bit_val;
+}
+
+static std::string intToHexString(unsigned int value) {
+  std::stringstream ss;
+  ss << "0x" << std::setfill('0') << std::setw(8) << std::hex << value;
+  return ss.str();
+}
+
+std::vector<std::string> BYTES_LIST::As32b() {
+  std::vector<std::string> result;
+  int total_bits = bytes.size() * 8;
+
+  // Iterate over 32-bit blocks starting from bit_idx
+  for (int i = 0; i < total_bits; i += 32) {
+    unsigned int value = 0;
+        
+    // Collect up to 32 bits into value, ensuring we don't exceed total_bits
+    for (int j = 31; j >= 0; --j) {
+      if (i + j < total_bits) {  // Check to prevent out-of-bounds access
+        value <<= 1;
+        value |= getBit(i + j);
+      } 
+    }
+
+    // Convert value to hex and add to result
+    result.push_back(intToHexString(value));
+  }
+
+  return result;
+}
+
+void BYTES_LIST::dump() const {
+    for (size_t i = 0; i < bytes.size(); ++i) {
+      std::cout << bytes[i];
+      if(i != bytes.size()-1)
+        std::cout << ",";
+    }
+}
 
 /////////////////////////////////////////////
 //// Base class of emit
@@ -252,7 +368,7 @@ void BaseEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, MapperS
   bank_status.assign(adg->numIobNodes(), {0, 0, 0, 0}); /*{iob, used, start, end}*/
 
   std::map<int, dfgIoInfo> dfg_io_infos;
-  uint64_t iob_ens = 0;
+  BYTES_LIST iob_ens(adg->numIobNodes()/8);
 
   /// set occupied banks
   //// TODO: what about _LoadToSPMInfos ??
@@ -273,7 +389,7 @@ void BaseEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, MapperS
           auto& attr =  mapper->_mapping->dfgNodeAttr(id);
           int iobId = attr.adgNode->id();
           int iobIdx = dynamic_cast<IOBNode*>(adg->node(iobId))->index();
-          iob_ens |= 1 << iobIdx; 
+          iob_ens.setBitTo(iobIdx, 1);    // iob_ens |= 1 << iobIdx; 
 
           // int selStart = bankStatus[0].second;
           // int selBank = availBanks[0];
@@ -312,7 +428,7 @@ void BaseEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, MapperS
             auto& attr =  mapper->_mapping->dfgNodeAttr(id);
             int iobId = attr.adgNode->id();
             int iobIdx = dynamic_cast<IOBNode*>(adg->node(iobId))->index();
-            iob_ens |= 1 << iobIdx;
+            iob_ens.setBitTo(iobIdx, 1);    // iob_ens |= 1 << iobIdx; 
             std::vector<int> banks = adg->iobToSpadBanks(iobIdx); // spad banks connected to this IOB
             int minBank = *(std::min_element(banks.begin(), banks.end()));
             std::vector<int> availBanks;
@@ -365,7 +481,7 @@ void BaseEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, MapperS
           auto& attr =  mapper->_mapping->dfgNodeAttr(id);
           int iobId = attr.adgNode->id();
           int iobIdx = dynamic_cast<IOBNode*>(adg->node(iobId))->index();
-          iob_ens |= 1 << iobIdx;
+          iob_ens.setBitTo(iobIdx, 1);    // iob_ens |= 1 << iobIdx; 
           std::vector<int> banks = adg->iobToSpadBanks(iobIdx); // spad banks connected to this IOB
           int minBank = *(std::min_element(banks.begin(), banks.end()));
           std::vector<int> availBanks;

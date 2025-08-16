@@ -42,6 +42,7 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/cfg/argv.h"
 #include "emit/EmitCGRACall.h"
+#include "emit/EmitPytest.h"
 
 // #include "mlir/Dialect/Arith/Transforms/Passes.h"
 // #include "mlir/Dialect/Func/Transforms/Passes.h"
@@ -53,48 +54,7 @@ namespace mlir {
 using namespace llvm;
 using namespace mlir;
 
-static int kernel_cnt = 0;
-
-//// function on single thread
-// void mapKernel(ADORA::KernelOp kernel, const std::string& GeneralOpNameFile, int timeout_ms, int max_iters, const std::string& objOpt, std::vector<MapperSA*>& mapper_Vec, std::vector<DFGIR*>& DFGIR_Vec, Emitter& emitter){
-//   MapperSA* mapper = new MapperSA(adg, timeout_ms, max_iters, objOpt);
-//   mapper_Vec.push_back(mapper);
-//   /// Generating DFG
-//   std::string kernelName = kernel.getKernelName();
-//   if(kernelName.empty()){
-//     kernelName = "kernel_" + std::to_string(kernel_cnt);
-//   }
-//   LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile);
-//   generateCDFGfromKernel(CDFG, kernel, /*verbose=*/true);
-//   // CDFG->CDFGtoDOT(CDFG->name_str()+"_CDFG.dot");
-
-//   /// DFG Mapping to CGRA architecture
-//   DFGIR* dfg_ir = new DFGIR(CDFG);
-//   DFGIR_Vec.push_back(dfg_ir);
-
-//   DFG* dfg = dfg_ir->getDFG();
-//   int numNodes = dfg->nodes().size();
-//   int numOpNodes = numNodes - dfg->ioNodes().size();
-//   // std::cout << "numOpNodes: " << numOpNodes << ", numDfgNodes(Op+IO): "  << numNodes << std::endl;
-//   // std::cout << "//============== Print DFG =================//" << std::endl;
-//   // dfg->print();
-//   // std::cout << "//============== End Print DFG =================//" << std::endl;
-//   // dfg->print();
-//   // map DFG to ADG
-//   mapper->setDFG(dfg);
-//   std::filesystem::create_directory(kernelName + "_map_result");
-//   CDFG->CDFGtoDOT(kernelName + "_map_result/before_map_" + CDFG->name_str() + "_CDFG.dot");
-//   bool succeed = mapper->execute(/*dumpCallFunc=*/false, /*dumpMappedViz*/true, /*resultDir=*/kernelName + "_map_result");
-//   if(succeed){
-//     std::lock_guard<std::mutex> lock(mtx); // 锁定，保护共享资源
-//     // Mapping is successful, get all blockload and blockstore op and corresponding spad memory addresses.
-//     emitter.setMapResult(kernel, mapper);
-//     emitter.DataBlockOperationsToSPADInfo(kernel, mapper);
-//       // emitter.GenerateCGRACFGAndEXE(kernel, mapper);
-//   }
-  
-//   kernel_cnt++;
-// }
+// static int kernel_cnt = 0;
 
 int main(int argc, char **argv) {
   // mlir::registerAllDialects();
@@ -189,6 +149,13 @@ int main(int argc, char **argv) {
     cl::value_desc("op filename"), 
     cl::init("-"));
 
+  static cl::opt<std::string> emit_type(
+    "output-type",
+    cl::Required, 
+    cl::desc("emit the execution file type: c(defualt), pytest"), 
+    cl::value_desc("c or pytest"), 
+    cl::init("c"));
+
   static cl::opt<std::string> outputFilename(
     "output", 
     cl::Optional, 
@@ -248,7 +215,9 @@ int main(int argc, char **argv) {
   t.dump();
 
 
-
+  /////////////////////////
+  /// Parse input file
+  /////////////////////////
   auto file = openInputFile(inputFilename, &errorMessage);
   if (!file) {
     llvm::errs() << errorMessage << "\n";
@@ -261,8 +230,9 @@ int main(int argc, char **argv) {
   mlir::ModuleOp moduleop = m.get();
   SymbolTable symbolTable(moduleop.getOperation());
 
-  moduleop.dump();
-
+  /////////////////////////
+  /// Optimize module to make it suitable for emitting
+  /////////////////////////
   /// Before emit C, simplify blockload and blockstore op and affineapply
   SimplifyBlockAccessOp(moduleop);
   ADORA::simplifyConstantAffineApplyOpsInRegion(moduleop.getBodyRegion());
@@ -270,7 +240,9 @@ int main(int argc, char **argv) {
 
   moduleop.dump();
   
+  //////////////////////////////////////////
   /// Parse Operation file and ADG file
+  //////////////////////////////////////////
   unsigned seed = time(0); // random seed using current time
   srand(seed);  // set random generator seed 
   std::cout << "Parse Operations: " << op_fn << std::endl;
@@ -288,10 +260,11 @@ int main(int argc, char **argv) {
   std::vector<int>bestLatency;
   // adg->print();
 
-  // map DFG to ADG
-  
-
-  CGRACallEmitter emitter(moduleop);
+  //////////////////////////////////////////
+  /// Start mapping
+  //////////////////////////////////////////
+  CGRACallEmitter CEmitter(moduleop);
+  PytestEmitter PyEmitter(moduleop);
   std::vector<MapperSA*>mapper_Vec;
   std::vector<DFGIR*>DFGIR_Vec;
 
@@ -342,7 +315,13 @@ int main(int argc, char **argv) {
     mapper->setDFG(dfg);
 
     // some io nodes must be placed at some place
-    emitter.preestablishPlacementConstraints(kernel, mapper);
+    if(emit_type == "pytest"){
+      PyEmitter.preestablishPlacementConstraints(kernel, mapper);
+    }
+    else{ /// default to be C
+      CEmitter.preestablishPlacementConstraints(kernel, mapper);
+    }
+
 
     std::filesystem::create_directory(kernelName + "_map_result");
     CDFG->CDFGtoDOT(kernelName + "_map_result/before_map_" + CDFG->name_str() + "_CDFG.dot");
@@ -352,22 +331,40 @@ int main(int argc, char **argv) {
     // bool succeed = mapper->execute(/*dumpCallFunc=*/false, /*dumpMappedViz*/true, /*resultDir=*/"map_result");
     if(succeed){
       // Mapping is successful, get all blockload and blockstore op and corresponding spad memory addresses.
-      emitter.setMapResult(kernel, mapper);
-      emitter.DataBlockOperationsToSPADInfo(kernel, mapper);
-      emitter.GenerateCGRAConfig(kernel, mapper);
+      if(emit_type == "pytest"){
+        PyEmitter.setMapResult(kernel, mapper);
+        PyEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
+        PyEmitter.GenerateCGRAConfig(kernel, mapper);
+      }
+      else{ /// default to be C
+        CEmitter.setMapResult(kernel, mapper);
+        CEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
+        CEmitter.GenerateCGRAConfig(kernel, mapper);
+      }
     }
     kernel_cnt++;
   });
 
   /// Emit module to a C source file
   moduleop.dump();
-  
-  if(outputFilename == "-")
-    emitter.emitCGRACallFunction(llvm::errs());
-  else{
-    std::error_code ec;
-    llvm::raw_fd_ostream outputFile(outputFilename, ec, sys::fs::FA_Write);
-    emitter.emitCGRACallFunction(outputFile);
+
+  if(emit_type == "pytest"){
+    if(outputFilename == "-")
+      PyEmitter.emitPytest(llvm::errs());
+    else{
+      std::error_code ec;
+      llvm::raw_fd_ostream outputFile(outputFilename, ec, sys::fs::FA_Write);
+      PyEmitter.emitPytest(outputFile);
+    }
+  }
+  else{ /// default to be C
+    if(outputFilename == "-")
+      CEmitter.emitCGRACallFunction(llvm::errs());
+    else{
+      std::error_code ec;
+      llvm::raw_fd_ostream outputFile(outputFilename, ec, sys::fs::FA_Write);
+      CEmitter.emitCGRACallFunction(outputFile);
+    }
   }
 
   moduleop.dump();

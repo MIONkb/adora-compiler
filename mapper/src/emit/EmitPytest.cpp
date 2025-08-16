@@ -25,6 +25,8 @@ int NewValueNameId(const llvm::SmallDenseMap<mlir::Value, Op_Name_C>& value_name
   return new_id + 1;
 }
 
+
+
 // void emitAffineLoad(AffineLoadOp op) {
 //   indent();
 //   emitValue(op.getResult());
@@ -46,8 +48,8 @@ namespace {
 class PyOpEmitter : public MLIROpVisitorBase<PyOpEmitter, bool> {
 public:
   PyOpEmitter(llvm::raw_ostream &os) : _os(os) {}
-  PyOpEmitter(PythonEmitter& emitter, llvm::raw_ostream &os) : 
-      _cgracallemitter(&emitter) ,_os(os) {setIndent(emitter.getIndent());}
+  PyOpEmitter(PytestEmitter& emitter, llvm::raw_ostream &os) : 
+      _pytestemitter(&emitter) ,_os(os) {setIndent(emitter.getIndent());}
   using MLIROpVisitorBase::visitOp;
 
   /// Tool functions for emitting
@@ -59,23 +61,23 @@ public:
   /// @param type the C type of this operation
   /// @return 
   std::string EmitNewValueAndGetName(mlir::Value v, const std::string type){
-    if(_cgracallemitter->getValueNameList().count(v)){
-      return _cgracallemitter->lookupName(v);
+    if(_pytestemitter->getValueNameList().count(v)){
+      return _pytestemitter->lookupName(v);
     }
     Op_Name_C newopinfo;
-    newopinfo.id = NewValueNameId(_cgracallemitter->getValueNameList());
+    newopinfo.id = NewValueNameId(_pytestemitter->getValueNameList());
     newopinfo.type = type;
-    _cgracallemitter->appendValueNameList(v, newopinfo);
+    _pytestemitter->appendValueNameList(v, newopinfo);
     return newopinfo.name();
   }
 
   template <typename opT>
     bool EmitBinary(opT op ,std::string op_symbol){
       std::string type = getEmitType(op.getResult());
-      std::string Lhs = _cgracallemitter->lookupName(op.getLhs());
+      std::string Lhs = _pytestemitter->lookupName(op.getLhs());
       if(Lhs == "")
         Lhs = ConstOpToValueStr[op.getLhs()];
-      std::string Rhs = _cgracallemitter->lookupName(op.getRhs());
+      std::string Rhs = _pytestemitter->lookupName(op.getRhs());
       if(Rhs == "")
         Rhs = ConstOpToValueStr[op.getRhs()];
       assert(Lhs != "" && Rhs != "");
@@ -86,6 +88,7 @@ public:
     }
 
   /// ADORA dialect operations.
+  /// TODO: 1. support np.array 2.strided blockload 3.mutiple-dimmension list. only support one dimmension list rightnow
   bool visitOp(ADORA::DataBlockLoadOp op) {
     /// DataBlockLoadOp can be seen as a memref subview op, 
     /// for example: 
@@ -97,8 +100,8 @@ public:
     /// DMA_Request_Offset: keep changing. For this one, DMA_Request_Offset = 230 * i + 230 * 230 * j, i = [0, 7), j = [0, 3)
     /// SPAD_BaseAddr: the base address of Scratchpad memory of the destinated transfer
     /// SPAD_Offset: keep increasing by DMA_Len.
-    indent() << "{\n";
-    indent() << "/// " << op << "\n";
+    indent() << "\n";
+    indent() << "## " << op << "\n";
 
     std::string BLid = op.getId().str();
     ::llvm::ArrayRef<int64_t> SourceShape =  op.getOriginalMemrefType().getShape();
@@ -106,23 +109,33 @@ public:
     // MemRefType SourceType = op.getOriginalMemref();
     // MemRefType ResultType = op.getResultType();
     if(SourceShape.size() == 0){
+      /// TODO:
       //// memref<f32> -> memref<2xf32>
-      std::string Memref_BaseAddr = _cgracallemitter->lookupName(op.getOriginalMemref());
-      llvm::SmallVector<dfgIoInfo> DfgIoInfos = _cgracallemitter->getDfgIoInfosFromBlockLoad(op);
+      std::string Memref_BaseAddr = _pytestemitter->lookupName(op.getOriginalMemref());
+      llvm::SmallVector<dfgIoInfo> DfgIoInfos = _pytestemitter->getDfgIoInfosFromBlockLoad(op);
       assert(DfgIoInfos.size() == 1);
+      uint64_t DataBytes = op.getOriginalMemrefType().getElementTypeBitWidth()/8;
+      uint64_t DMA_Len = DataBytes;
       uint64_t spadbaddr = DfgIoInfos[0].addr;
-      uint64_t DMA_Len = 8; /// 64bit
       int fuse = 0;
-      std::stringstream load_data;
-      load_data <<"load_data(*" << Memref_BaseAddr  ////address not pointer
-              <<", 0x" << std::hex << spadbaddr 
-              <<", " << std::dec << DMA_Len 
-              <<", " << std::dec << fuse  /*fuse*/
-              <<", _task_id" /*Task id*/ << ", LD_DEP_ST_LAST_TASK" /*Task dep*/
-              <<");\n";
-      indent() << load_data.str();
-      _os << "\n";
-      indent() << "}\n";
+      std::stringstream load_data, spm_ptr;
+
+      load_data << "idata.append(" << Memref_BaseAddr;
+      // assert(DRAM_Offset_EachDim.size() == LenEachDim.size());
+      // for(int i = 0; i < DRAM_Offset_EachDim.size(); i++){
+      //   load_data << "[" << DRAM_Offset_EachDim[i] 
+      //             << ":" << DRAM_Offset_EachDim[i] << "+" << LenEachDim[i] << "]";
+      // }
+      load_data << ")";
+
+      spm_ptr << "iptrs.append(DeviceData(" 
+              << "0x" << std::hex << spadbaddr
+              << ", " << std::dec<< DMA_Len  
+              << "))";
+      indent() << load_data.str() << "\n" ;
+      indent() << spm_ptr.str();
+
+      _os << "\n\n";
       return true;
     }
 
@@ -132,139 +145,183 @@ public:
     uint64_t DataBytes = op.getOriginalMemrefType().getElementTypeBitWidth()/8;
     uint64_t DMA_Len = DataBytes;
 
-    for(int r = SourceShape.size() - 1; r >= 0; r--){
+    for(int r = ResultShape.size() - 1; r >= 0; r--){
       // assert(SourceShape[r] >= ResultShape[r]);
-      if(op.getOriginalMemrefType().isDynamicDim(r)){
+      // if(op.getOriginalMemrefType().isDynamicDim(r)){
+      //   DMA_Len = DMA_Len * ResultShape[r];
+      //   break;
+      // }
+      // else{
+      //   assert(SourceShape[r] >= ResultShape[r]);
         DMA_Len = DMA_Len * ResultShape[r];
-        break;
-      }
-      else{
-        assert(SourceShape[r] >= ResultShape[r]);
-        DMA_Len = DMA_Len * ResultShape[r];
-        if(SourceShape[r] > ResultShape[r])
-          break;
-      }
+        // if(SourceShape[r] > ResultShape[r])
+        //   break;
+      // }
     }
     
     /// Get DRAM_BaseAddr
-    std::string Memref_BaseAddr = _cgracallemitter->lookupName(op.getOriginalMemref());
+    std::string Memref_BaseAddr = _pytestemitter->lookupName(op.getOriginalMemref());
 
     /// Get DRAM_Offset
-    std::string DRAM_Offset = "";
-    for(int operandIdx = 0; operandIdx < op.getMapOperands().size(); operandIdx++){
-      mlir::Value operand = op.getMapOperands()[operandIdx];
-      std::string operandname = _cgracallemitter->lookupName(operand);
-      if(operandname == "")      
-        operandname = ConstOpToValueStr[operand];
-      assert(operandname != "");
-      if(operandname == "0")
-        continue;
-      else{
-        SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/operandIdx, /*map=*/op.getAffineMap());
+    std::vector<std::string> DRAM_Offset_EachDim;
+    DRAM_Offset_EachDim.resize(ResultShape.size(), "-1");
+    /// initialize DRAM_Offset_EachDim
+    for(auto elem : DRAM_Offset_EachDim){
+      elem = "-1";
+    }
+
+    assert(ResultShape.size() == op.getAffineMap().getResults().size());
+    for(int exprIdx = 0; exprIdx < op.getAffineMap().getResults().size(); exprIdx++){
+      AffineExpr expr = op.getAffineMap().getResult(exprIdx);
+      if(expr.getKind() == AffineExprKind::Constant){
+        std::string cstValue = std::to_string(expr.dyn_cast<AffineConstantExpr>().getValue());
+        DRAM_Offset_EachDim[exprIdx] = cstValue;
+      }
+      else if(expr.getKind() == AffineExprKind::DimId){
+        for(int operandIdx = 0; operandIdx < op.getMapOperands().size(); operandIdx++){
+          mlir::Value operand = op.getMapOperands()[operandIdx];
+          SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/operandIdx, /*map=*/op.getAffineMap());
+          assert(Dimensions.size() == 1 && "We do not support one index is related to multiple dim of one array.");
+          if(Dimensions[0] == exprIdx){
+            std::string operandname = _pytestemitter->lookupName(operand);
+            DRAM_Offset_EachDim[exprIdx] = operandname;
+          }
+        }
+        // SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/operandIdx, /*map=*/op.getAffineMap());
         // assert(Dimensions.size() == 1);
-
-        for(unsigned d = 0; d < Dimensions.size(); d++){
-          int64_t elements_each_step = DataBytes;
-          for (unsigned i = Dimensions[d] + 1; i < SourceShape.size(); i++){
-            elements_each_step *= SourceShape[i];
-          }
-          if(DRAM_Offset != "")
-            DRAM_Offset = DRAM_Offset + " + ";
-          DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + operandname;
-        }
-      }
-    }
-    if(DRAM_Offset == "") {
-      if(op.getAffineMap().isEmpty()){
-        ///// For %2 = ADORA.BlockLoad %arg2 [] : memref<?xi32> -> memref<2xi32>
-        DRAM_Offset = "0";
+        // mlir::Value operand = op.getMapOperands()[exprIdx];
       }
       else{
-        ///// For %2 = ADORA.BlockLoad %arg2 [11, 10] : memref<20x506xi32> -> memref<2x506xi32>
-        for(int exprIdx = 0; exprIdx < op.getAffineMap().getResults().size(); exprIdx++){
-          AffineExpr expr = op.getAffineMap().getResult(exprIdx);
-          assert(expr.getKind() == AffineExprKind::Constant);
-          std::string cstValue = std::to_string(expr.dyn_cast<AffineConstantExpr>().getValue());
-          assert(cstValue != "");
-          if(cstValue == "0")
-            continue;
-          else{
-            // SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/exprIdx, /*map=*/op.getAffineMap());
-            int64_t elements_each_step = DataBytes;
-            for (unsigned i = exprIdx + 1; i < SourceShape.size(); i++){
-              elements_each_step *= SourceShape[i];
-            }
-            if(DRAM_Offset != "")
-              DRAM_Offset = DRAM_Offset + " + ";
-            DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + cstValue;
-          }
-        }
+        assert(false && "Unsupported Block Access.");
       }
-      if(DRAM_Offset == "") {
-        DRAM_Offset = "0";
-      }
-    }
 
-    /// Get DMA_Request_Offset
-    std::vector<int64_t> DMA_Request_Offsets;
+      // assert(cstValue != "");
+      // if(cstValue == "0"){
+      //   DRAM_Offset_EachDim.push_back("0");
+      //   continue;
+      // }
+      // else{
+      //   // SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/exprIdx, /*map=*/op.getAffineMap());
+      //   int64_t elements_each_step = DataBytes;
+      //   for (unsigned i = exprIdx + 1; i < SourceShape.size(); i++){
+      //     elements_each_step *= SourceShape[i];
+      //   }
+      //   // if(DRAM_Offset != "")
+      //   //   DRAM_Offset = DRAM_Offset + " + ";
+      //   // DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + cstValue;
+      // }
+    }
+    // for(int operandIdx = 0; operandIdx < op.getMapOperands().size(); operandIdx++){
+    //   std::string DRAM_Offset;
+    //   mlir::Value operand = op.getMapOperands()[operandIdx];
+    //   std::string operandname = _pytestemitter->lookupName(operand);
+    //   if(operandname == "")      
+    //     operandname = ConstOpToValueStr[operand];
+    //   assert(operandname != "");
+    //   DRAM_Offset_EachDim.push_back(operandname);
+      // if(operandname == "0"){
+      //   DRAM_Offset_EachDim.push_back("0");
+      //   continue;
+      // }
+      // else{
+      //   SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/operandIdx, /*map=*/op.getAffineMap());
+      //   assert(Dimensions.size() == 1);
+      //   DRAM_Offset_EachDim
+      //   // for(unsigned d = 0; d < Dimensions.size(); d++){
+      //   //   int64_t elements_each_step = DataBytes;
+      //   //   for (unsigned i = Dimensions[d] + 1; i < SourceShape.size(); i++){
+      //   //     elements_each_step *= SourceShape[i];
+      //   //   }
+      //   //   if(DRAM_Offset != "")
+      //   //     DRAM_Offset = DRAM_Offset + " + ";
+      //   //   DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + operandname;
+      //   // }
+      // }
+    // }
+    // for(unsigned d = 0; d < Dimensions.size(); d++){
+    //   int64_t elements_each_step = DataBytes;
+    //   for (unsigned i = Dimensions[d] + 1; i < SourceShape.size(); i++){
+    //     elements_each_step *= SourceShape[i];
+    //   }
+    //   if(DRAM_Offset != "")
+    //     DRAM_Offset = DRAM_Offset + " + ";
+    //   DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + operandname;
+    // }
+    // if(DRAM_Offset == "") {
+    //   if(op.getAffineMap().isEmpty()){
+    //     ///// For %2 = ADORA.BlockLoad %arg2 [] : memref<?xi32> -> memref<2xi32>
+    //     DRAM_Offset = "0";
+    //   }
+    //   else{
+    //     ///// For %2 = ADORA.BlockLoad %arg2 [11, 10] : memref<20x506xi32> -> memref<2x506xi32>
+
+    //   }
+    //   if(DRAM_Offset == "") {
+    //     DRAM_Offset = "0";
+    //   }
+    // }
+
+    /// Get DMA_Request_Len from every dim
+    std::vector<int64_t> LenEachDim;
     bool continuous = true;
-    for(int r = SourceShape.size() - 1; r >= 0; r--){
-      if(!continuous){
-        if(SourceShape[r] == 1)
-          DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is overlooked
-        else 
-          DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), ResultShape[r]);
-      }
-      else {/// continuous
-        if(SourceShape[r] > ResultShape[r]){
-          DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is continuous
-          continuous = false;
-        }
-        else if(SourceShape[r] == ResultShape[r]){
-          DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is continuous
-        }
-      }
+    for(int r = ResultShape.size() - 1; r >= 0; r--){
+      LenEachDim.insert(LenEachDim.begin(), ResultShape[r]);
+      // if(!continuous){
+      /// For Python List
+        // if(SourceShape[r] == 1)
+        //   DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is overlooked
+        // else 
+        //   DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), ResultShape[r]);
+      // }
+      // else {/// continuous
+      //   if(SourceShape[r] > ResultShape[r]){
+      //     DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is continuous
+      //     continuous = false;
+      //   }
+      //   else if(SourceShape[r] == ResultShape[r]){
+      //     DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is continuous
+      //   }
+      // }
     }    
 
     /// SPAD_BaseAddr
     /// SPAD_Offset: keep increasing by DMA_Len.
-    llvm::SmallVector<dfgIoInfo> DfgIoInfos = _cgracallemitter->getDfgIoInfosFromBlockLoad(op);
+    llvm::SmallVector<dfgIoInfo> DfgIoInfos = _pytestemitter->getDfgIoInfosFromBlockLoad(op);
     llvm::SmallVector<uint64_t> SPAD_BaseAddrs;
     for(dfgIoInfo elem: DfgIoInfos){
       SPAD_BaseAddrs.push_back(elem.addr);
     }
 
-    /// Emit C
-    unsigned cur_indent = _indent;
-    unsigned idx_num = 0;
+    /// Emit python
+    // unsigned cur_indent = _indent;
+    // unsigned idx_num = 0;
     // llvm::SmallDenseMap<int, int64_t> LItoStep;
-    indent() << "uint64_t dramoffset_" << BLid << " = " << DRAM_Offset <<";\n";
-    std::string DMA_Request_Offsets_str = "uint64_t roffset_" + BLid + " = ";
-    indent() << "uint64_t spadoffset_" << BLid << " = 0;\n";
-    for(int r = 0; r < DMA_Request_Offsets.size(); r++){
-      int64_t Roffset = DMA_Request_Offsets[r];
-      std::string idx = "idx_" + std::to_string(r);
-      if(Roffset != -1){
-        idx_num++;
-        int64_t elements_each_step = DataBytes;
-        for (unsigned i = r + 1; i < SourceShape.size(); i++){
-          elements_each_step *= SourceShape[i];
-        }
-        indent() << "for(int " << idx << " = " << 0 << "; "
-              << idx << " < " <<  Roffset << "; "
-              << idx << "++){\n";
-        // LItoStep[idx] = elements_each_step;
-        DMA_Request_Offsets_str += " " + std::to_string(elements_each_step)
-                                + "*" + idx + " +";
-        _indent += 2;
-        setIndent(_indent);
-      }
-    }
-    if(DMA_Request_Offsets_str.substr(DMA_Request_Offsets_str.size()-2, 2) == "= ")
-      DMA_Request_Offsets_str += "0;";
-    else
-      DMA_Request_Offsets_str.back() = ';';
-    indent() << DMA_Request_Offsets_str << "\n";
+    // indent() << "dramoffset_" << BLid << " = " << DRAM_Offset <<";\n";
+    // std::string DMA_Request_Len_str = "rlen_" + BLid + " = ";
+    // indent() << "spadoffset_" << BLid << " = 0;\n";
+    // for(int r = 0; r < DMA_Request_Offsets.size(); r++){
+    //   int64_t Roffset = DMA_Request_Offsets[r];
+    //   std::string idx = "idx_" + std::to_string(r);
+    //   if(Roffset != -1){
+    //     idx_num++;
+    //     int64_t elements_each_step = DataBytes;
+    //     for (unsigned i = r + 1; i < SourceShape.size(); i++){
+    //       elements_each_step *= SourceShape[i];
+    //     }
+    //     indent() << "for(" << idx << " in range(" 
+    //           << Roffset << "):\n";
+    //     // LItoStep[idx] = elements_each_step;
+    //     DMA_Request_Offsets_str += " " + std::to_string(elements_each_step)
+    //                             + "*" + idx + " +";
+    //     _indent += 4;
+    //     setIndent(_indent);
+    //   }
+    // }
+    // if(DMA_Request_Len_str.substr(DMA_Request_Offsets_str.size()-2, 2) == "= ")
+    //   DMA_Request_Offsets_str += "0;";
+    // else
+    //   DMA_Request_Offsets_str.back() = ';';
+    // indent() << DMA_Request_Offsets_str << "\n";
     // _indent += 2;
     // setIndent(_indent);
     // for(auto spadbaddr : SPAD_BaseAddrs){
@@ -272,57 +329,46 @@ public:
     {
       auto spadbaddr = SPAD_BaseAddrs[i];
       int fuse = (i == SPAD_BaseAddrs.size() - 1)? 0 : 1; /// fuse: 0 - broadcast, 1 - non-broadcast
-      std::stringstream load_data;
-      load_data <<"load_data(" << Memref_BaseAddr 
-              <<" + " << "dramoffset_" << BLid
-              <<" + " << "roffset_" << BLid
-              <<", 0x" << std::hex << spadbaddr 
-              <<" + " << "spadoffset_" << BLid 
-              <<", " << std::dec << DMA_Len 
-              <<", " << std::dec << fuse  /*fuse*/
-              <<", _task_id" /*Task id*/ << ", LD_DEP_ST_LAST_TASK" /*Task dep*/
-              <<");\n";
-      indent() << load_data.str();
+      std::stringstream load_data, spm_ptr;
+      // load_data <<"load_data(" << Memref_BaseAddr 
+      //         <<" + " << "dramoffset_" << BLid
+      //         <<" + " << "roffset_" << BLid
+      //         <<", 0x" << std::hex << spadbaddr 
+      //         <<" + " << "spadoffset_" << BLid 
+      //         <<", " << std::dec << DMA_Len 
+      //         <<", " << std::dec << fuse  /*fuse*/
+      //         <<", _task_id" /*Task id*/ << ", LD_DEP_ST_LAST_TASK" /*Task dep*/
+      //         <<");\n";
+      load_data << "idata.append(" << Memref_BaseAddr;
+      assert(DRAM_Offset_EachDim.size() == LenEachDim.size());
+      for(int i = 0; i < DRAM_Offset_EachDim.size(); i++){
+        load_data << "[" << DRAM_Offset_EachDim[i] 
+                  << ":" << DRAM_Offset_EachDim[i] << "+" << LenEachDim[i] << "]";
+      }
+      load_data << ")";
+
+      spm_ptr << "iptrs.append(DeviceData(" 
+              << "0x" << std::hex << spadbaddr
+              << ", " << std::dec<< DMA_Len 
+              << "))";
+      indent() << load_data.str() << "\n" ;
+      indent() << spm_ptr.str();
 
     }
-    indent()<< "spadoffset_" << BLid 
-            << " = spadoffset_" << BLid 
-            << " + " << DMA_Len <<";\n";
+    // indent()<< "spadoffset_" << BLid 
+    //         << " = spadoffset_" << BLid 
+    //         << " + " << DMA_Len <<";\n";
 
 
 
-    _indent = cur_indent;
-    setIndent(_indent);
+    // _indent = cur_indent;
+    // setIndent(_indent);
     indent();
-    for(int _ = 0 ; _ < idx_num ; _++){
-      _os << "} ";
-    }
+    // for(int _ = 0 ; _ < idx_num ; _++){
+    //   _os << "} ";
+    // }
     _os << "\n";
-    indent() << "}\n";
-
-    return true;
-  }
-
-  //////
-  /// Check whether a DataBlockStoreOp is the last of one kernel in one Block.
-  ///
-  static bool IsLastBlockStoreOp(ADORA::DataBlockStoreOp op){
-    Block* parentBlock = op.getOperation()->getBlock();
-
-    bool behindThisOp = false;
-    for(auto it = parentBlock->begin(); it != parentBlock->end(); it++){
-      if(behindThisOp && isa<ADORA::DataBlockStoreOp>(it)){
-        ADORA::DataBlockStoreOp toCheck = dyn_cast<ADORA::DataBlockStoreOp>(it);
-        
-        if(toCheck.getKernelName() == op.getKernelName()){
-          //// this is not the last datablockop of one kernel in this block
-          return false;
-        }
-      }
-      if(&*it == op.getOperation()){
-        behindThisOp = true;
-      }
-    }
+    // indent() << "}\n";
 
     return true;
   }
@@ -336,37 +382,47 @@ public:
     /// DMA_Request_Offset: keep changing. For this one, DMA_Request_Offset = 230 * i + 230 * 230 * j, i = [0, 7), j = [0, 3)
     /// SPAD_BaseAddr: the base address of Scratchpad memory of the destinated transfer
     /// SPAD_Offset: keep increasing by DMA_Len.
-    indent() << "{\n";
-    indent() << "/// " << op << "\n";
+    indent() << "\n";
+    indent() << "## " << op << "\n";
 
     std::string BLid = op.getId().str();
     ::llvm::ArrayRef<int64_t> SourceShape =  op.getSourceMemrefType().getShape();
     ::llvm::ArrayRef<int64_t> TargetShape =  op.getTargetMemrefType().getShape();
-    // MemRefType SourceType = op.getOriginalMemref();
-    // MemRefType ResultType = op.getResultType();
+
     if(TargetShape.size() == 0){
       //// memref<2xf32> -> memref<f32> 
-      std::string Memref_BaseAddr = _cgracallemitter->lookupName(op.getTargetMemref());
-      // llvm::SmallVector<dfgIoInfo> DfgIoInfos = _cgracallemitter->getDfgIoInfosFromBlockLoad(op);
-      dfgIoInfo DfgIoInfo = _cgracallemitter->getDfgIoInfosFromBlockStore(op);
+      std::string Memref_BaseAddr = _pytestemitter->lookupName(op.getTargetMemref());
+      // llvm::SmallVector<dfgIoInfo> DfgIoInfos = _pytestemitter->getDfgIoInfosFromBlockLoad(op);
+      dfgIoInfo DfgIoInfo = _pytestemitter->getDfgIoInfosFromBlockStore(op);
       // assert(DfgIoInfos.size() == 1);
       uint64_t spadbaddr = DfgIoInfo.addr;
-      uint64_t DMA_Len = 8; /// 64bit
+      uint64_t DataBytes = op.getSourceMemrefType().getElementTypeBitWidth()/8;
+      uint64_t DMA_Len = DataBytes;
       int fuse = 0;
 
-      std::stringstream store_data;
-      store_data <<"store(&" << Memref_BaseAddr  //// address not pointer
-              <<", 0x" << std::hex << spadbaddr 
-              <<", " << std::dec << DMA_Len 
-              <<", _task_id" /*Task id*/ << ", 0" /*Task dep*/
-              <<");\n";
-      indent() << store_data.str();
+      std::stringstream store_data, spm_ptr, olen;
+      store_data << "odata.append(" << Memref_BaseAddr;
+      store_data << ")";
 
-      _os << "\n";
-      indent() << "}\n";
+      spm_ptr << "optrs.append(DeviceData(" 
+              << "0x" << std::hex << spadbaddr
+              << ", " << std::dec<< DMA_Len  
+              << "))";
+      
+      olen << "olen.append(" << std::dec<< DMA_Len   <<")";
+
+      indent() << store_data.str() << "\n" ;
+      indent() << spm_ptr.str() << "\n" ;
+      indent() << olen.str() << "\n" ;
+
 
       if(IsLastBlockStoreOp(op)){
-        indent() << "_task_id++;\n";
+        indent() << "stream = runtime.create_stream()\n\n";
+        indent() << "await aux_stream(\n"
+                 << "\tstream=stream, config=configs,\n"
+                 << "\tiptrs=iptrs, idata=idata,\n"
+                 << "\toptrs=optrs, odata=odata, olen =olen\n"
+                 <<")\n";
       }
 
       return true;
@@ -379,201 +435,148 @@ public:
     uint64_t DMA_Len = DataBytes;
 
     for(int r = SourceShape.size() - 1; r >= 0; r--){
-      if(op.getTargetMemrefType().isDynamicDim(r)){
-        DMA_Len = DMA_Len * SourceShape[r];
-        break;
-      }
-      else{
-        assert(SourceShape[r] <= TargetShape[r]);
-        DMA_Len = DMA_Len * SourceShape[r];
-        if(SourceShape[r] < TargetShape[r])
-          break;
-      }
+      DMA_Len = DMA_Len * SourceShape[r];
     }
     
     /// Get DRAM_BaseAddr
-    std::string Memref_BaseAddr = _cgracallemitter->lookupName(op.getTargetMemref());
+    std::string Memref_BaseAddr = _pytestemitter->lookupName(op.getTargetMemref());
 
     /// Get DRAM_Offset
-    std::string DRAM_Offset = "";
-    for(int operandIdx = 0; operandIdx < op.getMapOperands().size(); operandIdx++){
-      mlir::Value operand = op.getMapOperands()[operandIdx];
-      operand.dump();
-      std::string operandname = _cgracallemitter->lookupName(operand);
-      std::cout << operandname <<"\n";
-      if(operandname == "")      
-        operandname = ConstOpToValueStr[operand];
-      assert(operandname != "");
-      if(operandname == "0")
-        continue;
-      else{
-        SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/operandIdx, /*map=*/op.getAffineMap());
+    std::vector<std::string> DRAM_Offset_EachDim;
+    DRAM_Offset_EachDim.resize(SourceShape.size(), "-1");
+    /// initialize DRAM_Offset_EachDim
+    for(auto elem : DRAM_Offset_EachDim){
+      elem = "-1";
+    }
+
+    assert(TargetShape.size() == op.getAffineMap().getResults().size());
+    for(int exprIdx = 0; exprIdx < op.getAffineMap().getResults().size(); exprIdx++){
+      AffineExpr expr = op.getAffineMap().getResult(exprIdx);
+      if(expr.getKind() == AffineExprKind::Constant){
+        std::string cstValue = std::to_string(expr.dyn_cast<AffineConstantExpr>().getValue());
+        DRAM_Offset_EachDim[exprIdx] = cstValue;
+      }
+      else if(expr.getKind() == AffineExprKind::DimId){
+        for(int operandIdx = 0; operandIdx < op.getMapOperands().size(); operandIdx++){
+          mlir::Value operand = op.getMapOperands()[operandIdx];
+          SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/operandIdx, /*map=*/op.getAffineMap());
+          assert(Dimensions.size() == 1 && "We do not support one index is related to multiple dim of one array.");
+          if(Dimensions[0] == exprIdx){
+            std::string operandname = _pytestemitter->lookupName(operand);
+            DRAM_Offset_EachDim[exprIdx] = operandname;
+          }
+        }
+        // SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/operandIdx, /*map=*/op.getAffineMap());
         // assert(Dimensions.size() == 1);
-
-        for(unsigned d = 0; d < Dimensions.size(); d++){
-          int64_t elements_each_step = DataBytes;
-          for (unsigned i = Dimensions[d] + 1; i < TargetShape.size(); i++){
-            elements_each_step *= TargetShape[i];
-          }
-          if(DRAM_Offset != "")
-            DRAM_Offset = DRAM_Offset + " + ";
-          DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + operandname;
-        }
-      }
-    }
-    if(DRAM_Offset == "") {
-      if(op.getAffineMap().isEmpty()){
-        ///// ADORA.Blockstore %1, %arg2 [] :  memref<2xi32> -> memref<?xi32> 
-        DRAM_Offset = "0";
+        // mlir::Value operand = op.getMapOperands()[exprIdx];
       }
       else{
-        ///// ADORA.Blockstore %1, %arg2 [11, 10] : memref<2x506xi32> -> memref<20x506xi32>
-        for(int exprIdx = 0; exprIdx < op.getAffineMap().getResults().size(); exprIdx++){
-          AffineExpr expr = op.getAffineMap().getResult(exprIdx);
-          assert(expr.getKind() == AffineExprKind::Constant);
-          std::string cstValue = std::to_string(expr.dyn_cast<AffineConstantExpr>().getValue());
-          assert(cstValue != "");
-          if(cstValue == "0")
-            continue;
-          else{
-            // SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/exprIdx, /*map=*/op.getAffineMap());
-            int64_t elements_each_step = DataBytes;
-            for (unsigned i = exprIdx + 1; i < TargetShape.size(); i++){
-              elements_each_step *= TargetShape[i];
-            }
-            if(DRAM_Offset != "")
-              DRAM_Offset = DRAM_Offset + " + ";
-            DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + cstValue;
-          }
-        }
-      }
-      if(DRAM_Offset == "") {
-        DRAM_Offset = "0";
+        assert(false && "Unsupported Block Access.");
       }
     }
 
-    /// Get DMA_Request_Offset
-    std::vector<int64_t> DMA_Request_Offsets;
+    std::vector<int64_t> LenEachDim;
     bool continuous = true;
     for(int r = SourceShape.size() - 1; r >= 0; r--){
-      if(!continuous){
-        if(SourceShape[r] == 1)
-          DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is overlooked
-        else 
-          DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), SourceShape[r]);
-      }
-      else {/// continuous
-        if(TargetShape[r] > SourceShape[r]){
-          DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is continuous
-          continuous = false;
-        }
-        else if(TargetShape[r] == SourceShape[r]){
-          DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is continuous
-        }
-      }
+      LenEachDim.insert(LenEachDim.begin(), SourceShape[r]);
     }    
+
 
     /// SPAD_BaseAddr
     /// SPAD_Offset: keep increasing by DMA_Len.
-    dfgIoInfo DfgIoInfos = _cgracallemitter->getDfgIoInfosFromBlockStore(op);
+    dfgIoInfo DfgIoInfos = _pytestemitter->getDfgIoInfosFromBlockStore(op);
     llvm::SmallVector<uint64_t> SPAD_BaseAddrs;
     SPAD_BaseAddrs.push_back(DfgIoInfos.addr);
 
-    /// Emit C
-    unsigned cur_indent = _indent;
-    unsigned idx_num = 0;
-    // llvm::SmallDenseMap<int, int64_t> LItoStep;
-    indent() << "uint64_t dramoffset_" << BLid << " = " << DRAM_Offset <<";\n";
-    std::string DMA_Request_Offsets_str = "uint64_t roffset_" + BLid + " = ";
-    indent() << "uint64_t spadoffset_" << BLid << " = 0;\n";
-    for(int r = 0; r < DMA_Request_Offsets.size(); r++){
-      int64_t Roffset = DMA_Request_Offsets[r];
-      std::string idx = "idx_" + std::to_string(r);
-      if(Roffset != -1){
-        idx_num++;
-        int64_t elements_each_step = DataBytes;
-        for (unsigned i = r + 1; i < TargetShape.size(); i++){
-          elements_each_step *= TargetShape[i];
-        }
-        indent() << "for(int " << idx << " = " << 0 << "; "
-              << idx << " < " <<  Roffset << "; "
-              << idx << "++){\n";
-        // LItoStep[idx] = elements_each_step;
-        DMA_Request_Offsets_str += " " + std::to_string(elements_each_step)
-                                + "*" + idx + " +";
-        _indent += 2;
-        setIndent(_indent);
-      }
-    }
-    if(DMA_Request_Offsets_str.substr(DMA_Request_Offsets_str.size()-2, 2) == "= ")
-      DMA_Request_Offsets_str += "0;";
-    else
-      DMA_Request_Offsets_str.back() = ';';
-    indent() << DMA_Request_Offsets_str << "\n";
-    // _indent += 2;
-    // setIndent(_indent);
-    // for(auto spadbaddr : SPAD_BaseAddrs){
+    /// Emit pytest
     for(int i = 0; i < SPAD_BaseAddrs.size(); i++)
     {
       auto spadbaddr = SPAD_BaseAddrs[i];
       int fuse = (i == SPAD_BaseAddrs.size() - 1)? 0 : 1; /// fuse: 0 - broadcast, 1 - non-broadcast
-      std::stringstream store_data;
-      store_data <<"store(" << Memref_BaseAddr 
-              <<" + " << "dramoffset_" << BLid
-              <<" + " << "roffset_" << BLid
-              <<", 0x" << std::hex << spadbaddr 
-              <<" + " << "spadoffset_" << BLid 
-              <<", " << std::dec << DMA_Len 
-              <<", _task_id" /*Task id*/ << ", 0" /*Task dep*/
-              <<");\n";
-      indent() << store_data.str();
+      std::stringstream store_data, spm_ptr, olen;
+
+      store_data << "odata.append(" << Memref_BaseAddr;
+      assert(DRAM_Offset_EachDim.size() == LenEachDim.size());
+      for(int i = 0; i < DRAM_Offset_EachDim.size(); i++){
+        store_data << "[" << DRAM_Offset_EachDim[i] 
+                  << ":" << DRAM_Offset_EachDim[i] << "+" << LenEachDim[i] << "]";
+      }
+      store_data << ")";
+
+      spm_ptr << "optrs.append(DeviceData(" 
+              << "0x" << std::hex << spadbaddr
+              << ", " << std::dec<< DMA_Len 
+              << "))";
+      
+      olen << "olen.append(" << DMA_Len <<")";
+
+      indent() << store_data.str() << "\n" ;
+      indent() << spm_ptr.str() << "\n";
+      indent() << olen.str() << "\n";
 
     }
-    indent()<< "spadoffset_" << BLid 
-            << " = spadoffset_" << BLid 
-            << " + " << DMA_Len <<";\n";
 
-
-    _indent = cur_indent;
-    setIndent(_indent);
-    indent();
-    for(int _ = 0 ; _ < idx_num ; _++){
-      _os << "} ";
-    }
-    _os << "\n";
-    indent() << "}\n";
+    indent() << "\n";
 
     if(IsLastBlockStoreOp(op)){
-      indent() << "_task_id++;\n";
+      indent() << "stream = runtime.create_stream()\n\n";
+      indent() << "await aux_stream("
+               << "\tstream=stream, config=configs,"
+               << "\tiptrs=iptrs, idata=idata,"
+               << "\toptrs=optrs, odata=odata, olen =olen"
+               <<")\n";
     }
 
     return true;    
   }
 
   bool visitOp(ADORA::LocalMemAllocOp op) {
+    /// %2 = ADORA.LocalMemAlloc memref<20x20xi32>  {Id = "2", KernelName = "IntVecAdd"}
+    indent() << "\n";
+    indent() << "## " << op << "\n";
+
+    std::string BLid = op.getId().str();
+    ::llvm::ArrayRef<int64_t> ResultShape =  op.getResultType().getShape();
+
+    uint64_t DataBytes = op.getResultType().getElementTypeBitWidth()/8;
+    uint64_t Len = DataBytes;
+    for(int r = ResultShape.size() - 1; r >= 0; r--){
+        Len = Len * ResultShape[r];
+    }
+
+    dfgIoInfo DfgIoInfos = _pytestemitter->getSPMInfosFromLocalAlloc(op).second;
+    uint64_t SPAD_BaseAddr = DfgIoInfos.addr;
+
+    std::stringstream alloc_ptr;
+    alloc_ptr << "data_ptr.append(DeviceData(" 
+             << "0x" << std::hex << SPAD_BaseAddr
+             << ", " << std::dec << Len
+             << "))";
     
+    indent() << alloc_ptr.str() << "\n";
+
     return true;
   }
   
 
 
   bool visitOp(ADORA::KernelOp op) {
-    indent() << "{\n";
-    if(!MapHasKey(_cgracallemitter->KnToCfgExe, op)){
+    indent() << "\n";
+    if(!MapHasKey(_pytestemitter->KnToCfgExe, op)){
       // Configuration cfg = ;
-      ADG* adg = _cgracallemitter->getADG();
-      _cgracallemitter->GenerateCGRACFGAndEXE(op, _cgracallemitter->KnToConfiguration[op], adg);
+      ADG* adg = _pytestemitter->getADG();
+      _pytestemitter->GenerateCGRACFGAndEXE(op, _pytestemitter->KnToConfiguration[op], adg);
     }
     if(!op.getKernelName().empty()){
-      indent() << "/// " << op.getKernelName() << "\n";
+      indent() << "### " << op.getKernelName() << "\n";
     }
 
-    std::vector<std::string> strs = split_str_by_char(_cgracallemitter->KnToCfgExe[op], '\n');
+    std::vector<std::string> strs = split_str_by_char(_pytestemitter->KnToCfgExe[op], '\n');
     for(std::string str: strs){
       indent() << str << "\n";
     }
     
-    indent() << "}\n";
+    indent() << "\n\n";
     return true;
   }
   // bool visitOp(BufferOp op) {
@@ -618,7 +621,7 @@ public:
 
   /// CF 
   bool visitOp(cf::BranchOp op) { 
-    _cgracallemitter->emitBlock(*(op.getDest()), _os);
+    _pytestemitter->emitBlock(*(op.getDest()), _os);
     return true;
   }
 
@@ -634,14 +637,14 @@ public:
 
     // Emit loop invariant(upper bound)
     assert(op.getUpperBoundMap().getResults().size()==1);
-    _os << _cgracallemitter->lookupName(iterVar) << " < " ;
+    _os << _pytestemitter->lookupName(iterVar) << " < " ;
     _os << op.getUpperBoundMap().getResult(0) << "; ";
 
     // Emit loop step
-    _os << _cgracallemitter->lookupName(iterVar) << " = " ;
-    _os << _cgracallemitter->lookupName(iterVar) << " + "  << op.getStep() << "){\n";
+    _os << _pytestemitter->lookupName(iterVar) << " = " ;
+    _os << _pytestemitter->lookupName(iterVar) << " + "  << op.getStep() << "){\n";
 
-    _cgracallemitter->emitBlock(*(op.getBody()), _os);
+    _pytestemitter->emitBlock(*(op.getBody()), _os);
     // reduce
     indent() << "}\n";
     indent() << "\n";
@@ -671,12 +674,12 @@ public:
       value = "0";
     }
     else{
-      std::string value = _cgracallemitter->lookupName(op.getValue());
+      std::string value = _pytestemitter->lookupName(op.getValue());
       // assert("Unsupported!\n");
     }
 
     assert(op.getMemref().getType().cast<MemRefType>().getShape().size() == 0);
-    std::string memref = _cgracallemitter->lookupName(op.getMemref());
+    std::string memref = _pytestemitter->lookupName(op.getMemref());
     indent() << memref << " = " << value << ";\n";
     return true;
     // return emitter.emitAffineStore(op), true; 
@@ -822,10 +825,10 @@ public:
 
   bool visitOp(arith::AddIOp op) {
       std::string type = getEmitType(op.getResult());
-      std::string Lhs = _cgracallemitter->lookupName(op.getLhs());
+      std::string Lhs = _pytestemitter->lookupName(op.getLhs());
       if(Lhs == "")
         Lhs = ConstOpToValueStr[op.getLhs()];
-      std::string Rhs = _cgracallemitter->lookupName(op.getRhs());
+      std::string Rhs = _pytestemitter->lookupName(op.getRhs());
       if(Rhs == "")
         Rhs = ConstOpToValueStr[op.getRhs()];
       assert(Lhs != "" && Rhs != "");
@@ -849,10 +852,10 @@ public:
 
   bool visitOp(arith::SubIOp op) {
       std::string type = getEmitType(op.getResult());
-      std::string Lhs = _cgracallemitter->lookupName(op.getLhs());
+      std::string Lhs = _pytestemitter->lookupName(op.getLhs());
       if(Lhs == "")
         Lhs = ConstOpToValueStr[op.getLhs()];
-      std::string Rhs = _cgracallemitter->lookupName(op.getRhs());
+      std::string Rhs = _pytestemitter->lookupName(op.getRhs());
       if(Rhs == "")
         Rhs = ConstOpToValueStr[op.getRhs()];
       assert(Lhs != "" && Rhs != "");
@@ -895,12 +898,12 @@ public:
   }
 
 private:
-  CGRACallEmitter* _cgracallemitter;
+  PytestEmitter* _pytestemitter;
   llvm::DenseMap<mlir::Value, std::string> ConstOpToValueStr;
   llvm::raw_ostream &_os;
   unsigned _indent = 0;
 };
-CGRVOpEmitter* opEmitter;
+PyOpEmitter* opEmitter;
 } // namespace
 
 
@@ -915,12 +918,14 @@ CGRVOpEmitter* opEmitter;
 /// @param os
 void PytestEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os) {
   std::stringstream ostr;
-  ostr << "void " << funcop.getSymName().str() << "(";
+  ostr << "async def " << funcop.getSymName().str() << "("
+       << "runtime: DeviceRuntime, ";
+
   // Funtion args
   ArrayRef<mlir::Type> argTypes = funcop.getArgumentTypes();
   for(int argIdx = 0; argIdx < argTypes.size(); argIdx++){
     if(argIdx != 0){
-      ostr << " ,";
+      ostr << ", ";
     }
     mlir::Type argType = argTypes[argIdx];
 
@@ -928,34 +933,40 @@ void PytestEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os
     Op_Name_C arg_info("arg", argIdx);
     appendValueNameList(funcop.getBody().getArgument(argIdx), arg_info);
     if(argType.isa<MemRefType>()){
-      ostr << "void* " << "arg_" << argIdx;
+      ostr <<"arg_" << argIdx  << ": List" ;
     } 
     else if(argType.isIndex()){
-      ostr << "int " << "arg_" << argIdx;
+      ostr << "arg_" << argIdx  << ": int";
     }
     else if(argType.isInteger(32)){
-      ostr << "int32_t " << "arg_" << argIdx;
+      ostr  << "arg_" << argIdx << ": int";
     }
     else if(argType.isInteger(64)){
-      ostr << "int64_t " << "arg_" << argIdx;
+      ostr  << "arg_" << argIdx << ": int";
     }
     else if(argType.isUnsignedInteger(32)){
-      ostr << "uint32_t " << "arg_" << argIdx;
+      ostr  << "arg_" << argIdx << ": int";
     }
     else if(argType.isUnsignedInteger(64)){
-      ostr << "uint64_t " << "arg_" << argIdx;
+      ostr  << "arg_" << argIdx << ": int";
     }
     
   }
-  ostr << "){\n";
+  ostr << "):\n";
 
+  ostr << "    # axibus.log.info(\"[ADORA] Starting CGRA call (" 
+       << funcop.getSymName().str() << ")\")";
+
+  ostr << "    iptrs, idata = [],[]\n" 
+       << "    optrs, odata, olen = [],[],[]\n" 
+       << "    configs, data_ptr = [],[]";
 
   os << ostr.str();
 }
 
 /// @brief Emit a block (maybe a loop body, maybe a function body), especially the for loop structure
 /// @param os
-void PythonEmitter::emitBlock(mlir::Block &block, llvm::raw_ostream &os) {
+void PytestEmitter::emitBlock(mlir::Block &block, llvm::raw_ostream &os) {
   // std::stringstream ostr;
   addIndent();
 
@@ -994,7 +1005,7 @@ void PythonEmitter::emitBlock(mlir::Block &block, llvm::raw_ostream &os) {
 /// @brief Emit the whole module op to CGRA Call function in C languange
 /// @param os
 /// @return Successful or not
-bool PythonEmitter::emitCGRACallFunction(llvm::raw_ostream &os) {
+bool PytestEmitter::emitPytest(llvm::raw_ostream &os) {
   opEmitter = new PyOpEmitter(*this, os);
   // ADORAEmitterState state(os);
   // ModuleEmitter(state).emitModule(module);
@@ -1006,7 +1017,7 @@ All rights reserved.
 
 Automatically generated file for pytest/cocotb based CGRA call function from ADORA.
 """
-from test_runif import DeviceData, DeviceConfig, DeviceStream, DeviceRuntime, aux_stream
+from test_runif import DeviceData, DeviceConfig, DeviceStream, DeviceRuntime
 from typing import List
 
 async def aux_stream(
@@ -1054,14 +1065,12 @@ async def aux_stream(
     for i in range(len(optrs)):
         await stream.memcpyDeviceToHost(d_data=optrs[i], h_data=odata[i], size=olen[i], dtype='i')
 
-    finally:
-        # Always release the stream, even if an error occurs
-        await stream.release()
-        return";
+    ## await stream.release()
+    return
 
-//===----------------------------------------------------------------------===//
-// Configuration Data 
-//===----------------------------------------------------------------------===//
+## ===----------------------------------------------------------------------===//
+## Configuration Data 
+## ===----------------------------------------------------------------------===//
 )XXX";  
 
   for(auto elem : KnToCfgData){
@@ -1082,16 +1091,21 @@ async def aux_stream(
     emitBlock(funcop.getBody().front(), os);
 
     // / function tail
-    os << "  fence(1);\n";
-    os << "}\n";
+    os << R"XXX(
+    await stream.synchronize()
+)XXX";
   }
 
   delete opEmitter;
 }
 
+bool PytestEmitter::emitCGRACallFunction(llvm::raw_ostream &os) {
+  emitPytest(os);
+}
+
 // Traverse the whole module to find which operation keeps a "VAR_CONFIG" attr
 // equal to arg config, and return the result value of the operation
-std::string CGRACallEmitter::lookupVarConfigName(const std::string config){ 
+std::string PytestEmitter::lookupVarConfigName(const std::string config){ 
   mlir::Value target_value;
   _moduleop.walk([&](mlir::Operation* op)-> WalkResult {
     op->dump();
@@ -1110,12 +1124,11 @@ std::string CGRACallEmitter::lookupVarConfigName(const std::string config){
 }
 
 /// @brief Get the config data
-std::string CGRACallEmitter::GenerateCGRAConfig(
+std::string PytestEmitter::GenerateCGRAConfig(
   ADORA::KernelOp& kernel, Configuration cfg, ADG* adg){
   // adg->print();
-  std::string CFGarrayName = "cin_" + kernel.getKernelName();
+  std::string CFGarrayName = "cfgbit_" + kernel.getKernelName();
   std::stringstream CFGdata;
-  CFGdata << "/// " << kernel.getKernelName() << "\n";
 
    // cfg.dumpCfgData(std::cout);
   std::map<int, dfgIoInfo> dfg_io_infos = std::move(_kernel_to_dfg_io_infos[kernel]);
@@ -1135,16 +1148,18 @@ std::string CGRACallEmitter::GenerateCGRAConfig(
     cfgNum += cdp.data.size() * 32 / cfgDataWidth;
   }
 
-  if(cfgAddrWidth > 16){
-    CFGdata << "volatile unsigned int ";
-  }else{
-    CFGdata << "volatile unsigned short ";
-  }
-  CFGdata << CFGarrayName << "[" << cfgNum << "][" << (1 + cfgDataWidth / alignWidth) << "] __attribute__((aligned(" << cfgSpadDataByte << "))) = {\n";
+  // if(cfgAddrWidth > 16){
+  //   CFGdata << "volatile unsigned int ";
+  // }else{
+  //   CFGdata << "volatile unsigned short ";
+  // }
+  CFGdata << "\"\"\" kernel: " << kernel.getKernelName()
+          << ",  cfgNum: " << cfgNum << "\"\"\"\n";
+  CFGdata << CFGarrayName << " = [\n";
   CFGdata << std::hex;
   int alignWidthHex = alignWidth/4;
   for(auto& cdp : cfgData){
-    CFGdata << "\t\t{";
+    CFGdata << "\t\t";
     for(auto data : cdp.data){      
       if(alignWidth == 32){
          CFGdata << "0x" << std::setw(alignWidthHex) << std::setfill('0') << data << ", ";
@@ -1154,9 +1169,9 @@ std::string CGRACallEmitter::GenerateCGRAConfig(
       }
             
     }
-    CFGdata << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (cdp.addr) << "},\n";
+    CFGdata << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (cdp.addr) << ",\n";
   }
-  CFGdata << std::dec << "\t};\n\n";
+  CFGdata << std::dec << "\t]\n\n";
 
   KnToCfgData[kernel] = CFGdata.str();
   KnToCfgArrayInfo[kernel] = std::pair(CFGarrayName, cfgNum);
@@ -1165,7 +1180,7 @@ std::string CGRACallEmitter::GenerateCGRAConfig(
 }
 
 /// @brief Get the config data
-std::string CGRACallEmitter::GenerateCGRAConfig(
+std::string PytestEmitter::GenerateCGRAConfig(
   ADORA::KernelOp& kernel, MapperSA* mapper){
   ADG* adg = mapper->getADG();
   Configuration cfg(mapper->_mapping);
@@ -1177,7 +1192,7 @@ std::string CGRACallEmitter::GenerateCGRAConfig(
 
 
 /// @brief Get the config and execution instructions of CGRA
-void CGRACallEmitter::GenerateCGRACFGAndEXE(
+void PytestEmitter::GenerateCGRACFGAndEXE(
   ADORA::KernelOp& kernel, Configuration cfg, ADG* adg){
   // adg->print();
   /////////////////////// CFG is generated in GenerateCGRACFGData()
@@ -1198,6 +1213,7 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(
   int cfgNum = KnToCfgArrayInfo[kernel].second;
 
   /// replace the variable part of the config
+  //// TODO: what about variable runtime
   CFGandEXE << std::hex;
   for(auto elem : cfg.VarReplaceInfo){
     std::string varcfg_name = lookupVarConfigName(elem.first);
@@ -1245,12 +1261,29 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(
   int cfgBaseAddrSpad = cfgBaseAddr + banks * sizeofBank; // cfg spad on top of iob spad
   int cfgBaseAddrCtrl = cfgBaseAddr / cfgSpadDataByte; // config base address the controller access
   
-  uint64_t iob_ens = _kernel_to_iob_ens[kernel];
+  BYTES_LIST iob_ens = _kernel_to_iob_ens[kernel];
 
-  CFGandEXE << "load_cfg((void*)" << CFGarrayName << ", 0x" << std::hex << cfgBaseAddrSpad << std::dec << ", " 
-       << cfg_len << ", " << /*_task_id=*/"_task_id" << ", " << /*_ld_cfg_dep*/"LD_DEP_EX_LAST_TASK" << ");\n";
-  CFGandEXE << "config(0x" << std::hex << cfgBaseAddrCtrl << std::dec << ", " << cfgNum << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/ 0 << ");\n";
-  CFGandEXE << "execute(0x" << std::hex << iob_ens << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"EX_DEP_ST_LAST_TASK" << ");\n";
+  CFGandEXE << "data_ptr.append(iptrs)\n";
+  // CFGandEXE << "data_ptr.append(optrs)\n\n";
+
+  CFGandEXE << "config_" << kernel.getKernelName() << "= DeviceConfig(\n" ;
+  CFGandEXE << "\tconfig_values=" << CFGarrayName << ",\n" ;
+  CFGandEXE << "\tiob_en=[" ;
+  for(int _ = 0; _ < iob_ens.size(); _++){
+    CFGandEXE << iob_ens.getByte(_);
+    if(_ != iob_ens.size() - 1)
+      CFGandEXE << "," ;
+  }
+  CFGandEXE << "],\n" ;
+  CFGandEXE << "\tdata_ptr=data_ptr\n";
+  CFGandEXE << ")\n" ;
+
+  CFGandEXE << "configs.append(config_" << kernel.getKernelName() << ")";
+
+  // CFGandEXE << "\tload_cfg((void*)" << CFGarrayName << ", 0x" << std::hex << cfgBaseAddrSpad << std::dec << ", " 
+  //      << cfg_len << ", " << /*_task_id=*/"_task_id" << ", " << /*_ld_cfg_dep*/"LD_DEP_EX_LAST_TASK" << ");\n";
+  // CFGandEXE << "config(0x" << std::hex << cfgBaseAddrCtrl << std::dec << ", " << cfgNum << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/ 0 << ");\n";
+  // CFGandEXE << "execute(0x" << std::hex << iob_ens << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"EX_DEP_ST_LAST_TASK" << ");\n";
 
   KnToCfgExe[kernel] = CFGandEXE.str();
   
@@ -1260,7 +1293,7 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(
 
 /// @brief Get the config and execution instructions of CGRA
 /// @param mapper The SA mapper which has completed mapping
-void CGRACallEmitter::GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, MapperSA* mapper){
+void PytestEmitter::GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, MapperSA* mapper){
   /// why MapperSA (without&) will cause bug ?? memory leakage?
   /// Generate CGRA configuration
   ADG* adg = mapper->getADG();

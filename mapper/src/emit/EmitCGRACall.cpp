@@ -303,30 +303,6 @@ public:
     return true;
   }
 
-  //////
-  /// Check whether a DataBlockStoreOp is the last of one kernel in one Block.
-  ///
-  static bool IsLastBlockStoreOp(ADORA::DataBlockStoreOp op){
-    Block* parentBlock = op.getOperation()->getBlock();
-
-    bool behindThisOp = false;
-    for(auto it = parentBlock->begin(); it != parentBlock->end(); it++){
-      if(behindThisOp && isa<ADORA::DataBlockStoreOp>(it)){
-        ADORA::DataBlockStoreOp toCheck = dyn_cast<ADORA::DataBlockStoreOp>(it);
-        
-        if(toCheck.getKernelName() == op.getKernelName()){
-          //// this is not the last datablockop of one kernel in this block
-          return false;
-        }
-      }
-      if(&*it == op.getOperation()){
-        behindThisOp = true;
-      }
-    }
-
-    return true;
-  }
-
   bool visitOp(ADORA::DataBlockStoreOp op) {
     /// DataBlockStoreOp can be seen as an opposite operation of memref subview op, 
     /// 6 variables should be maintained:
@@ -921,7 +897,7 @@ void CGRACallEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &
   ArrayRef<mlir::Type> argTypes = funcop.getArgumentTypes();
   for(int argIdx = 0; argIdx < argTypes.size(); argIdx++){
     if(argIdx != 0){
-      ostr << " ,";
+      ostr << ", ";
     }
     mlir::Type argType = argTypes[argIdx];
 
@@ -1206,12 +1182,13 @@ void CGRACallEmitter::GenerateCGRACFGAndEXE(
   int cfgBaseAddrSpad = cfgBaseAddr + banks * sizeofBank; // cfg spad on top of iob spad
   int cfgBaseAddrCtrl = cfgBaseAddr / cfgSpadDataByte; // config base address the controller access
   
-  uint64_t iob_ens = _kernel_to_iob_ens[kernel];
+  BYTES_LIST iob_ens = _kernel_to_iob_ens[kernel];
+  assert(iob_ens.As32b().size() == 1);
 
   CFGandEXE << "load_cfg((void*)" << CFGarrayName << ", 0x" << std::hex << cfgBaseAddrSpad << std::dec << ", " 
        << cfg_len << ", " << /*_task_id=*/"_task_id" << ", " << /*_ld_cfg_dep*/"LD_DEP_EX_LAST_TASK" << ");\n";
   CFGandEXE << "config(0x" << std::hex << cfgBaseAddrCtrl << std::dec << ", " << cfgNum << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/ 0 << ");\n";
-  CFGandEXE << "execute(0x" << std::hex << iob_ens << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"EX_DEP_ST_LAST_TASK" << ");\n";
+  CFGandEXE << "execute(" << iob_ens.As32b()[0] << std::dec << ", " << /*_task_id*/"_task_id" << ", " << /*_ex_dep*/"EX_DEP_ST_LAST_TASK" << ");\n";
 
   KnToCfgExe[kernel] = CFGandEXE.str();
   
