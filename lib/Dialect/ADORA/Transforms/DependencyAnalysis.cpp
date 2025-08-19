@@ -283,13 +283,23 @@ SmallDenseMap<srcT, SmallVector<dstT>> getSrctoDstDependency(AffineForOp& forOp)
         }
         else {
           ///// Only check whether related loop levels exist RAW
+          bool inDomain = false;
           for (unsigned d = 0; d < loops.size(); d++) {
             AffineForOp dth_level = loops[d];
             dth_level.dump();
+
+            // inDomain means that the current (and inner) loop level is within the domain relevant to the operation indices,
+            // i.e., we have already reached the loop domain that requires dependency checking.
+            // If not in the domain, there might be generated solutions representing fake (spurious) dependencies.
+            // In other words, only after entering the relevant loop domain should dependencies be checked,
+            // to avoid detecting false dependencies at unrelated loop levels.
             if(findElement(srcOpInst.getIndices(), dth_level.getInductionVar()) == NULL &&
-               findElement(dstOpInst.getIndices(), dth_level.getInductionVar()) == NULL){
+               findElement(dstOpInst.getIndices(), dth_level.getInductionVar()) == NULL &&
+               !inDomain){
               continue;
             }
+            inDomain = true; 
+
             int depth = getNestingDepth(dth_level) + 1;
             
             MemRefAccess srcAccess(srcOpInst);
@@ -380,7 +390,7 @@ SmallDenseMap<unsigned, SmallVector<Operation* >>
   // mark all ops as unvisited;
   for (unsigned i = 0, groupnum = 0; i < numOps; ++i) {
     mlir::Operation* srcOpInst = loadAndStoreOpInsts[i];
-    LLVM_DEBUG(llvm::errs() << "srcOpInst:"<< srcOpInst);
+    LLVM_DEBUG(llvm::errs() << "srcOpInst:"; srcOpInst->dump());
     if(OpToGroupNumber.contains(srcOpInst))
       continue;
     mlir::Value srcArray = getMemrefFromOperation(srcOpInst);
@@ -400,13 +410,22 @@ SmallDenseMap<unsigned, SmallVector<Operation* >>
         FlatAffineValueConstraints *dependenceConstraints;
         // SmallVector<DependenceComponent, 2> *dependenceComponents;
         ///// Only check whether related loop levels exist RAW
+        bool inDomain = false;
         for (unsigned d = 0; d < loops.size(); d++) {
           AffineForOp dth_level = loops[d];
           dth_level.dump();
+
+          // inDomain means that the current (and inner) loop level is within the domain relevant to the operation indices,
+          // i.e., we have already reached the loop domain that requires dependency checking.
+          // If not in the domain, there might be generated solutions representing fake (spurious) dependencies.
+          // In other words, only after entering the relevant loop domain should dependencies be checked,
+          // to avoid detecting false dependencies at unrelated loop levels.
           if(findElement(getIndicesFromOperation(srcOpInst), dth_level.getInductionVar()) == NULL &&
-              findElement(getIndicesFromOperation(dstOpInst), dth_level.getInductionVar()) == NULL){
+              findElement(getIndicesFromOperation(dstOpInst), dth_level.getInductionVar()) == NULL &&
+              !inDomain){
             continue;
           }
+          inDomain = true; 
 
           int depth = getNestingDepth(dth_level) + 1;
           DependenceResult result =

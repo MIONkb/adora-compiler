@@ -647,6 +647,39 @@ int AdjustMemoryFootprintPass::ExplicitKernelDataBLockLoadStore(ADORA::KernelOp 
   SmallDenseMap<unsigned, SmallVector<Operation* > > ReuseGroups = getReuseGroupsForLoop(forop);
   SmallVector<Operation* > VisitedOperations;
 
+  LLVM_DEBUG(
+  for(auto elem: WARs){
+    llvm::errs() << "WAR:\n";
+    affine::AffineLoadOp load = elem.first;
+    llvm::errs() << "load: ";
+    load.dump();
+    for(auto store : elem.second){
+      llvm::errs() << "|-->store: ";
+      store.dump();
+    }
+  }
+
+  for(auto elem: RAWs){
+    llvm::errs() << "RAW:\n";
+    affine::AffineStoreOp store = elem.first;
+    llvm::errs() << "store: ";
+    store.dump();
+    for(auto load : elem.second){
+      llvm::errs() << "|-->load: ";
+      load.dump();
+    }
+  }
+
+  for(auto elem: ReuseGroups){
+    llvm::errs() << "ReuseGroups " << elem.first << ":\n";
+    for(auto op : elem.second){
+      llvm::errs() << "|->op: ";
+      op->dump();
+    }
+  }
+
+  );
+
   //////////
   /// Handle RAWs first
   //////////

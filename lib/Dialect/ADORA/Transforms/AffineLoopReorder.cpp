@@ -91,7 +91,7 @@ struct AffineLoopReorder : public AffineLoopReorderBase<AffineLoopReorder> {
 //        For a loop, synchronization cost = product of tripCounts of all loops which are at outer positions to this loop.
 //6. Choose the permutation with the least synchronization cost as the best permutation.
 LogicalResult AffineLoopReorder::ReorderOnAffineForOp(AffineForOp forOp) {
-  // SmallDenseMap<unsigned, SmallVector<SmallVector<Operation *>> > loop_refGroups = getReuseGroupsForEachLoop(forOp);
+  SmallDenseMap<unsigned, SmallVector<SmallVector<Operation *>> > loop_refGroups = getReuseGroupsForEachLoop(forOp);
 
   AffineForOp rootForOp = forOp;
   SmallVector<AffineForOp, 4> loops;
@@ -290,7 +290,7 @@ SmallVector<Operation*> AffineLoopReorder::Corresponding_MemAccessOps(AffineForO
 
 SmallVector<int64_t> AffineLoopReorder::GetAccessShapeAtThisLevel(
       AffineForOp ForLevel, SmallVector<Operation*> AccessOps){
-  SmallVector <int64_t> CriticalShape;
+  SmallVector<int64_t> CriticalShape;
   std::optional<int64_t> BiggestSize;  
   MemRefRegion CriticalRegion(AccessOps[0]->getLoc());
   for(Operation* AccessOp : AccessOps){

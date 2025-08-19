@@ -1,0 +1,334 @@
+
+//===----------------------------------------------------------------------===//
+//
+// Automatically generated file for CGRA call function in cgrv-opt.
+//
+//===----------------------------------------------------------------------===//
+
+#include "include/ISA.h"
+
+static uint8_t _task_id = 0;
+
+#define LD_DEP_ST_LAST_TASK 1     // this load command depends on the store command of last task
+#define LD_DEP_EX_LAST_TASK 2     // this load command depends on the execute command of last task
+#define LD_DEP_ST_LAST_SEC_TASK 3 // this load command depends on the store command of last second task
+#define EX_DEP_ST_LAST_TASK 1     // this execute command depends on the store command of last task
+
+
+
+//===----------------------------------------------------------------------===//
+// Configuration Data 
+//===----------------------------------------------------------------------===//
+/// merge_MATMUL_4x4
+volatile unsigned short cin_merge_MATMUL_4x4[186][3] __attribute__((aligned(8))) = {
+		{0x2000, 0x9004, 0x0010},
+		{0xe040, 0x804e, 0x0011},
+		{0x9dae, 0x0000, 0x0012},
+		{0x0000, 0x0002, 0x0013},
+		{0x2800, 0x9004, 0x0018},
+		{0xe040, 0x804e, 0x0019},
+		{0x9dae, 0x0000, 0x001a},
+		{0x0000, 0x0002, 0x001b},
+		{0x3000, 0x1000, 0x0020},
+		{0x0040, 0x0048, 0x0021},
+		{0x9002, 0x0000, 0x0022},
+		{0x0000, 0x0982, 0x0023},
+		{0x0000, 0x0000, 0x0024},
+		{0x3800, 0x1000, 0x0028},
+		{0x0040, 0x0048, 0x0029},
+		{0x9002, 0x0000, 0x002a},
+		{0x0000, 0x0982, 0x002b},
+		{0x0000, 0x0000, 0x002c},
+		{0x3000, 0x9000, 0x0030},
+		{0xf740, 0x804f, 0x0031},
+		{0x9036, 0x0000, 0x0032},
+		{0x0000, 0x0002, 0x0033},
+		{0x2000, 0x9004, 0x0038},
+		{0xe040, 0x804e, 0x0039},
+		{0x9dae, 0x0000, 0x003a},
+		{0x0000, 0x0002, 0x003b},
+		{0x2800, 0x9004, 0x0040},
+		{0xe040, 0x804e, 0x0041},
+		{0x9dae, 0x0000, 0x0042},
+		{0x0000, 0x0002, 0x0043},
+		{0x0000, 0x0010, 0x0058},
+		{0x0000, 0x000c, 0x0060},
+		{0x2230, 0x0000, 0x0068},
+		{0x0030, 0x0032, 0x0070},
+		{0x0000, 0x0030, 0x0078},
+		{0x0000, 0x0030, 0x0080},
+		{0x0100, 0x0001, 0x0088},
+		{0x0000, 0x0000, 0x0090},
+		{0x0035, 0x1a00, 0x00a9},
+		{0x0000, 0x0000, 0x00aa},
+		{0x0010, 0x0904, 0x00ab},
+		{0x0144, 0x0000, 0x00ac},
+		{0x0035, 0x0c00, 0x00b1},
+		{0x0000, 0x0000, 0x00b2},
+		{0x0010, 0x0905, 0x00b3},
+		{0x0144, 0x0000, 0x00b4},
+		{0x0035, 0x1200, 0x00b9},
+		{0x0000, 0x0000, 0x00ba},
+		{0x0010, 0x0903, 0x00bb},
+		{0x0144, 0x0000, 0x00bc},
+		{0x1035, 0x2300, 0x00c1},
+		{0x0000, 0x0000, 0x00c2},
+		{0x0010, 0x0905, 0x00c3},
+		{0x0144, 0x0000, 0x00c4},
+		{0x1035, 0x2300, 0x00c9},
+		{0x0000, 0x0000, 0x00ca},
+		{0x0010, 0x0905, 0x00cb},
+		{0x0144, 0x0000, 0x00cc},
+		{0x0035, 0x0900, 0x00d1},
+		{0x0000, 0x0000, 0x00d2},
+		{0x0010, 0x0903, 0x00d3},
+		{0x0144, 0x0000, 0x00d4},
+		{0x008c, 0x0000, 0x00e9},
+		{0x0000, 0xb001, 0x00f0},
+		{0x0061, 0x0000, 0x00f1},
+		{0x0000, 0xa002, 0x00f8},
+		{0x0061, 0x0000, 0x00f9},
+		{0x0001, 0x4080, 0x0100},
+		{0x0008, 0x0000, 0x0101},
+		{0x0300, 0x4801, 0x0108},
+		{0x0070, 0x0000, 0x0109},
+		{0x0204, 0x0000, 0x0110},
+		{0x0004, 0x2000, 0x0118},
+		{0x0080, 0x0000, 0x0119},
+		{0x0000, 0x0000, 0x0120},
+		{0x2035, 0x0b00, 0x0139},
+		{0x0000, 0x0000, 0x013a},
+		{0x0010, 0x0906, 0x013b},
+		{0x0144, 0x0000, 0x013c},
+		{0x0035, 0x0a00, 0x0141},
+		{0x0000, 0x0000, 0x0142},
+		{0x0010, 0x0904, 0x0143},
+		{0x0144, 0x0000, 0x0144},
+		{0x11d2, 0x5a33, 0x0149},
+		{0x0004, 0x0000, 0x014a},
+		{0x0010, 0x004a, 0x014b},
+		{0x0004, 0x0000, 0x014c},
+		{0x12d2, 0xc943, 0x0151},
+		{0x0004, 0x0000, 0x0152},
+		{0x0010, 0x0049, 0x0153},
+		{0x0004, 0x0000, 0x0154},
+		{0x0010, 0x0000, 0x0170},
+		{0x0000, 0x0004, 0x0178},
+		{0x0070, 0x0000, 0x0179},
+		{0x0200, 0x0140, 0x0180},
+		{0x0068, 0x0000, 0x0181},
+		{0x4000, 0x4002, 0x0188},
+		{0x0000, 0x0000, 0x0189},
+		{0x0400, 0x8001, 0x0190},
+		{0x0001, 0x0000, 0x0191},
+		{0x1000, 0x0800, 0x0198},
+		{0x0062, 0x0000, 0x0199},
+		{0x0000, 0x1000, 0x01a0},
+		{0x0080, 0x0000, 0x01a1},
+		{0x0000, 0x2000, 0x01a8},
+		{0x31d2, 0x5232, 0x01c1},
+		{0x0008, 0x0000, 0x01c2},
+		{0x0010, 0x004b, 0x01c3},
+		{0x0004, 0x0000, 0x01c4},
+		{0x0335, 0x2300, 0x01c9},
+		{0x0000, 0x0000, 0x01ca},
+		{0x0010, 0x0906, 0x01cb},
+		{0x0144, 0x0000, 0x01cc},
+		{0x2035, 0x0900, 0x01d1},
+		{0x0000, 0x0000, 0x01d2},
+		{0x0010, 0x0906, 0x01d3},
+		{0x0144, 0x0000, 0x01d4},
+		{0x12d2, 0xcc43, 0x01d9},
+		{0x0004, 0x0000, 0x01da},
+		{0x0010, 0x004b, 0x01db},
+		{0x0004, 0x0000, 0x01dc},
+		{0x2235, 0x1300, 0x01e9},
+		{0x0000, 0x0000, 0x01ea},
+		{0x0010, 0x0906, 0x01eb},
+		{0x0144, 0x0000, 0x01ec},
+		{0x0014, 0x0000, 0x0200},
+		{0x4000, 0x1002, 0x0208},
+		{0x0022, 0x0000, 0x0209},
+		{0x0340, 0x0002, 0x0210},
+		{0x000c, 0x0000, 0x0211},
+		{0x0004, 0x9000, 0x0218},
+		{0x0008, 0x0000, 0x0219},
+		{0x0000, 0x3001, 0x0220},
+		{0x0020, 0x0000, 0x0221},
+		{0x0000, 0x2002, 0x0228},
+		{0x0082, 0x0000, 0x0229},
+		{0x0300, 0x2000, 0x0230},
+		{0x0135, 0x0900, 0x0251},
+		{0x0000, 0x0000, 0x0252},
+		{0x0010, 0x0906, 0x0253},
+		{0x0144, 0x0000, 0x0254},
+		{0x0135, 0x0b00, 0x0259},
+		{0x0000, 0x0000, 0x025a},
+		{0x0010, 0x0904, 0x025b},
+		{0x0144, 0x0000, 0x025c},
+		{0x0435, 0x2300, 0x0261},
+		{0x0000, 0x0000, 0x0262},
+		{0x0010, 0x0907, 0x0263},
+		{0x0144, 0x0000, 0x0264},
+		{0x0235, 0x0c00, 0x0269},
+		{0x0000, 0x0000, 0x026a},
+		{0x0010, 0x0905, 0x026b},
+		{0x0144, 0x0000, 0x026c},
+		{0x0235, 0x0b00, 0x0271},
+		{0x0000, 0x0000, 0x0272},
+		{0x0010, 0x0905, 0x0273},
+		{0x0144, 0x0000, 0x0274},
+		{0x0004, 0x0000, 0x0290},
+		{0x2000, 0x000d, 0x0298},
+		{0x0010, 0x0017, 0x02a0},
+		{0x0020, 0x0003, 0x02a8},
+		{0x2002, 0x0001, 0x02b0},
+		{0x0010, 0x0012, 0x02b8},
+		{0x0000, 0x0008, 0x02c0},
+		{0x2800, 0x1000, 0x02d8},
+		{0x0040, 0x0048, 0x02d9},
+		{0x9002, 0x0000, 0x02da},
+		{0x0000, 0x0982, 0x02db},
+		{0x0020, 0x0000, 0x02dc},
+		{0x2000, 0x9000, 0x02e0},
+		{0xf740, 0x804f, 0x02e1},
+		{0x9036, 0x0000, 0x02e2},
+		{0x0000, 0x0002, 0x02e3},
+		{0x3000, 0x1000, 0x02f0},
+		{0x0040, 0x0048, 0x02f1},
+		{0x9002, 0x0000, 0x02f2},
+		{0x0000, 0x09a2, 0x02f3},
+		{0x0020, 0x0000, 0x02f4},
+		{0x2800, 0x9000, 0x02f8},
+		{0xf740, 0x804f, 0x02f9},
+		{0x9036, 0x0000, 0x02fa},
+		{0x0000, 0x0002, 0x02fb},
+		{0x2000, 0x9000, 0x0300},
+		{0xf740, 0x804f, 0x0301},
+		{0x9036, 0x0000, 0x0302},
+		{0x0000, 0x0002, 0x0303},
+	};
+
+
+void merge_MATMUL_4x4(void* arg_0 ,void* arg_1 ,void* arg_2){
+  {
+  /// %0 = ADORA.BlockLoad %arg0 [0, 0] : memref<?x36xi32> -> memref<33x36xi32>  {Id = "0", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_0 = 0;
+  uint64_t spadoffset_0 = 0;
+  uint64_t roffset_0 = 0;
+  load_data(arg_0 + dramoffset_0 + roffset_0, 0x18000 + spadoffset_0, 4752, 0, _task_id, LD_DEP_ST_LAST_TASK);
+  spadoffset_0 = spadoffset_0 + 4752;
+  
+  }
+  {
+  /// %1 = ADORA.BlockLoad %arg1 [0, 0] : memref<?x36xi32> -> memref<36x33xi32>  {Id = "1", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_1 = 0;
+  uint64_t spadoffset_1 = 0;
+  for(int idx_0 = 0; idx_0 < 36; idx_0++){
+    uint64_t roffset_1 =  144*idx_0 ;
+    load_data(arg_1 + dramoffset_1 + roffset_1, 0x8000 + spadoffset_1, 132, 0, _task_id, LD_DEP_ST_LAST_TASK);
+    spadoffset_1 = spadoffset_1 + 132;
+  } 
+  }
+  {
+  /// %2 = ADORA.BlockLoad %arg1 [0, 1] : memref<?x36xi32> -> memref<36x33xi32>  {Id = "2", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_2 = 4 * 1;
+  uint64_t spadoffset_2 = 0;
+  for(int idx_0 = 0; idx_0 < 36; idx_0++){
+    uint64_t roffset_2 =  144*idx_0 ;
+    load_data(arg_1 + dramoffset_2 + roffset_2, 0x0 + spadoffset_2, 132, 0, _task_id, LD_DEP_ST_LAST_TASK);
+    spadoffset_2 = spadoffset_2 + 132;
+  } 
+  }
+  {
+  /// %3 = ADORA.BlockLoad %arg1 [0, 2] : memref<?x36xi32> -> memref<36x33xi32>  {Id = "3", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_3 = 4 * 2;
+  uint64_t spadoffset_3 = 0;
+  for(int idx_0 = 0; idx_0 < 36; idx_0++){
+    uint64_t roffset_3 =  144*idx_0 ;
+    load_data(arg_1 + dramoffset_3 + roffset_3, 0x2000 + spadoffset_3, 132, 0, _task_id, LD_DEP_ST_LAST_TASK);
+    spadoffset_3 = spadoffset_3 + 132;
+  } 
+  }
+  {
+  /// %4 = ADORA.BlockLoad %arg1 [0, 3] : memref<?x36xi32> -> memref<36x33xi32>  {Id = "4", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_4 = 4 * 3;
+  uint64_t spadoffset_4 = 0;
+  for(int idx_0 = 0; idx_0 < 36; idx_0++){
+    uint64_t roffset_4 =  144*idx_0 ;
+    load_data(arg_1 + dramoffset_4 + roffset_4, 0xa000 + spadoffset_4, 132, 0, _task_id, LD_DEP_ST_LAST_TASK);
+    spadoffset_4 = spadoffset_4 + 132;
+  } 
+  }
+  {
+  /// %5 = ADORA.BlockLoad %arg0 [1, 0] : memref<?x36xi32> -> memref<33x36xi32>  {Id = "5", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_5 = 144 * 1;
+  uint64_t spadoffset_5 = 0;
+  uint64_t roffset_5 = 0;
+  load_data(arg_0 + dramoffset_5 + roffset_5, 0xc000 + spadoffset_5, 4752, 0, _task_id, LD_DEP_ST_LAST_TASK);
+  spadoffset_5 = spadoffset_5 + 4752;
+  
+  }
+  {
+  /// %6 = ADORA.BlockLoad %arg0 [2, 0] : memref<?x36xi32> -> memref<33x36xi32>  {Id = "6", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_6 = 144 * 2;
+  uint64_t spadoffset_6 = 0;
+  uint64_t roffset_6 = 0;
+  load_data(arg_0 + dramoffset_6 + roffset_6, 0x10000 + spadoffset_6, 4752, 0, _task_id, LD_DEP_ST_LAST_TASK);
+  spadoffset_6 = spadoffset_6 + 4752;
+  
+  }
+  {
+  /// %7 = ADORA.BlockLoad %arg0 [3, 0] : memref<?x36xi32> -> memref<33x36xi32>  {Id = "7", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_7 = 144 * 3;
+  uint64_t spadoffset_7 = 0;
+  uint64_t roffset_7 = 0;
+  load_data(arg_0 + dramoffset_7 + roffset_7, 0x1a000 + spadoffset_7, 4752, 0, _task_id, LD_DEP_ST_LAST_TASK);
+  spadoffset_7 = spadoffset_7 + 4752;
+  
+  }
+  {
+  /// merge_MATMUL_4x4
+  load_cfg((void*)cin_merge_MATMUL_4x4, 0x20000, 1116, _task_id, LD_DEP_EX_LAST_TASK);
+  config(0x0, 186, _task_id, 0);
+  execute(0x3bfe, _task_id, EX_DEP_ST_LAST_TASK);
+  }
+  {
+  /// ADORA.BlockStore %8, %arg2 [0, 0] : memref<9x36xi32> -> memref<?x36xi32>  {Id = "8", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_8 = 0;
+  uint64_t spadoffset_8 = 0;
+  uint64_t roffset_8 = 0;
+  store(arg_2 + dramoffset_8 + roffset_8, 0xe000 + spadoffset_8, 1296, _task_id, 0);
+  spadoffset_8 = spadoffset_8 + 1296;
+  
+  }
+  {
+  /// ADORA.BlockStore %9, %arg2 [9, 0] : memref<9x36xi32> -> memref<?x36xi32>  {Id = "9", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_9 = 144 * 9;
+  uint64_t spadoffset_9 = 0;
+  uint64_t roffset_9 = 0;
+  store(arg_2 + dramoffset_9 + roffset_9, 0x4000 + spadoffset_9, 1296, _task_id, 0);
+  spadoffset_9 = spadoffset_9 + 1296;
+  
+  }
+  {
+  /// ADORA.BlockStore %10, %arg2 [18, 0] : memref<9x36xi32> -> memref<?x36xi32>  {Id = "10", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_10 = 144 * 18;
+  uint64_t spadoffset_10 = 0;
+  uint64_t roffset_10 = 0;
+  store(arg_2 + dramoffset_10 + roffset_10, 0x12000 + spadoffset_10, 1296, _task_id, 0);
+  spadoffset_10 = spadoffset_10 + 1296;
+  
+  }
+  {
+  /// ADORA.BlockStore %11, %arg2 [27, 0] : memref<9x36xi32> -> memref<?x36xi32>  {Id = "11", KernelName = "merge_MATMUL_4x4"}
+  uint64_t dramoffset_11 = 144 * 27;
+  uint64_t spadoffset_11 = 0;
+  uint64_t roffset_11 = 0;
+  store(arg_2 + dramoffset_11 + roffset_11, 0x14000 + spadoffset_11, 1296, _task_id, 0);
+  spadoffset_11 = spadoffset_11 + 1296;
+  
+  }
+  _task_id++;
+  fence(1);
+}

@@ -1,0 +1,25 @@
+module {
+  func.func @jacobi_1d_kernel_0(%arg0: memref<120xf32>, %arg1: memref<120xf32>) attributes {Kernel, jacobi_1d_kernel_0} {
+    cf.br ^bb1
+  ^bb1:  // pred: ^bb0
+    %cst = arith.constant 3.333300e-01 : f32
+    %0 = ADORA.BlockLoad %arg0 [0] : memref<120xf32> -> memref<120xf32>  {Id = "0", KernelName = "jacobi_1d_kernel_0"}
+    %1 = ADORA.BlockLoad %arg0 [1] : memref<120xf32> -> memref<120xf32>  {Id = "1", KernelName = "jacobi_1d_kernel_0"}
+    %2 = ADORA.BlockLoad %arg0 [2] : memref<120xf32> -> memref<120xf32>  {Id = "2", KernelName = "jacobi_1d_kernel_0"}
+    %3 = ADORA.LocalMemAlloc memref<120xf32>  {Id = "3", KernelName = "jacobi_1d_kernel_0"}
+    ADORA.kernel {
+      affine.for %arg2 = 0 to 118 {
+        %4 = affine.load %0[%arg2] : memref<120xf32>
+        %5 = affine.load %1[%arg2] : memref<120xf32>
+        %6 = arith.addf %4, %5 : f32
+        %7 = affine.load %2[%arg2] : memref<120xf32>
+        %8 = arith.addf %6, %7 : f32
+        %9 = arith.mulf %8, %cst : f32
+        affine.store %9, %3[%arg2] : memref<120xf32>
+      }
+      ADORA.terminator
+    } {KernelName = "jacobi_1d_kernel_0"}
+    ADORA.BlockStore %3, %arg1 [1] : memref<120xf32> -> memref<120xf32>  {Id = "3", KernelName = "jacobi_1d_kernel_0"}
+    return
+  }
+}

@@ -1,0 +1,44 @@
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i1, dense<8> : vector<2xi32>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi32>>, #dlti.dl_entry<i8, dense<8> : vector<2xi32>>, #dlti.dl_entry<i16, dense<16> : vector<2xi32>>, #dlti.dl_entry<i32, dense<32> : vector<2xi32>>, #dlti.dl_entry<f64, dense<64> : vector<2xi32>>, #dlti.dl_entry<f16, dense<16> : vector<2xi32>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi32>>, #dlti.dl_entry<f128, dense<128> : vector<2xi32>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi32>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi32>>, #dlti.dl_entry<i64, dense<64> : vector<2xi32>>, #dlti.dl_entry<f80, dense<128> : vector<2xi32>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i32>>, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu", "polygeist.target-cpu" = "x86-64", "polygeist.target-features" = "+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87", "polygeist.tune-cpu" = "generic"} {
+  func.func @merge_MATMUL_4x4_IS(%arg0: memref<?x36xi32>, %arg1: memref<?x36xi32>, %arg2: memref<?x36xi32>) attributes {llvm.linkage = #llvm.linkage<external>} {
+    %0 = ADORA.BlockLoad %arg0 [0, 0] : memref<?x36xi32> -> memref<36x36xi32>  {Id = "0", KernelName = "merge_MATMUL_4x4_IS"}
+    %1 = ADORA.BlockLoad %arg1 [0, 0] : memref<?x36xi32> -> memref<36x9xi32>  {Id = "1", KernelName = "merge_MATMUL_4x4_IS"}
+    %2 = ADORA.BlockLoad %arg2 [0, 0] : memref<?x36xi32> -> memref<36x9xi32>  {Id = "2", KernelName = "merge_MATMUL_4x4_IS"}
+    %3 = ADORA.BlockLoad %arg0 [0, 1] : memref<?x36xi32> -> memref<36x35xi32>  {Id = "3", KernelName = "merge_MATMUL_4x4_IS"}
+    %4 = ADORA.BlockLoad %arg1 [1, 1] : memref<?x36xi32> -> memref<36x9xi32>  {Id = "4", KernelName = "merge_MATMUL_4x4_IS"}
+    %5 = ADORA.BlockLoad %arg0 [0, 2] : memref<?x36xi32> -> memref<36x34xi32>  {Id = "5", KernelName = "merge_MATMUL_4x4_IS"}
+    %6 = ADORA.BlockLoad %arg1 [2, 2] : memref<?x36xi32> -> memref<36x9xi32>  {Id = "6", KernelName = "merge_MATMUL_4x4_IS"}
+    %7 = ADORA.BlockLoad %arg0 [0, 3] : memref<?x36xi32> -> memref<36x33xi32>  {Id = "7", KernelName = "merge_MATMUL_4x4_IS"}
+    %8 = ADORA.BlockLoad %arg1 [3, 3] : memref<?x36xi32> -> memref<36x9xi32>  {Id = "8", KernelName = "merge_MATMUL_4x4_IS"}
+    %9 = ADORA.LocalMemAlloc memref<36x9xi32>  {Id = "9", KernelName = "merge_MATMUL_4x4_IS"}
+    ADORA.kernel {
+      affine.for %arg3 = 0 to 9 {
+        affine.for %arg4 = 0 to 36 {
+          affine.for %arg5 = 0 to 36 {
+            %10 = affine.load %0[%arg5, %arg4] : memref<36x36xi32>
+            %11 = affine.load %1[%arg4, %arg3] : memref<36x9xi32>
+            %12 = arith.muli %10, %11 : i32
+            %13 = affine.load %2[%arg5, %arg3] : memref<36x9xi32>
+            %14 = arith.addi %13, %12 : i32
+            %15 = affine.load %3[%arg5, %arg4] : memref<36x35xi32>
+            %16 = affine.load %4[%arg4, %arg3] : memref<36x9xi32>
+            %17 = arith.muli %15, %16 : i32
+            %18 = arith.addi %14, %17 : i32
+            %19 = affine.load %5[%arg5, %arg4] : memref<36x34xi32>
+            %20 = affine.load %6[%arg4, %arg3] : memref<36x9xi32>
+            %21 = arith.muli %19, %20 : i32
+            %22 = arith.addi %18, %21 : i32
+            %23 = affine.load %7[%arg5, %arg4] : memref<36x33xi32>
+            %24 = affine.load %8[%arg4, %arg3] : memref<36x9xi32>
+            %25 = arith.muli %23, %24 : i32
+            %26 = arith.addi %22, %25 : i32
+            affine.store %26, %9[%arg5, %arg3] : memref<36x9xi32>
+          }
+        }
+      }
+      ADORA.terminator
+    } {KernelName = "merge_MATMUL_4x4_IS"}
+    ADORA.BlockStore %9, %arg2 [0, 0] : memref<36x9xi32> -> memref<?x36xi32>  {Id = "9", KernelName = "merge_MATMUL_4x4_IS"}
+    return
+  }
+}
+

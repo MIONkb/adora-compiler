@@ -1,0 +1,24 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="unroll_MATMUL:1", size="5184", offset="0,0", pattern="4,36,-140,36,4,36", color = black];
+Input1[opcode = "Input", ref_name="unroll_MATMUL:2", size="5184", offset="0,0", pattern="144,36,-5036,36,-5180,36", color = black];
+MUL2[opcode = "MUL", color = black];
+ADD3[opcode = "ADD", color = black];
+yield4[opcode = "yield", color = black];
+for5[opcode = "for", color = black];
+Input6[opcode = "Input", ref_name="unroll_MATMUL:0", size="5184", offset="0,0", pattern="0,36,4,36,4,36", color = purple];
+CONST7[opcode = "CONST", value="0x00000000", color = black];
+ADD8[opcode = "ADD", color = purple];
+Output9[opcode = "Output", ref_name="unroll_MATMUL:3", size="5184", offset="0,0", pattern="0,36,4,36,4,36", color = purple];
+for11[opcode = "for", color = purple];
+for13[opcode = "for", color = yellow];
+Input0 -> MUL2[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> MUL2[color = black, style = bold, operand = 1, label = "Op=1"];
+for5 -> ADD3[color = black, style = dashed, operand = 0, iterdist = 0, label = "Op=0, IterDist = 0"];
+MUL2 -> ADD3[color = black, style = bold, operand = 1, label = "Op=1"];
+ADD3 -> yield4[color = black, style = bold, operand = 0, label = "Op=0"];
+CONST7 -> for5[color = black, style = bold, operand = 0, label = "Op=0"];
+for5 -> ADD8[color = black, style = bold, operand = 0, label = "Op=0"];
+Input6 -> ADD8[color = black, style = bold, operand = 1, label = "Op=1"];
+ADD8 -> Output9[color = black, style = bold, operand = 0, label = "Op=0"];
+yield4 -> for5[color = black, style = dashed, operand = 0, iterdist = 0, label = "Op=0, IterDist = 0"];
+}

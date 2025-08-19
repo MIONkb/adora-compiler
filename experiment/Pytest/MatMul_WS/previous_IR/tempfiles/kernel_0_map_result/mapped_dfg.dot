@@ -1,0 +1,13 @@
+Digraph G {
+"Input3"[label = "\N\nlat=3"];
+"Input4"[label = "\N\nlat=3"];
+"Input5"[label = "\N\nlat=3"];
+"Input6"[label = "\N\nlat=3"];
+"MERGE47"[label = "\N\nlat=6"];
+"Input3"->"MERGE47"[label = "lat=1\nop=0\nrdudelay=1"];
+"Input4"->"MERGE47"[label = "lat=1\nop=1\nrdudelay=1"];
+"Input5"->"MERGE47"[label = "lat=2\nop=2\nrdudelay=0"];
+"Input6"->"MERGE47"[label = "lat=2\nop=3\nrdudelay=0"];
+"Output8"[label = "\N\nlat=7"];
+"MERGE47"->"Output8"[label = "lat=0\nop=0\nrdudelay=0"];
+}

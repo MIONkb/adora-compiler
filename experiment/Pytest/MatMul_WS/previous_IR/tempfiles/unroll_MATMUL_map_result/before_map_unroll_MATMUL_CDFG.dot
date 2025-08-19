@@ -1,0 +1,13 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="unroll_MATMUL:1", size="5184", offset="0,0", pattern="4,36,-140,36,4,36", color = black];
+Input1[opcode = "Input", ref_name="unroll_MATMUL:2", size="5184", offset="0,0", pattern="144,36,-5036,36,-5180,36", color = black];
+MAC3[opcode = "MAC", acc_params="0,36,1,1296", acc_first=1, color = black];
+Input6[opcode = "Input", ref_name="unroll_MATMUL:0", size="5184", offset="0,0", pattern="0,36,4,36,4,36", color = purple];
+ADD8[opcode = "ADD", color = purple];
+Output9[opcode = "Output", ref_name="unroll_MATMUL:3", size="5184", offset="0,0", pattern="0,36,4,36,4,36", color = purple];
+Input6 -> ADD8[color = black, style = bold, operand = 1, label = "Op=1"];
+ADD8 -> Output9[color = black, style = bold, operand = 0, label = "Op=0"];
+MAC3 -> ADD8[color = black, style = bold, operand = 0, label = "Op=0"];
+Input0 -> MAC3[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> MAC3[color = black, style = bold, operand = 1, label = "Op=1"];
+}

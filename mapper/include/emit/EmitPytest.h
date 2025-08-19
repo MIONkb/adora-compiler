@@ -70,8 +70,8 @@ private:
 
   /// reset Indent size for python emit
   // unsigned _currentIndent = 0;
-  void addIndent() override{_currentIndent += 4;}
-  void reduceIndent() override {_currentIndent = _currentIndent >= 4 ? _currentIndent - 4 : 0;}
+  void addIndent() override{_currentIndent += 2;}
+  void reduceIndent() override {_currentIndent = _currentIndent >= 2 ? _currentIndent - 2 : 0;}
 };
 
 namespace mlir {

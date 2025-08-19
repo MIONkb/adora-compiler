@@ -12,7 +12,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i16, dense<16> : 
       }
       ADORA.terminator
     } {KernelName = "IntVecAdd"}
-    ADORA.BlockStore %2, %arg2 [0] : memref<20xi32> -> memref<?xi32> , stride [1] {Id = "2", KernelName = "IntVecAdd"}
+    ADORA.BlockStore %2, %arg2 [0] : memref<20xi32> -> memref<?xi32> , stride [2] {Id = "2", KernelName = "IntVecAdd"}
+    ADORA.BlockStore %2, %arg2 [0] : memref<20xi32> -> memref<?xi32>  {Id = "2", KernelName = "IntVecAdd"}
     return
   }
 }

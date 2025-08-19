@@ -1,0 +1,15 @@
+Digraph G {
+for1[opcode = "for", color = black];
+Input2[opcode = "Input", ref_name=":0", size="16", offset="0,0", pattern="0,4,4,4", color = purple];
+Input3[opcode = "Input", ref_name=":1", size="16", offset="0,0", pattern="0,4,4,4", color = purple];
+Input4[opcode = "Input", ref_name=":2", size="16", offset="0,0", pattern="0,4,4,4", color = purple];
+Input5[opcode = "Input", ref_name=":3", size="16", offset="0,0", pattern="0,4,4,4", color = purple];
+MERGE46[opcode = "MERGE4", acc_params="0,1,1,1", acc_first=1, color = purple];
+Output7[opcode = "Output", ref_name=":4", size="64", offset="0,0", pattern="0,4,16,4", color = purple];
+for9[opcode = "for", color = blue];
+Input2 -> MERGE46[color = black, style = bold, operand = 0, label = "Op=0"];
+Input2 -> MERGE46[color = black, style = bold, operand = 1, label = "Op=1"];
+Input4 -> MERGE46[color = black, style = bold, operand = 2, label = "Op=2"];
+Input5 -> MERGE46[color = black, style = bold, operand = 3, label = "Op=3"];
+MERGE46 -> Output7[color = black, style = bold, operand = 0, label = "Op=0"];
+}

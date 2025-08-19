@@ -1,0 +1,19 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="jacobi_1d_kernel_0:0", size="480", offset="0,0", pattern="4,118", color = black];
+Input1[opcode = "Input", ref_name="jacobi_1d_kernel_0:1", size="480", offset="0,0", pattern="4,118", color = black];
+FADD322[opcode = "FADD32", color = black];
+Input3[opcode = "Input", ref_name="jacobi_1d_kernel_0:2", size="480", offset="0,0", pattern="4,118", color = black];
+FADD324[opcode = "FADD32", color = black];
+FMUL325[opcode = "FMUL32", color = black];
+Output6[opcode = "Output", ref_name="jacobi_1d_kernel_0:3", size="480", offset="0,0", pattern="4,118", color = black];
+yield7[opcode = "yield", color = black];
+for8[opcode = "for", color = purple];
+CONST9[opcode = "CONST", value="0x3EAAAA3B", color = black];
+Input0 -> FADD322[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> FADD322[color = black, style = bold, operand = 1, label = "Op=1"];
+FADD322 -> FADD324[color = black, style = bold, operand = 0, label = "Op=0"];
+Input3 -> FADD324[color = black, style = bold, operand = 1, label = "Op=1"];
+FADD324 -> FMUL325[color = black, style = bold, operand = 0, label = "Op=0"];
+CONST9 -> FMUL325[color = black, style = bold, operand = 1, label = "Op=1"];
+FMUL325 -> Output6[color = black, style = bold, operand = 0, label = "Op=0"];
+}

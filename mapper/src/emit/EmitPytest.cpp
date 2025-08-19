@@ -520,10 +520,10 @@ public:
 
     if(IsLastBlockStoreOp(op)){
       indent() << "stream = runtime.create_stream()\n\n";
-      indent() << "await aux_stream("
-               << "\tstream=stream, config=configs,"
-               << "\tiptrs=iptrs, idata=idata,"
-               << "\toptrs=optrs, odata=odata, olen =olen"
+      indent() << "await aux_stream(\n"
+               << "\tstream=stream, config=configs,\n"
+               << "\tiptrs=iptrs, idata=idata,\n"
+               << "\toptrs=optrs, odata=odata, olen =olen\n"
                <<")\n";
     }
 
@@ -959,7 +959,7 @@ void PytestEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os
 
   ostr << "    iptrs, idata = [],[]\n" 
        << "    optrs, odata, olen = [],[],[]\n" 
-       << "    configs, data_ptr = [],[]";
+       << "    configs, data_ptr = [],[]\n";
 
   os << ostr.str();
 }
