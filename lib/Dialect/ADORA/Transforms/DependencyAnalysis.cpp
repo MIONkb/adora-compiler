@@ -399,7 +399,7 @@ SmallDenseMap<unsigned, SmallVector<Operation* >>
       mlir::Operation* dstOpInst = loadAndStoreOpInsts[j];
       if(OpToGroupNumber.contains(srcOpInst) || srcOpInst == dstOpInst)
         continue;
-      LLVM_DEBUG(llvm::errs() << "dstOpInst:" << dstOpInst);
+      LLVM_DEBUG(llvm::errs() << "|-> dstOpInst:"; dstOpInst->dump());
       mlir::Value dstArray = getMemrefFromOperation(dstOpInst);
       if (srcArray != dstArray) {
         continue;
@@ -441,6 +441,7 @@ SmallDenseMap<unsigned, SmallVector<Operation* >>
             //// get group count from src
             unsigned group_cnt =  OpToGroupNumber[srcOpInst];
             ReuseGroups[group_cnt].push_back(dstOpInst);
+            OpToGroupNumber[dstOpInst] = group_cnt;
           }
         }
       } 
