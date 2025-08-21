@@ -1,4 +1,5 @@
-# Adora : MLIR project for FDRA CGRA SoC
+# Adora : Adaptive Dataflow Optimization for Reconfigurable Architectures.
+An MLIR project for CGRA SoC([FDRA Repository](https://github.com/MIONkb/FDRA)).
 Adora includes two compilers designed for the FDRA CGRA SoC:
 
 - **`cgra-opt`**

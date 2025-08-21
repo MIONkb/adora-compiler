@@ -702,7 +702,7 @@ static func::FuncOp ConvertOpTtoFunc(OpT op, llvm::SetVector<mlir::Value> &opera
   mlir::FunctionType type =
       mlir::FunctionType::get(op.getContext(), OperandTypes, ResultTypes);
   func::FuncOp Func = builder.create<func::FuncOp>(loc, FnName, type);
-  std::cout << "[debug] after create:\n"; Func.dump();
+  LLVM_DEBUG(std::cout << "[debug] after create:\n"; Func.dump(););
   // KernelFunc->setAttr(kernelFnName, builder.getUnitAttr());
   // KernelFunc->setAttr("Kernel", builder.getUnitAttr());
 
@@ -724,7 +724,7 @@ static func::FuncOp ConvertOpTtoFunc(OpT op, llvm::SetVector<mlir::Value> &opera
   }
   mlir::Operation* newop = op.getOperation()->clone(mapping);
   entryBlock->push_back(newop);
-  builder.create<func::ReturnOp>(newop->getLoc(), dyn_cast<OpT>(newop).getResultTensors());
+  entryBlock->push_back(builder.create<func::ReturnOp>(newop->getLoc(), dyn_cast<OpT>(newop).getResultTensors()));
 
   // Block &KernelOpEntry = KernelOpBody.front();
   // Block *clonedKernelOpEntry = mapping.lookup(&KernelOpEntry);
@@ -741,8 +741,8 @@ static func::FuncOp ConvertOpTtoFunc(OpT op, llvm::SetVector<mlir::Value> &opera
   callop.getOperation()->moveBefore(op.getOperation());
   op.getOperation()->replaceAllUsesWith(callop);
   
-  std::cout << "[debug] func:\n"; Func.dump();
-  std::cout << "[debug] callop:\n"; callop.dump();
+  LLVM_DEBUG(std::cout << "[debug] func:\n"; Func.dump(););
+  LLVM_DEBUG(std::cout << "[debug] callop:\n"; callop.dump(););
   return Func;
 }
 

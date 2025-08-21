@@ -367,11 +367,11 @@ SmallDenseMap<unsigned, SmallVector<Operation* >>
                  getReuseGroupsForLoop(AffineForOp forOp) {
   // get all load and store operations
   SmallVector<Operation *, 8> loadAndStoreOpInsts;
-  SmallDenseMap<Operation *, bool> visitedOp;
+  // SmallDenseMap<Operation *, bool> visitedOp;
   forOp.getOperation()->walk([&](Operation *opInst) {
     if (isa<AffineLoadOp>(opInst) || isa<AffineStoreOp>(opInst)) {
       loadAndStoreOpInsts.push_back(opInst);
-      visitedOp[opInst] = false;
+      // visitedOp[opInst] = false;
     }
   });
   // SmallVector<AffineForOp, 4> loops;
@@ -395,7 +395,8 @@ SmallDenseMap<unsigned, SmallVector<Operation* >>
       continue;
     mlir::Value srcArray = getMemrefFromOperation(srcOpInst);
 
-    for (unsigned j = 0; j < numOps; ++j) {
+    //// Don't have to check ops before src(lex)
+    for (unsigned j = i; j < numOps; ++j) {
       mlir::Operation* dstOpInst = loadAndStoreOpInsts[j];
       if(OpToGroupNumber.contains(srcOpInst) || srcOpInst == dstOpInst)
         continue;

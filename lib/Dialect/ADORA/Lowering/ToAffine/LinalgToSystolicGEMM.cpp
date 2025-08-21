@@ -326,22 +326,34 @@ public:
     // lowerLinalgToLoopsImpl<affine::AffineForOp>(getOperation());
     _m = getOperation();
     _m.walk([&](linalg::MatmulOp matmul) {
-      ConvertMatmulToSystolic(matmul);
-      _m->dump();
+      func::FuncOp f = ConvertMatmulToSystolic(matmul);
+      _m.getBodyRegion().front().push_back(f);
+      _m.dump();
       return; 
     });
     
   };
-  void ConvertMatmulToSystolic(linalg::MatmulOp matmul);
+  func::FuncOp ConvertMatmulToSystolic(linalg::MatmulOp matmul);
 }; // struct LinalgToSystolicGEMMPass
 
-void LinalgToSystolicGEMMPass::ConvertMatmulToSystolic(linalg::MatmulOp matmul){
+func::FuncOp LinalgToSystolicGEMMPass::ConvertMatmulToSystolic(linalg::MatmulOp matmul){
   llvm::SetVector<mlir::Value> operands;
   for(auto operand : matmul.getOperands()){
     operands.insert(operand);
   }
-  ConvertMatmulToFunc(matmul, operands, "matmul_" + std::to_string(matmul_idx));
+  func::FuncOp func = ConvertMatmulToFunc(matmul, operands, "matmul_" + std::to_string(matmul_idx));
+  
+  //// Annotate the function as a systolic gemm
+  
+
+  //// lower matmul to gemm
+  // linalg::MatmulOp ToLowerOp = dyn_cast<linalg::MatmulOp>(func.getBody().front().front());
+
+  //// lower to a 4x4 weight stationary
+  
+
   matmul_idx++;
+  return func;
 }
 
 
