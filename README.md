@@ -1,4 +1,5 @@
-# Adora : MLIR project for FDRA CGRA SoC
+# Adora : Adaptive Dataflow Optimization for Reconfigurable Architectures.
+An MLIR project for CGRA SoC([FDRA Repository](https://github.com/MIONkb/FDRA)).
 Adora includes two compilers designed for the FDRA CGRA SoC:
 
 - **`cgra-opt`**
@@ -37,7 +38,7 @@ Adora includes two compilers designed for the FDRA CGRA SoC:
 
 ### 1 LLVM-18
 
-LLVM Commit: `26eb4285b56edd8c897642078d91f16ff0fd3472` (Same as Polygeist)
+LLVM Commit: `26eb4285b56edd8c897642078d91f16ff0fd3472` (Same as [Polygeist GitHub Repository](https://github.com/llvm/Polygeist))
 
 You can download the specified version from the following link:  [LLVM GitHub Repository](https://github.com/llvm/llvm-project/tree/26eb4285b56edd8c897642078d91f16ff0fd3472)
 
@@ -104,7 +105,7 @@ To run 'deriche' example from Polybench benchmark, you can go with:
 cd experiment/Cbenchmarks/Polybench/medley/deriche/deriche_mini
 
 ### From C source file to MLIR. This step can be skipped since the kernel is already in MLIR format.
-bash scripts/0_compileCtoMLIR.sh 
+bash scripts/0_compileCtoMLIR.sh
 
 ### For hardware-independent compilation
 bash scripts/1_kernel_opt.sh
