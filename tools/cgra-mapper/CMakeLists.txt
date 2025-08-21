@@ -44,6 +44,9 @@ set(LIBS
   # MLIRADORATransforms
   # MLIRADORALowerings
 
+  #ADORATensor
+  ADORATensorOps
+
   #Mapper
   CGRAMapperLIB
 )

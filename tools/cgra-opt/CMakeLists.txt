@@ -57,6 +57,10 @@ set(LIBS
   MLIRADORATransforms
   MLIRADORALowerings
   GeneralCDFGGen
+
+  #ADORATensor
+  ADORATensorOps
+  ADORATensorTransforms
 )
 
 set(SOURCES

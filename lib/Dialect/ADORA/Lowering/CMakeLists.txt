@@ -2,7 +2,6 @@ add_mlir_conversion_library(MLIRADORALowerings
   KernelCallToLLVM.cpp
   MathRewrite.cpp
   ADORAToSCF.cpp
-  ToAffine/LinalgToSystolicGEMM.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${PROJ_INCLUDE_DIR}/RAAA/Dialect/ADORA/Lowering

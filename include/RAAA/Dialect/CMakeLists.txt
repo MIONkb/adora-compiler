@@ -1,1 +1,2 @@
 add_subdirectory(ADORA)
+add_subdirectory(ADORATensor)

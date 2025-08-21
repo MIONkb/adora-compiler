@@ -22,6 +22,7 @@
 #include "RAAA/Dialect/ADORA/IR/ADORA.h"
 #include "RAAA/Dialect/ADORA/Transforms/Passes.h"
 #include "RAAA/Dialect/ADORA/Lowering/LowerPasses.h"
+#include "RAAA/Dialect/ADORATensor/IR/ADORATensor.h"
 #include "RAAA/Misc/Passes.h"
 #include "RAAA/Misc/DFG.h"
 
@@ -86,7 +87,8 @@ int main(int argc, char **argv) {
                   mlir::bufferization::BufferizationDialect>();
 
   // Dialects
-  registry.insert<mlir::ADORA::ADORADialect>();
+  registry.insert<mlir::ADORA::ADORADialect,
+                  mlir::ADORA::ADORATensor::ADORATensorDialect>();
   // return failed(
   //     mlir::MlirOptMain(argc, argv, "Fail\n", registry)
   // );

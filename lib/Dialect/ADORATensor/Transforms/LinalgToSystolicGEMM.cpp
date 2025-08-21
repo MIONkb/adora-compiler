@@ -26,9 +26,11 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 
-#include "../LowerPassDetail.h"
-#include "RAAA/Dialect/ADORA/Lowering/LowerPasses.h"
 #include "RAAA/Dialect/ADORA/IR/ADORA.h"
+#include "RAAA/Dialect/ADORATensor/IR/ADORATensor.h"
+#include "RAAA/Dialect/ADORATensor/Transforms/Passes.h"
+
+#include "PassDetail.h"
 
 #define DEBUG_TYPE "ADORA-linalg-to-systolic-gemm"
 
@@ -39,6 +41,7 @@ namespace mlir {
 using namespace mlir;
 using namespace mlir::linalg;
 using namespace mlir::ADORA;
+using namespace mlir::ADORA::ADORATensor;
 
 static SmallVector<Value> makeCanonicalAffineApplies(OpBuilder &b, Location loc,
                                                      AffineMap map,
@@ -243,6 +246,7 @@ static FailureOr<LinalgLoops> linalgOpToLoopsImpl(RewriterBase &rewriter,
 
 namespace mlir {
 namespace ADORA {
+namespace ADORATensor {
 template <typename LoopType>
 class LinalgRewritePattern : public RewritePattern {
 public:
@@ -347,7 +351,9 @@ func::FuncOp LinalgToSystolicGEMMPass::ConvertMatmulToSystolic(linalg::MatmulOp 
   
 
   //// lower matmul to gemm
-  // linalg::MatmulOp ToLowerOp = dyn_cast<linalg::MatmulOp>(func.getBody().front().front());
+  linalg::MatmulOp ToLowerOp = dyn_cast<linalg::MatmulOp>(func.getBody().front().front());
+  ADORATensor::MatMulOp newmatmul;
+  newmatmul = ConvertToSameADORATensorOp<ADORATensor::MatMulOp>(ToLowerOp);
 
   //// lower to a 4x4 weight stationary
   
@@ -361,6 +367,7 @@ std::unique_ptr<OperationPass<ModuleOp>> createLinalgToSystolicGEMMPass() {
   return std::make_unique<LinalgToSystolicGEMMPass>();
 }
 
+}
 } // namespace
 } // namespace
 

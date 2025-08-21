@@ -1,0 +1,11 @@
+add_mlir_interface(ShapeInferenceOpInterface)
+
+set(LLVM_TARGET_DEFINITIONS ShapeInferenceOpInterface.td)
+mlir_tablegen(ShapeInferenceOpInterface.h.inc  -gen-op-interface-decls)
+add_public_tablegen_target(ADORATensorShapeInferenceOpInterfaceIncGen)
+
+#add_mlir_interface(CloneFromOtherDialectOpInterface)
+
+#set(LLVM_TARGET_DEFINITIONS CloneFromOtherDialectOpInterface.td)
+#mlir_tablegen(CloneFromOtherDialectOpInterface.h.inc  -gen-op-interface-decls)
+#add_public_tablegen_target(ADORATensorCloneFromOtherDialectOpInterfaceIncGen)

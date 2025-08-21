@@ -97,15 +97,4 @@ def MathRewrite : Pass<"adora-math-rewrite", "ModuleOp"> {
   let dependentDialects = ["math::MathDialect","arith::ArithDialect"];
 }
 
-def LinalgToSystolicGEMMPass : Pass<"adora-convert-linalg-to-systolic-gemm", "ModuleOp"> {
-  let summary = "Transforms Linalg dialect operators into optimized systolic GEMM implementations. Following operators are included: matmul, conv2d.";
-  let description = [{"
-    This pass converts specific Linalg operations, such as 
-    matrix multiplication and 2D convolution, into systolic 
-    array implementations. 
-  "}];
-  let constructor = "createLinalgToSystolicGEMMPass()";
-  let dependentDialects = [
-    "affine::AffineDialect", "linalg::LinalgDialect", "memref::MemRefDialect", "ADORA::ADORADialect"];
-}
 #endif // ADORA_DIALECT_PASSES

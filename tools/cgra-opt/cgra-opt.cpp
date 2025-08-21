@@ -15,7 +15,10 @@
 #include "RAAA/Dialect/ADORA/IR/ADORA.h"
 #include "RAAA/Dialect/ADORA/Transforms/Passes.h"
 #include "RAAA/Dialect/ADORA/Lowering/LowerPasses.h"
+#include "RAAA/Dialect/ADORATensor/IR/ADORATensor.h"
+#include "RAAA/Dialect/ADORATensor/Transforms/Passes.h"
 #include "RAAA/Misc/Passes.h"
+
 
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
@@ -105,7 +108,8 @@ int main(int argc, char **argv) {
                   mlir::bufferization::BufferizationDialect>();
 
   // Dialects
-  registry.insert<mlir::ADORA::ADORADialect>();
+  registry.insert<mlir::ADORA::ADORADialect,
+                  mlir::ADORA::ADORATensor::ADORATensorDialect>();
 
   // ----- My Dialect -----
   mlir::ADORA::registerADORALoopCdfgGenPass();
@@ -125,7 +129,9 @@ int main(int argc, char **argv) {
   mlir::ADORA::registerConvertKernelCallToLLVMPass();
   mlir::ADORA::registerConvertADORAToSCFPass();
   mlir::ADORA::registerMathRewrite();
-  mlir::ADORA::registerLinalgToSystolicGEMMPass();
+
+  /// ADORATensor
+  mlir::ADORA::ADORATensor::registerLinalgToSystolicGEMMPass();
 
   mlir::registerSCFForLoopCanonicalizationPass();
   
