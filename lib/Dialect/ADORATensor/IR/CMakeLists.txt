@@ -5,7 +5,7 @@ add_mlir_dialect_library(ADORATensorOps
   ADORATensorDialect.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${PROJ_INCLUDE_DIR}/RAAA/Dialect/ADORATensor/IR
+  ${PROJ_INCLUDE_DIR}/ADORA/Dialect/ADORATensor/IR
 
   DEPENDS
 

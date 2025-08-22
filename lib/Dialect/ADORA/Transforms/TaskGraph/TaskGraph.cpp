@@ -1,8 +1,8 @@
 //===----------------------------------------------------------------------===//
 // For Task Graph
 //===----------------------------------------------------------------------===//
-#include "RAAA/Dialect/ADORA/Transforms/TaskGraph/TaskGraph.h"
-#include "RAAA/Dialect/ADORA/Transforms/DependencyAnalysis.h"
+#include "ADORA/Dialect/ADORA/Transforms/TaskGraph/TaskGraph.h"
+#include "ADORA/Dialect/ADORA/Transforms/DependencyAnalysis.h"
 
 #include <iostream>
 #include <fstream>

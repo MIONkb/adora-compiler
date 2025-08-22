@@ -14,8 +14,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
-#include "RAAA/Dialect/ADORA/Transforms/Passes.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
 #include "./PassDetail.h"
 
 

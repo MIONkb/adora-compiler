@@ -12,9 +12,9 @@
 // #include "mlir/IR/AffineExpr.h"
 
 #include "mlir/Support/LLVM.h"
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
-#include "RAAA/Dialect/ADORA/Transforms/Passes.h"
-#include "RAAA/Dialect/ADORA/Transforms/DependencyAnalysis.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
+#include "ADORA/Dialect/ADORA/Transforms/DependencyAnalysis.h"
 #include "./PassDetail.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/ADT/DenseMap.h"

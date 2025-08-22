@@ -3,7 +3,7 @@ add_mlir_dialect_library(MLIRADORAOps
   ADORAOps.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${PROJ_INCLUDE_DIR}/RAAA/Dialect/ADORA
+  ${PROJ_INCLUDE_DIR}/ADORA/Dialect/ADORA
 
   DEPENDS
   MLIRADORAOpInterfacesIncGen

@@ -10,9 +10,9 @@
 #include "mlir/IR/TypeUtilities.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
 
-#include "RAAA/Dialect/ADORA/IR/ADORAOps.h.inc"
+#include "ADORA/Dialect/ADORA/IR/ADORAOps.h.inc"
 
 
 using namespace mlir;
@@ -911,4 +911,4 @@ ParseResult MergeOp::parse(OpAsmParser &parser, OperationState &result) {
 
 
 #define GET_OP_CLASSES
-#include "RAAA/Dialect/ADORA/IR/ADORAOps.cpp.inc"
+#include "ADORA/Dialect/ADORA/IR/ADORAOps.cpp.inc"

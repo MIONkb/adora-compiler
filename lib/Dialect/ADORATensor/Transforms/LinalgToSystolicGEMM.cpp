@@ -26,9 +26,9 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
-#include "RAAA/Dialect/ADORATensor/IR/ADORATensor.h"
-#include "RAAA/Dialect/ADORATensor/Transforms/Passes.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
+#include "ADORA/Dialect/ADORATensor/Transforms/Passes.h"
 
 #include "PassDetail.h"
 
@@ -357,7 +357,7 @@ func::FuncOp LinalgToSystolicGEMMPass::ConvertMatmulToSystolic(linalg::MatmulOp 
 
   //// set to a 4x4 weight stationary
   ADORATensor::SystolicImplInterface Sinterface(newGemm);
-  mlir::SmallVector<int64_t> tile = {4,4};
+  // mlir::SmallVector<int64_t> tile = {4,4};
   Sinterface.setStationaryKind(MatMulStrategy::WeightStationary);
   Sinterface.setTileSize(ArrayRef<int64_t>({4,4}));
 

@@ -19,12 +19,12 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "../../lib/DFG/inc/mlir_cdfg.h"
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
-#include "RAAA/Dialect/ADORA/Transforms/Passes.h"
-#include "RAAA/Dialect/ADORA/Lowering/LowerPasses.h"
-#include "RAAA/Dialect/ADORATensor/IR/ADORATensor.h"
-#include "RAAA/Misc/Passes.h"
-#include "RAAA/Misc/DFG.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
+#include "ADORA/Dialect/ADORA/Lowering/LowerPasses.h"
+#include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
+#include "ADORA/Misc/Passes.h"
+#include "ADORA/Misc/DFG.h"
 
 #include <iostream>
 #include <set>

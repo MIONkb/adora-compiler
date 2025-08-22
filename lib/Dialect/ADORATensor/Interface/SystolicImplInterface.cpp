@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RAAA/Dialect/ADORATensor/Interface/SystolicImplInterface.h"
+#include "ADORA/Dialect/ADORATensor/Interface/SystolicImplInterface.h"
 
 namespace mlir {
 
 /// Include the auto-generated declarations.
-#include "RAAA/Dialect/ADORATensor/Interface/SystolicImplInterface.cpp.inc"
+#include "ADORA/Dialect/ADORATensor/Interface/SystolicImplInterface.cpp.inc"
 
 namespace ADORA {
 namespace ADORATensor {

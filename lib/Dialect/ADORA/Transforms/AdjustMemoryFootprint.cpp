@@ -34,9 +34,9 @@
 // #include "llvm/Support/raw_ostream.h"
 // #include "llvm/Support/FileSystem.h"
 
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
-#include "RAAA/Dialect/ADORA/Transforms/Passes.h"
-#include "RAAA/Dialect/ADORA/Transforms/DependencyAnalysis.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
+#include "ADORA/Dialect/ADORA/Transforms/DependencyAnalysis.h"
 #include "./PassDetail.h"
 
 using namespace llvm; // for llvm.errs()

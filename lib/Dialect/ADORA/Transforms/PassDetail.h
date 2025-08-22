@@ -16,7 +16,7 @@ class ArithmeticDialect;
 class AffineDialect;
 } // namespace Tensor
 #define GEN_PASS_CLASSES
-#include "RAAA/Dialect/ADORA/Transforms/Passes.h.inc"
+#include "ADORA/Dialect/ADORA/Transforms/Passes.h.inc"
 
 } // end namespace mlir
 

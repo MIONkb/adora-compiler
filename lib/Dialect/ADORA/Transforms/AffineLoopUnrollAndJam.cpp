@@ -54,10 +54,10 @@
 #include <optional>
 #include <filesystem>
 
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
-#include "RAAA/Dialect/ADORA/Transforms/Passes.h"
-#include "RAAA/Dialect/ADORA/Transforms/DSE.h"
-#include "RAAA/Misc/DFG.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
+#include "ADORA/Dialect/ADORA/Transforms/DSE.h"
+#include "ADORA/Misc/DFG.h"
 #include "./PassDetail.h"
 
 #define DEBUG_TYPE "adora-loop-unroll-jam"

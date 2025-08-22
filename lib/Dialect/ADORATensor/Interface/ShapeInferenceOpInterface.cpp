@@ -13,12 +13,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RAAA/Dialect/ADORATensor/Interface/ShapeInferenceOpInterface.h"
+#include "ADORA/Dialect/ADORATensor/Interface/ShapeInferenceOpInterface.h"
 
 namespace mlir {
 
 /// Include the auto-generated declarations.
-#include "RAAA/Dialect/ADORATensor/Interface/ShapeInferenceOpInterface.cpp.inc"
+#include "ADORA/Dialect/ADORATensor/Interface/ShapeInferenceOpInterface.cpp.inc"
 
 
 } // end namespace mlir

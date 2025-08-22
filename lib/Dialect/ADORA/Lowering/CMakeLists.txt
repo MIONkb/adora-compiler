@@ -4,8 +4,8 @@ add_mlir_conversion_library(MLIRADORALowerings
   ADORAToSCF.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${PROJ_INCLUDE_DIR}/RAAA/Dialect/ADORA/Lowering
-  ${PROJ_INCLUDE_DIR}/RAAA/Dialect/ADORA/IR
+  ${PROJ_INCLUDE_DIR}/ADORA/Dialect/ADORA/Lowering
+  ${PROJ_INCLUDE_DIR}/ADORA/Dialect/ADORA/IR
 
   DEPENDS
   ADORALowerPassIncGen

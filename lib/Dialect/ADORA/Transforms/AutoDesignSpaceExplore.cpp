@@ -28,11 +28,11 @@
 // #include <regex>
 #include <stack>
 
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
-#include "RAAA/Dialect/ADORA/Transforms/Passes.h"
-#include "RAAA/Dialect/ADORA/Transforms/DSE.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
+#include "ADORA/Dialect/ADORA/Transforms/DSE.h"
 #include "../../../DFG/inc/mlir_cdfg.h"
-#include "RAAA/Misc/DFG.h"
+#include "ADORA/Misc/DFG.h"
 #include "./PassDetail.h"
 
 

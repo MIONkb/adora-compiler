@@ -12,12 +12,12 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/ToolOutputFile.h"
 
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
-#include "RAAA/Dialect/ADORA/Transforms/Passes.h"
-#include "RAAA/Dialect/ADORA/Lowering/LowerPasses.h"
-#include "RAAA/Dialect/ADORATensor/IR/ADORATensor.h"
-#include "RAAA/Dialect/ADORATensor/Transforms/Passes.h"
-#include "RAAA/Misc/Passes.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
+#include "ADORA/Dialect/ADORA/Lowering/LowerPasses.h"
+#include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
+#include "ADORA/Dialect/ADORATensor/Transforms/Passes.h"
+#include "ADORA/Misc/Passes.h"
 
 
 #include "mlir/Dialect/Arith/Transforms/Passes.h"

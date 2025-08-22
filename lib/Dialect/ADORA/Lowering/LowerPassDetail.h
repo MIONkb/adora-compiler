@@ -9,13 +9,13 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 
 namespace mlir {
 // namespace ADORA {
 #define GEN_PASS_CLASSES
-#include "RAAA/Dialect/ADORA/Lowering/LowerPasses.h.inc"
+#include "ADORA/Dialect/ADORA/Lowering/LowerPasses.h.inc"
 // }
 } // end namespace mlir
 

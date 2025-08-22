@@ -33,10 +33,10 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/CommandLine.h"
 
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
-#include "RAAA/Dialect/ADORA/Transforms/Passes.h"
-#include "RAAA/Dialect/ADORA/Transforms/DependencyAnalysis.h"
-#include "RAAA/Dialect/ADORA/Transforms/TaskGraph/TaskGraph.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
+#include "ADORA/Dialect/ADORA/Transforms/DependencyAnalysis.h"
+#include "ADORA/Dialect/ADORA/Transforms/TaskGraph/TaskGraph.h"
 #include "./PassDetail.h"
 
 using namespace llvm; // for llvm.errs()

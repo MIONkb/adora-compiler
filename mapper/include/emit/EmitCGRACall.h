@@ -9,7 +9,7 @@
 // #include "llvm/ADT/PostOrderIterator.h"
 // #include "llvm/Support/raw_ostream.h"
 
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
 
 #include "mapper/mapper.h"
 #include "mapper/mapper_sa.h"

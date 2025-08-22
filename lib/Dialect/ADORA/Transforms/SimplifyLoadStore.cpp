@@ -31,10 +31,10 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Debug.h"
 
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
-#include "RAAA/Dialect/ADORA/Transforms/Passes.h"
-#include "RAAA/Dialect/ADORA/Transforms/DSE.h"
-#include "RAAA/Dialect/ADORA/Transforms/SimplifyLoadStore.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
+#include "ADORA/Dialect/ADORA/Transforms/DSE.h"
+#include "ADORA/Dialect/ADORA/Transforms/SimplifyLoadStore.h"
 #include "./PassDetail.h"
 
 using namespace llvm; // for llvm.errs()

@@ -7,7 +7,7 @@
 #ifndef CGRV_EMITCGRA_EMITOR_H
 #define CGRV_EMITCGRA_EMITOR_H
 
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"

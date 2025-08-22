@@ -43,8 +43,8 @@
 #include <functional>
 
 #include "./LowerPassDetail.h"
-#include "RAAA/Dialect/ADORA/Lowering/LowerPasses.h"
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Lowering/LowerPasses.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
 
 #define DEBUG_TYPE "ADORA_lowering"
 

@@ -15,12 +15,12 @@
 #include <iostream>
 #include <string>
 #include <bit>
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
 // #include "PassDetail.h"
-// #include "RAAA/Dialect/ADORA/Transforms/Passes.h"
-#include "RAAA/Dialect/ADORA/Transforms/SimplifyLoadStore.h"
+// #include "ADORA/Dialect/ADORA/Transforms/Passes.h"
+#include "ADORA/Dialect/ADORA/Transforms/SimplifyLoadStore.h"
 #include "inc/mlir_cdfg.h"
-#include "RAAA/Misc/DFG.h"
+#include "ADORA/Misc/DFG.h"
 
 // For Block handle 
 // #include "mlir/IR/BlockAndValueMapping.h"

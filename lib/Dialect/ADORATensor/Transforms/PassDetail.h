@@ -16,7 +16,7 @@ class ArithmeticDialect;
 class AffineDialect;
 } // namespace Tensor
 #define GEN_PASS_CLASSES
-#include "RAAA/Dialect/ADORATensor/Transforms/Passes.h.inc"
+#include "ADORA/Dialect/ADORATensor/Transforms/Passes.h.inc"
 
 
 /////// Tools

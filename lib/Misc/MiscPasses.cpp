@@ -11,8 +11,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 
-#include "RAAA/Dialect/ADORA/IR/ADORA.h"
-#include "RAAA/Misc/Passes.h"
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Misc/Passes.h"
 
 
 #include "llvm/IR/IRBuilder.h"

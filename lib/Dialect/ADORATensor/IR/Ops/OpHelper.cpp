@@ -5,7 +5,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Path.h"
 
-#include "RAAA/Dialect/ADORATensor/IR/ADORATensor.h"
+#include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 // #include "src/Dialect/Mlir/IndexExpr.hpp"
 // #include "src/Dialect/ONNX/DialectBuilder.hpp"
 // #include "src/Dialect/ONNX/ONNXLayoutHelper.hpp"

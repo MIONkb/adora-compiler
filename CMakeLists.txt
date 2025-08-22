@@ -47,7 +47,7 @@ link_directories(${LLVM_BUILD_LIBRARY_DIR})
 add_definitions(${LLVM_DEFINITIONS})
 
 
-add_subdirectory(include/RAAA)
+add_subdirectory(include/ADORA)
 add_subdirectory(lib)
 add_subdirectory(mapper)
 # add_subdirectory(test)
