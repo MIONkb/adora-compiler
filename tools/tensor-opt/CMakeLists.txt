@@ -8,6 +8,7 @@ set(LIBS
   MLIROptLib
   
   # Dialects
+  MLIRTosaDialect
   MLIRLinalgDialect
   MLIRMemRefDialect
   MLIRAffineDialect
