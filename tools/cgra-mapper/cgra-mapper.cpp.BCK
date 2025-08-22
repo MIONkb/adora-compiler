@@ -44,7 +44,6 @@
 #include "spdlog/cfg/argv.h"
 #include "emit/EmitCGRACall.h"
 #include "emit/EmitPytest.h"
-#include "tensorop/TensorOp.h"
 
 // #include "mlir/Dialect/Arith/Transforms/Passes.h"
 // #include "mlir/Dialect/Func/Transforms/Passes.h"
@@ -261,8 +260,6 @@ int main(int argc, char **argv) {
   std::vector<MapperSA*>mapper_Vec;
   std::vector<DFGIR*>DFGIR_Vec;
 
-  std::vector<ADORA_TENSOR_MAPPER*>tensor_mapper_Vec;
-
   std::string GeneralOpNameFile_str;
   if (GeneralOpNameFile == nullptr) {
     std::cerr << "Environment variable \" GENERAL_OP_NAME_ENV \" is not set." << std::endl;
@@ -275,13 +272,7 @@ int main(int argc, char **argv) {
   /////////////////////////
   /// Map ADORA Tensor
   /////////////////////////
-  MapAdoraTensorOp(moduleop, tensor_mapper_Vec, adg, timeout_ms, max_iters, objOpt);
-  // if(emit_type == "pytest"){
-  //   MapAdoraTensorOp(tensor_mapper_Vec)
-  // }
-  // else{ /// default to be C
-  //   CEmitter.preestablishPlacementConstraints(kernel, mapper);
-  // }
+  MapAdoraTensorOp(moduleop, )
   
   /////////////////////////
   /// Optimize module to make it suitable for emitting
@@ -394,8 +385,6 @@ int main(int argc, char **argv) {
     delete mapper;
   for(auto ir: DFGIR_Vec)
     delete ir;
-  for(auto mapper: tensor_mapper_Vec)
-    delete mapper;
 
   return 0; 
 }

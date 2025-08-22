@@ -2,7 +2,7 @@
 ###################
 ## User define args 
 ###################
-unroll=1 # 1: auto unroll, 0: Don't unroll
+unroll=0 # 1: auto unroll, 0: Don't unroll
 ###################
 ## Don't touch other part
 ###################
@@ -49,13 +49,15 @@ for file in "$srcfolder"/*; do
           --adora-math-rewrite \
           --adora-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
           --adora-auto-unroll="cgra-adg=${CGRA_ADG_PATH}/cgra_adg.json" \
-          "$file" -o $tarfolder/"$filename"_opt.mlir
+          "$file" -o $tarfolder/"$filename"_opt.mlir \
+          -mlir-print-ir-before-all 2>&1 | cat > $tempfolder/print_ir_before_all_"$filename".mlir
       else
          cgra-opt \
           --adora-simplify-loadstore \
           --adora-math-rewrite \
           --adora-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
-          "$file" -o $tarfolder/"$filename"_opt.mlir
+          "$file" -o $tarfolder/"$filename"_opt.mlir \
+          -mlir-print-ir-before-all 2>&1 | cat > $tempfolder/print_ir_before_all_"$filename".mlir
       fi
 
         # 

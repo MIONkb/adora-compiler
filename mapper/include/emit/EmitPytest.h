@@ -1,5 +1,5 @@
-#ifndef CGRV_EMITPYTEST_H
-#define CGRV_EMITPYTEST_H
+#ifndef ADORA_EMITPYTEST_H
+#define ADORA_EMITPYTEST_H
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Analysis/CallGraph.h"

@@ -8,8 +8,8 @@ asmfolder="$rootfolder/$IRfolder/4_asms"
 tarfolder="$rootfolder/$IRfolder/5_obj"
 # tarfolder="$CHIPYARD_DIR/generators/fdra/software/tests/bareMetalC"
 tempfolder="$rootfolder/$IRfolder/tempfiles"
-main_file="gemm_main.c"
-baremetal_file_name="gemm_mini_unroll"
+main_file="main.c"
+baremetal_file_name="matmul"
 DATASET_Size="MINI_DATASET"
 
 if [ ! -d "$tarfolder" ]; then
@@ -52,7 +52,6 @@ riscv64-unknown-elf-gcc \
  -DBAREMETAL=1 -e _start -g  \
  -o $tarfolder/${baremetal_file_name}-baremetal \
  $rootfolder/$main_file \
- /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/medley/deriche/deriche_mini/cpu_deriche.c \
  $src_files  $asm_files\
  $CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/syscalls.c \
  $CHIPYARD_DIR/generators/fdra/software/tests/UtilSrc/CRunnerUtils.cpp \

@@ -4,8 +4,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CGRV_EMITCGRA_EMITOR_H
-#define CGRV_EMITCGRA_EMITOR_H
+#ifndef ADORA_EMITCGRA_VISITOR_H
+#define ADORA_EMITCGRA_VISITOR_H
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -26,7 +26,7 @@ public:
     auto *thisCast = static_cast<ConcreteType *>(this);
     return TypeSwitch<Operation *, ResultType>(op)
         .template Case<
-            // CGRV Dialect
+            // ADORA Dialect
             ADORA::KernelOp, 
             ADORA::DataBlockLoadOp, ADORA::DataBlockStoreOp, 
             ADORA::LocalMemAllocOp,

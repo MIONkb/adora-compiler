@@ -5,7 +5,7 @@ IRfolder="IR"
 srcfolder="$rootfolder/$IRfolder/3_cgra_exes"
 tarfolder="$rootfolder/$IRfolder/4_asms"
 tempfolder="$rootfolder/$IRfolder/tempfiles"
-func_name="jacobi-1d"
+func_name="merge"
 
 if [ ! -d "$tarfolder" ]; then
   mkdir -p "$tarfolder"

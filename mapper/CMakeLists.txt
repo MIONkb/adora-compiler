@@ -37,17 +37,13 @@ add_library(CGRAMapperLIB
   src/op/operations.cpp
   )
 
-# target_include_directories(CGRAMapperLIB
-#   PRIVATE ${PROJ_INCLUDE_DIR}/lib/DFG/inc
-#   # PRIVATE ${LLVM_INCLUDE_DIRS}
-# )
+target_link_libraries(CGRAMapperLIB
+  CGRAEmit
+  ADORAMapTensorOp
+)
 
-# target_link_libraries(CGRAMapperLIB
-#   # PUBLIC MLIRIR
-#   # PUBLIC MLIRPass
-#   # PUBLIC MLIRTransforms
-#   # PUBLIC MLIRSCFDialect
-#   # PRIVATE ${LLVM_LIBRARY_DIRS}
-# )
+add_dependencies(CGRAMapperLIB 
+  GeneralCDFGGen)
 
-add_dependencies(CGRAMapperLIB GeneralCDFGGen)
+add_subdirectory(src/emit)
+add_subdirectory(src/tensorop)
