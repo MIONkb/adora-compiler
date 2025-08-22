@@ -26,14 +26,30 @@ DstOp ConvertToSameADORATensorOp(SrcOp src) {
   mlir::Operation* srcop = src.getOperation();
   auto loc = srcop->getLoc();
 
-  assert(srcop->getNumOperands() == DstOp::getExpectedNumOperands());
-
-  return builder.create<DstOp>(
+  //// Verify the operand number
+  if(srcop->getNumOperands() != DstOp::getExpectedNumOperands()){
+    src.dump();
+    assert(false && "Two tensor op should get same operands number");
+  }
+  
+  //// Build a new ADORATensor op
+  DstOp dst = builder.create<DstOp>(
     loc,
     src.getResultTypes(),   
     src.getOperands(),     
     src->getAttrs()       
   );
+
+  //// Replace the old one
+  // src.getBlock()->dump();
+  // src.getBlock()->push_back(dst);
+  // src.getBlock()->dump();
+  dst.getOperation()->moveBefore(src);
+  src.getOperation()->getBlock()->dump();
+  src.getOperation()->replaceAllUsesWith(dst);
+  src.erase();
+
+  return dst;
 }
 
 } // end namespace mlir

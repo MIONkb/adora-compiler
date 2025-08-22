@@ -20,4 +20,5 @@ namespace mlir {
 /// Include the auto-generated declarations.
 #include "RAAA/Dialect/ADORATensor/Interface/ShapeInferenceOpInterface.cpp.inc"
 
+
 } // end namespace mlir

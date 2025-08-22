@@ -352,11 +352,14 @@ func::FuncOp LinalgToSystolicGEMMPass::ConvertMatmulToSystolic(linalg::MatmulOp 
 
   //// lower matmul to gemm
   linalg::MatmulOp ToLowerOp = dyn_cast<linalg::MatmulOp>(func.getBody().front().front());
-  ADORATensor::MatMulOp newmatmul;
-  newmatmul = ConvertToSameADORATensorOp<ADORATensor::MatMulOp>(ToLowerOp);
+  ADORATensor::GemmOp newGemm;
+  newGemm = ConvertToSameADORATensorOp<ADORATensor::GemmOp>(ToLowerOp);
 
-  //// lower to a 4x4 weight stationary
-  
+  //// set to a 4x4 weight stationary
+  ADORATensor::SystolicImplInterface Sinterface(newGemm);
+  mlir::SmallVector<int64_t> tile = {4,4};
+  Sinterface.setStationaryKind(MatMulStrategy::WeightStationary);
+  Sinterface.setTileSize(ArrayRef<int64_t>({4,4}));
 
   matmul_idx++;
   return func;

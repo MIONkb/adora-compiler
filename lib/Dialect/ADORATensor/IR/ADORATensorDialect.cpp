@@ -14,8 +14,13 @@ using namespace mlir::ADORA::ADORATensor;
 
 #include "RAAA/Dialect/ADORATensor/IR/ADORATensorOpsDialect.cpp.inc"
 #include "RAAA/Dialect/ADORATensor/IR/ADORATensorOpsTypes.cpp.inc"
+
+#define GET_OP_CLASSES
+#include "RAAA/Dialect/ADORATensor/IR/ADORATensorOps.cpp.inc"
+
 void ADORATensorDialect::initialize() {
   addOperations<
+#define GET_OP_LIST
 #include "RAAA/Dialect/ADORATensor/IR/ADORATensorOps.cpp.inc"
       >();
 }

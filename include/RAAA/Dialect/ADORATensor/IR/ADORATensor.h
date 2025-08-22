@@ -1,8 +1,8 @@
 //===- Test.h - Test dialect --------------------------------------*- C++ -*-===//
 //===----------------------------------------------------------------------===//
 
-#ifndef CGRAOPT_DIALECT_ADORATensor_IR_Test_H_
-#define CGRAOPT_DIALECT_ADORATensor_IR_Test_H_
+#ifndef CGRAOPT_DIALECT_ADORATENSOR_IR_H_
+#define CGRAOPT_DIALECT_ADORATENSOR_IR_H_
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -15,11 +15,14 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "mlir/Support/LogicalResult.h"
+
 
 // #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -36,8 +39,8 @@
 //===----------------------------------------------------------------------===//
 // Test Dialect Operations
 //===----------------------------------------------------------------------===//
-#include "RAAA/Dialect/ADORATensor/Interface/ShapeInferenceOpInterface.h.inc"
-#include "RAAA/Dialect/ADORATensor/Interface/CloneFromOtherDialectOpInterface.h.inc"
+#include "RAAA/Dialect/ADORATensor/Interface/ShapeInferenceOpInterface.h"
+#include "RAAA/Dialect/ADORATensor/Interface/SystolicImplInterface.h"
 
 #define GET_OP_CLASSES
 #include "RAAA/Dialect/ADORATensor/IR/ADORATensorOps.h.inc"

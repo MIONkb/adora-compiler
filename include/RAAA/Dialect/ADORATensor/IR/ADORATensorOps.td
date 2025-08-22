@@ -26,7 +26,8 @@ include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 // include "mlir/Dialect/Func/IR/FuncOps.td"
 // include "mlir/Dialect/Func/IR/FuncOps.h"
 include "RAAA/Dialect/ADORATensor/Interface/ShapeInferenceOpInterface.td"
-include "RAAA/Dialect/ADORATensor/Interface/CloneFromOtherDialectOpInterface.td"
+// include "RAAA/Dialect/ADORATensor/Interface/CloneFromOtherDialectOpInterface.td"
+include "RAAA/Dialect/ADORATensor/Interface/SystolicImplInterface.td"
 
 // include "mlir/Dialect/MemRef/IR/MemRefOps.td"
 // #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -43,7 +44,8 @@ class ADORATensor_Op<string mnemonic, list<Trait> traits = []> :
 /// Similar to ONNX-MLIR ONNXMatMulOp
 
 def MatMulOp : ADORATensor_Op<"matmul",
-    [DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
+    [DeclareOpInterfaceMethods<ShapeInferenceOpInterface>,
+    DeclareOpInterfaceMethods<SystolicImplInterface>]> {
       // DeclareOpInterfaceMethods<CloneFromOtherDialectOpInterface>
   let summary = "ADORA Tensor MatMul operation";
   let description = [{
@@ -62,26 +64,40 @@ def MatMulOp : ADORATensor_Op<"matmul",
     int getNumberOfResults() {
       return 1;
     }
-
-    enum class MatMulStrategy {
-      WeightStationary,
-      InputStationary,
-      OutputStationary
-    };
-    StringRef getMethodStrRef(MatMulStrategy method);
-
-    StringRef getStationaryKindAttrStr(){
-      return "stationary_kind";
-    }
-
-    void setStationaryKind(MatMulStrategy method);
-    llvm::StringRef getStationaryKind();
   }];
   let extraClassDefinition = [{
 
   }];
 }
 
+def GemmOp : ADORATensor_Op<"Gemm",
+    [
+    DeclareOpInterfaceMethods<ShapeInferenceOpInterface>,
+    DeclareOpInterfaceMethods<SystolicImplInterface>]> {
+      // DeclareOpInterfaceMethods<CloneFromOtherDialectOpInterface>
+  let summary = "ADORA Tensor Gemm operation";
+  let description = [{
+    Gemm with 3 inputs for CGRA deployment;
+  }];
+  let arguments = (ins 
+    AnyTypeOf<[TensorOf<[F16]>, TensorOf<[F32]>, TensorOf<[F64]>, TensorOf<[UI32]>, TensorOf<[UI64]>, TensorOf<[I32]>, TensorOf<[I64]>, TensorOf<[BF16]>, AnyMemRef]>:$A,
+    AnyTypeOf<[TensorOf<[F16]>, TensorOf<[F32]>, TensorOf<[F64]>, TensorOf<[UI32]>, TensorOf<[UI64]>, TensorOf<[I32]>, TensorOf<[I64]>, TensorOf<[BF16]>, AnyMemRef]>:$B,
+    AnyTypeOf<[TensorOf<[F16]>, TensorOf<[F32]>, TensorOf<[F64]>, TensorOf<[UI32]>, TensorOf<[UI64]>, TensorOf<[I32]>, TensorOf<[I64]>, TensorOf<[BF16]>, AnyMemRef]>:$C);
+  let results = (outs AnyTypeOf<[TensorOf<[F16]>, TensorOf<[F32]>, TensorOf<[F64]>, TensorOf<[UI32]>, TensorOf<[UI64]>, TensorOf<[I32]>, TensorOf<[I64]>, TensorOf<[BF16]>, AnyMemRef]>:$O);
+  let extraClassDeclaration = [{
+    static constexpr unsigned getExpectedNumOperands() { return 3; }
 
+    int getNumberOfOperands() {
+      return 3;
+    }
+
+    int getNumberOfResults() {
+      return 1;
+    }
+  }];
+  let extraClassDefinition = [{
+
+  }];
+}
 
 #endif // ADORATensor_OPS

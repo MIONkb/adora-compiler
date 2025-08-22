@@ -4,6 +4,14 @@ set(LLVM_TARGET_DEFINITIONS ShapeInferenceOpInterface.td)
 mlir_tablegen(ShapeInferenceOpInterface.h.inc  -gen-op-interface-decls)
 add_public_tablegen_target(ADORATensorShapeInferenceOpInterfaceIncGen)
 
+
+add_mlir_interface(SystolicImplInterface)
+
+set(LLVM_TARGET_DEFINITIONS SystolicImplInterface.td)
+mlir_tablegen(SystolicImplInterface.h.inc  -gen-op-interface-decls)
+add_public_tablegen_target(ADORATensorSystolicImplInterfaceIncGen)
+
+
 #add_mlir_interface(CloneFromOtherDialectOpInterface)
 
 #set(LLVM_TARGET_DEFINITIONS CloneFromOtherDialectOpInterface.td)
