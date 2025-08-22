@@ -31,9 +31,9 @@
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
 #include "ADORA/Dialect/ADORA/Transforms/Passes.h"
 #include "ADORA/Dialect/ADORA/Transforms/DSE.h"
-#include "../../../DFG/inc/mlir_cdfg.h"
+#include "../../../../DFG/inc/mlir_cdfg.h"
 #include "ADORA/Misc/DFG.h"
-#include "./PassDetail.h"
+#include "../PassDetail.h"
 
 
 using namespace llvm; // for llvm.errs()

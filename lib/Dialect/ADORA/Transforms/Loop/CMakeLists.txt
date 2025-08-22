@@ -1,11 +1,11 @@
-add_mlir_dialect_library(MLIRADORATransforms
-  DependencyAnalysis.cpp
-  DFGgenPass.cpp
-  ScheduleAdoraTasks.cpp
-  SimplifyLoadStore.cpp
-
-  TaskGraph/TaskNode.cpp
-  TaskGraph/TaskGraph.cpp
+add_mlir_dialect_library(MLIRADORALoopTransforms
+  AdjustMemoryFootprint.cpp
+  AffineLoopReorder.cpp
+  AffineLoopSimplify.cpp
+  AffineLoopUnroll.cpp
+  AffineLoopUnrollAndJam.cpp
+  AutoDesignSpaceExplore.cpp
+  AutoUnroll.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${PROJ_INCLUDE_DIR}/ADORA/Dialect/ADORA/IR
@@ -15,20 +15,19 @@ add_mlir_dialect_library(MLIRADORATransforms
 
   DEPENDS
   ADORAPassIncGen
+  GeneralCDFGGen
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRADORALoopTransforms
-  MLIRADORAKernelExtract
   GeneralCDFGGen
   MLIRAffineDialect
+  MLIRAffineToStandard
   MLIRADORATransformsUtility
-
   # MLIRPass
   # MLIRTransforms
   # MLIRSCFDialect
-  # MLIRAffineToStandard
   )
 
-add_subdirectory(Loop)
-add_subdirectory(Kernel)
+set(LIBS
+  GeneralCDFGGen
+)

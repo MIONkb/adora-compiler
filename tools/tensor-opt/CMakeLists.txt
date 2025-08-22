@@ -33,6 +33,7 @@ set(LIBS
 
   #ADORA
   MLIRADORAOps
+  MLIRADORAKernelExtract
   # MLIRADORALowerings
   # MLIRADORAMisc
   # MLIRADORATransforms

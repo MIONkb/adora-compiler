@@ -16,7 +16,7 @@
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
 #include "ADORA/Dialect/ADORA/Transforms/Passes.h"
-#include "./PassDetail.h"
+#include "../PassDetail.h"
 
 
 using namespace llvm; // for llvm.errs()

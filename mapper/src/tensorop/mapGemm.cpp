@@ -121,9 +121,9 @@ return [=](OpBuilder &builder, Location loc, ValueRange ivs) {
     Value k_it = ivs[1];
     Value i_it = ivs[2];
 
-    j_it.dump();
-    k_it.dump();
-    i_it.dump();
+    // j_it.dump();
+    // k_it.dump();
+    // i_it.dump();
 
     auto i32Type = builder.getI32Type();
 
