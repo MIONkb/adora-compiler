@@ -25,7 +25,7 @@ namespace ADORA{
 namespace ADORATensor{
 
 enum class MatMulStrategy {
-WeightStationary,
+  WeightStationary,
   InputStationary,
   OutputStationary
 };

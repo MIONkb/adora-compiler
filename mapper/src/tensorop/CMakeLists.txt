@@ -5,4 +5,7 @@ add_library(ADORAMapTensorOp
   mapGemm.cpp 
 )
 
-add_dependencies(ADORAMapTensorOp ADORATensorOps)
+target_link_libraries(ADORAMapTensorOp
+  ADORATensorOps
+  ADORATensorInterface
+)
