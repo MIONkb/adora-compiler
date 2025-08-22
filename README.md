@@ -2,28 +2,33 @@
 An MLIR project for CGRA SoC([FDRA Repository](https://github.com/MIONkb/FDRA)).
 Adora includes two compilers designed for the FDRA CGRA SoC:
 
-- **`cgra-opt`**
+## `tensor-opt`
+High-level tensor transformation tool for CGRA-based DNN acceleration.  
 
--Automated lowering and transformation.
+- Converts commonly used tensor operations to ADORATensor built-in operations (e.g., `linalg.matmul`-> `ADORATensor.Gemm`).  
+- Focuses on operator-level dataflow optimizations before hardware mapping.  
 
--Performs affine optimizations.
+## `cgra-opt`
+Mid-level automated lowering and transformation framework.  
 
--Generates Data-Flow Graphs (DFG).
+- Performs affine optimizations for C kernels and tensor operations not directly supported in the ADORATensor dialect.  
+- Generates Data-Flow Graphs (DFGs) for subsequent mapping.  
+- Can be executed independently of specific hardware information.  
 
--Can be run independently of hardware information.
+## `cgra-mapper`
+Low-level mapper that maps DFGs to the Architecture Description Graph (ADG).  
 
-- **`cgra-mapper`**
+- Handles hardware-specific scheduling, placement, and resource allocation.  
+- Generates RISC-V execution files for the Rocket+CGRA SoC. 
+- Or generates pytest files for the AXI-CGRA simulation envioronment.   
 
--Maps DFG to ADG (Architecture Description Graph).
-
--Generates RISC-V execution files for the Rocket+CGRA SoC.
 
 #### If you have any issues related to this repository, please don't hesitate to get in touch!
 
 ## Directories:
-- **`tools`** : Contains the main functions for `cgra-opt` and `cgra-mapper`
+- **`tools`** : Contains the main functions for `tensor-opt`, `cgra-opt` and `cgra-mapper`
 
-- **`include` / `lib`** : C++ headers and source files for `cgra-opt`
+- **`include` / `lib`** : C++ headers and source files for `cgra-opt` and `tensor-opt`
 
 - **`mapper`** : C++ source files for `cgra-mapper`
 

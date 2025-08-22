@@ -1,15 +1,15 @@
-add_mlir_dialect_library(ADORATensorTransforms
-  LinalgToSystolicGEMM.cpp
+add_mlir_dialect_library(ADORATensorUtility
+  Utility.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${PROJ_INCLUDE_DIR}/ADORA/Dialect/ADORATensor/IR
 
   DEPENDS
-  ADORATensorPassIncGen
+  MLIRFuncDialect
+  MLIRMemRefDialect
   
   LINK_LIBS PUBLIC
   ADORATensorOps
-  ADORATensorUtility
   MLIRTensorDialect
   #MLIRIR
   #MLIRPass
@@ -20,5 +20,5 @@ add_mlir_dialect_library(ADORATensorTransforms
   )
 
 set(LIBS
-  ADORATensorTransforms
+  ADORATensorUtility
 )

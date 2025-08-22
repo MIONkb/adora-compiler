@@ -54,6 +54,10 @@ namespace mlir {
 namespace ADORA {
 namespace ADORATensor {
 
+
+func::FuncOp 
+  ConvertMatmulToFunc(mlir::linalg::MatmulOp op, llvm::SetVector<mlir::Value> &operands, std::string FnName);
+
 }
 } // namespace ADORA
 } // namespace mlir
