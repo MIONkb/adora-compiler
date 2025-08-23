@@ -1,15 +1,10 @@
 ```
-                                                   
-    // | |     //    ) ) //   ) ) //   ) )  // | | 
-   //__| |    //    / / //   / / //___/ /  //__| | 
-  / ___  |   //    / / //   / / / ___ (   / ___  | 
- //    | |  //    / / //   / / //   | |  //    | | 
-//     | | //____/ / ((___/ / //    | | //     | | 
-<h2>ADORA: Adaptive Dataflow Optimization for Reconfigurable Architectures</h2>
+      __   __   __       
+ /\  |  \ /  \ |__)  /\  
+/~~\ |__/ \__/ |  \ /~~\ 
+                         
 ```
-
-
-
+## ADORA: Adaptive Dataflow Optimization for Reconfigurable Architectures.
 
 An MLIR project for CGRA SoC ([FDRA Repository](https://github.com/MIONkb/FDRA)).
 ADORA includes two compilers designed for the FDRA CGRA SoC:
