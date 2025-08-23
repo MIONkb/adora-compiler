@@ -1,15 +1,12 @@
-<div align="center">
-
+```
                                                    
     // | |     //    ) ) //   ) ) //   ) )  // | | 
    //__| |    //    / / //   / / //___/ /  //__| | 
   / ___  |   //    / / //   / / / ___ (   / ___  | 
  //    | |  //    / / //   / / //   | |  //    | | 
 //     | | //____/ / ((___/ / //    | | //     | | 
-
 <h2>ADORA: Adaptive Dataflow Optimization for Reconfigurable Architectures</h2>
-
-</div>
+```
 
 
 
