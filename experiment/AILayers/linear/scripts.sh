@@ -14,7 +14,7 @@ mlir-opt \
     linalg_linear.mlir \
     -o affine.mlir
 
-cgra-opt --adora-convert-linalg-to-systolic-gemm linalg_linear_elide.mlir 
+tensor-opt --adora-convert-linalg-to-systolic-gemm linalg_linear_elide.mlir 
 
 source scripts/env.sh
 cgra-mapper \

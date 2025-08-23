@@ -125,7 +125,7 @@ return [=](OpBuilder &builder, Location loc, ValueRange ivs) {
     // k_it.dump();
     // i_it.dump();
 
-    auto i32Type = builder.getI32Type();
+    // auto i32Type = builder.getI32Type();
 
     /**
      * Example: N K M (j k i)

@@ -1,21 +1,36 @@
-# Adora : Adaptive Dataflow Optimization for Reconfigurable Architectures.
-An MLIR project for CGRA SoC([FDRA Repository](https://github.com/MIONkb/FDRA)).
-Adora includes two compilers designed for the FDRA CGRA SoC:
+<div align="center">
+  ____  ___     ___   ____    ____         __   ____  ____    ____         __   ___   ___ ___  ____ ____  _        ___  ____  
+ /    ||   \   /   \ |    \  /    |       /  ] /    ||    \  /    |       /  ] /   \ |   |   ||    \    || |      /  _]|    \ 
+|  o  ||    \ |     ||  D  )|  o  |      /  / |   __||  D  )|  o  |      /  / |     || _   _ ||  o  )  | | |     /  [_ |  D  )
+|     ||  D  ||  O  ||    / |     |     /  /  |  |  ||    / |     |     /  /  |  O  ||  \_/  ||   _/|  | | |___ |    _]|    / 
+|  _  ||     ||     ||    \ |  _  |    /   \_ |  |_ ||    \ |  _  |    /   \_ |     ||   |   ||  |  |  | |     ||   [_ |    \ 
+|  |  ||     ||     ||  .  \|  |  |    \     ||     ||  .  \|  |  |    \     ||     ||   |   ||  |  |  | |     ||     ||  .  \
+|__|__||_____| \___/ |__|\_||__|__|     \____||___,_||__|\_||__|__|     \____| \___/ |___|___||__| |____||_____||_____||__|\_|
+                                                                                                                              
 
-## `tensor-opt`
+## ADORA: Adaptive Dataflow Optimization for Reconfigurable Architectures
+
+</div>
+
+
+
+An MLIR project for CGRA SoC ([FDRA Repository](https://github.com/MIONkb/FDRA)).
+ADORA includes two compilers designed for the FDRA CGRA SoC:
+
+- ## `tensor-opt`
 High-level tensor transformation tool for CGRA-based DNN acceleration.  
 
 - Converts commonly used tensor operations to ADORATensor built-in operations (e.g., `linalg.matmul`-> `ADORATensor.Gemm`).  
 - Focuses on operator-level dataflow optimizations before hardware mapping.  
 
-## `cgra-opt`
+- ## `cgra-opt`
 Mid-level automated lowering and transformation framework.  
 
 - Performs affine optimizations for C kernels and tensor operations not directly supported in the ADORATensor dialect.  
 - Generates Data-Flow Graphs (DFGs) for subsequent mapping.  
 - Can be executed independently of specific hardware information.  
 
-## `cgra-mapper`
+- ## `cgra-mapper`
 Low-level mapper that maps DFGs to the Architecture Description Graph (ADG).  
 
 - Handles hardware-specific scheduling, placement, and resource allocation.  
