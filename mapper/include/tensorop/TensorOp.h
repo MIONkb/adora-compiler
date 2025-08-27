@@ -18,15 +18,15 @@ void MapAdoraTensorOp(MLIRContext* context, mlir::ModuleOp module,
                     ADG* adg, int timeout_ms, int max_iters, bool objOpt);
 
 
-class TensoDataflowGen : public ADORATensorOpVisitorBase<TensoDataflowGen, bool> {
+class TensorDataflowGen : public ADORATensorOpVisitorBase<TensorDataflowGen, bool> {
 public:
   /// Class define
   OpBuilder opbuilder;
   std::vector<ADORA_TENSOR_MAPPER*> mappers;
 
-  /// TensoDataflowGen
-  // TensoDataflowGen(){}
-  TensoDataflowGen(MLIRContext* _) : opbuilder(_){}
+  /// TensorDataflowGen
+  // TensorDataflowGen(){}
+  TensorDataflowGen(MLIRContext* _) : opbuilder(_){}
 
   using ADORATensorOpVisitorBase::visitOp;
 

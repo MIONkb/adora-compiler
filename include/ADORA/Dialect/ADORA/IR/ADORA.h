@@ -45,6 +45,11 @@ namespace ADORA {
 std::optional<int64_t> getSingleMemrefAccessSpace(::mlir::affine::AffineForOp forOp);
 
 ///////////////
+/// AffineLoopSimplify.cpp
+///////////////
+LogicalResult simplifyLoopLevelsInModuleOp(mlir::ModuleOp& m);
+
+///////////////
 /// SimplifyLoadStore.cpp
 ///////////////
 enum class PositionRelationInLoop { SameLevel, LhsOuter, RhsOuter, NotInSameLoopNest}; 

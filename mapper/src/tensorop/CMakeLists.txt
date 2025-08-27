@@ -10,4 +10,5 @@ add_library(ADORAMapTensorOp
 target_link_libraries(ADORAMapTensorOp
   ADORATensorOps
   ADORATensorInterface
+  MLIRADORAKernelExtract
 )

@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRADORAKernelExtract
   AffineForToKernelPass.cpp
   KernelToFuncPass.cpp
+  AffineFortoKernelUtil.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${PROJ_INCLUDE_DIR}/ADORA/Dialect/ADORA/IR
@@ -9,16 +10,11 @@ add_mlir_dialect_library(MLIRADORAKernelExtract
   ${PROJ_INCLUDE_DIR}/lib/DFG/inc
 
   DEPENDS
-  ADORAPassIncGen
-  GeneralCDFGGen
+  MLIRADORAOps
 
   LINK_LIBS PUBLIC
   MLIRIR
   GeneralCDFGGen
   MLIRAffineDialect
-  MLIRADORATransformsUtility
-  # MLIRAffineToStandard
-  # MLIRPass
-  # MLIRTransforms
-  # MLIRSCFDialect
+  # MLIRADORATransformsUtility
   )

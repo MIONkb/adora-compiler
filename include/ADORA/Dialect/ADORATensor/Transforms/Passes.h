@@ -9,7 +9,7 @@
 #define ADORATENSOR_DIALECT_PASSES_H_
 
 #include "mlir/Pass/Pass.h"
-
+#include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 
 namespace mlir {
 namespace ADORA {
@@ -17,6 +17,7 @@ namespace ADORATensor{
 
 /// Lower some operators in Linalg dialect to 
 std::unique_ptr<OperationPass<ModuleOp>> createLinalgToSystolicGEMMPass();
+std::unique_ptr<OperationPass<ModuleOp>> createADORATensorOpCdfgGenPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

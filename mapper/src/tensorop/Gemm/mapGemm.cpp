@@ -15,7 +15,7 @@ using namespace ::mlir::affine;
 namespace mlir{
 namespace ADORA{
 
-bool TensoDataflowGen::visitOp(ADORATensor::GemmOp op){
+bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
   SystolicImplInterface SystolicPara(op);
   ArrayRef<int64_t> tilesize = SystolicPara.getTileSize();
   StringRef stragegy = SystolicPara.getStationaryKind();

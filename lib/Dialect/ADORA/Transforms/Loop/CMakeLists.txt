@@ -1,10 +1,10 @@
 add_mlir_dialect_library(MLIRADORALoopTransforms
   AdjustMemoryFootprint.cpp
   AffineLoopReorder.cpp
-  AffineLoopSimplify.cpp
   AffineLoopUnroll.cpp
   AffineLoopUnrollAndJam.cpp
   AutoDesignSpaceExplore.cpp
+  AffineLoopSimplify.cpp
   AutoUnroll.cpp
 
   ADDITIONAL_HEADER_DIRS

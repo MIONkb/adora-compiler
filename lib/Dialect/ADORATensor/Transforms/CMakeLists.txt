@@ -1,5 +1,9 @@
+# To solve error: exception handling disabled, use '-fexceptions' to enable
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSPDLOG_NO_EXCEPTIONS ")
+set(SPDLOG_NO_EXCEPTIONS ON)
 add_mlir_dialect_library(ADORATensorTransforms
   LinalgToSystolicGEMM.cpp
+  TensorCDFGGenPass.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${PROJ_INCLUDE_DIR}/ADORA/Dialect/ADORATensor/IR
@@ -8,6 +12,9 @@ add_mlir_dialect_library(ADORATensorTransforms
   ADORATensorPassIncGen
   
   LINK_LIBS PUBLIC
+  GeneralCDFGGen
+  MLIRADORALoopTransforms
+  ADORAMapTensorOp
   ADORATensorOps
   ADORATensorUtility
   MLIRTensorDialect
@@ -22,3 +29,4 @@ add_mlir_dialect_library(ADORATensorTransforms
 set(LIBS
   ADORATensorTransforms
 )
+

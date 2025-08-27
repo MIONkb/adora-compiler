@@ -1,23 +1,23 @@
 //===----------------------------------------------------------------------===//
 //
-// This file implements Data flow graph generation
+// This file implements Data flow graph generation for ADORA Tensor
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/OperationSupport.h"
+// #include "mlir/IR/OpDefinition.h"
+#include "mlir/Transforms/RegionUtils.h"
+#include "mlir/Support/LLVM.h"
 
 #include <iostream>
 #include <string>
 #include <bit>
-#include "ADORA/Dialect/ADORA/IR/ADORA.h"
-#include "PassDetail.h"
-#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
-#include "../../../DFG/inc/mlir_cdfg.h"
-#include "ADORA/Misc/DFG.h"
 
-// For Block handle 
 // #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
@@ -26,6 +26,14 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Misc/DFG.h"
+#include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
+#include "PassDetail.h"
+// lower tensor op
+#include "../../../../mapper/include/tensorop/TensorOp.h"
+
+
 // // DFG
 // ADORA::KernelOp* _kernel_toDFG;
 // int _variable_config_cnt = 0;
@@ -33,20 +41,31 @@
 using namespace mlir;
 using namespace mlir::affine;
 using namespace mlir::ADORA;
+using namespace mlir::ADORA::ADORATensor;
 
-#define DEBUG_TYPE "adora-dfg-gen"
+#define DEBUG_TYPE "adora-tensor-dfg-gen"
 
-namespace
+namespace mlir{
+namespace ADORA{
+namespace ADORATensor{
+
+class ADORATensorOpCdfgGenPass : public ADORATensorOpCdfgGenPassBase<ADORATensorOpCdfgGenPass>
 {
-  class ADORALoopCdfgGenPass : public ADORALoopCdfgGenBase<ADORALoopCdfgGenPass>
-  {
-    void runOnOperation() override;
-  };
+  void runOnOperation() override;
+};
+
+std::unique_ptr<OperationPass<ModuleOp>> createADORATensorOpCdfgGenPass()
+{
+  return std::make_unique<ADORATensorOpCdfgGenPass>();
+}
+
+}
+}
 } // namespace
 
-void ADORALoopCdfgGenPass::runOnOperation()
+void ADORATensorOpCdfgGenPass::runOnOperation()
 {
-  mlir::Operation *m = getOperation();
+  mlir::ModuleOp m = getOperation();
   llvm::errs() << "[test] kernel! " ; m->dump() ;
 
   /// Get function name
@@ -77,7 +96,15 @@ void ADORALoopCdfgGenPass::runOnOperation()
     //   WalkResult::interrupt();
     // });
     int kernel_cnt = 0;
-    m->walk([&](ADORA::KernelOp kernel) {
+
+    TensorDataflowGen engine(m->getContext());
+    m.walk([&](mlir::Operation* op) {
+      if(engine.dispatchVisitor(op)){
+        m.dump();
+      }
+    });
+    simplifyLoopLevelsInModuleOp(m);
+    m.walk([&](ADORA::KernelOp kernel) {
       std::string kernelName = kernel.getKernelName();
       if(kernelName.empty()){
         kernelName = "kernel_" + std::to_string(kernel_cnt);
@@ -94,9 +121,4 @@ void ADORALoopCdfgGenPass::runOnOperation()
   }
   // assert(cnt == 1 && "There should be only 1 topFunc in IR Module.");
 
-}
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::ADORA::createADORALoopCdfgGenPass()
-{
-  return std::make_unique<ADORALoopCdfgGenPass>();
 }

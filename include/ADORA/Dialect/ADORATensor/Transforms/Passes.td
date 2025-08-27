@@ -23,4 +23,14 @@ def LinalgToSystolicGEMMPass : Pass<"adora-convert-linalg-to-systolic-gemm", "Mo
     "affine::AffineDialect", "linalg::LinalgDialect", "memref::MemRefDialect", "ADORA::ADORADialect", "ADORA::ADORATensor::ADORATensorDialect"];
 }
 
+def ADORATensorOpCdfgGenPass : Pass<"adora-gen-tensor-op-cdfg", "ModuleOp"> {
+  let summary = "Generate cdfg of ADORA from a ADORA tensor op";
+  let constructor = "createADORATensorOpCdfgGenPass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "::mlir::ADORA::ADORADialect",
+    "::mlir::scf::SCFDialect",
+    "::mlir::affine::AffineDialect"
+  ];
+}
 #endif 

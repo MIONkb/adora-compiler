@@ -11,7 +11,7 @@ namespace ADORA{
 
 void MapAdoraTensorOp(MLIRContext* context, mlir::ModuleOp moduleop, std::vector<ADORA_TENSOR_MAPPER*> mappers,
                     ADG* adg, int timeout_ms, int max_iters, bool objOpt){
-  TensoDataflowGen engine(context);
+  TensorDataflowGen engine(context);
   moduleop.walk([&](mlir::Operation* op) {
     if(engine.dispatchVisitor(op)){
       moduleop.dump();
