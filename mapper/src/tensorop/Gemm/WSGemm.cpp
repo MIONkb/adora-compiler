@@ -29,7 +29,7 @@ using WSBodyBuilderFn = std::function<void(OpBuilder &, Location, ValueRange)>;
 
 affine::AffineForOp GenerateOnDeviceNestedLoopWithoutLoopCarry(
     OpBuilder &builder, Location loc,
-    int level = 1, SmallVector<int> Upperbounds = {1}, 
+    int level = 2, SmallVector<int> Upperbounds = {1, 1}, 
     WSBodyBuilderFn InnerMostBodyBuilder = nullptr) 
 {
 
@@ -57,9 +57,9 @@ affine::AffineForOp GenerateOnDeviceNestedLoopWithoutLoopCarry(
         [&](OpBuilder &b, Location loc, Value v, ValueRange vs) {
           /// v here is useless
           allIvs.push_back(v);
-          assert(allIvs.size() >= 3);
-          SmallVector<Value> lastThreeIvs(allIvs.end() - 3, allIvs.end());
-          InnerMostBodyBuilder(b, loc, lastThreeIvs);
+          assert(allIvs.size() >= 2);
+          SmallVector<Value> lastTwoIvs(allIvs.end() - 2, allIvs.end());
+          InnerMostBodyBuilder(b, loc, lastTwoIvs);
         });
       current = inner;
     }
@@ -273,6 +273,7 @@ WSBodyBuilderFn TileofWeightStationary(
     ////// generate explicit data transfer: host to device
     ///////////////////////////////////////////////
     unsigned BlockLoadStoreOpId = 0;
+    SmallVector<ADORA::DataBlockStoreOp> stores; 
 
     /////////////////////
     /// transfer A 
@@ -289,7 +290,6 @@ WSBodyBuilderFn TileofWeightStationary(
 
       AffineMap memIVmap = AffineMap::get(2, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
       MemRefType newMemRef = MemRefType::get(shape, dtype);
-      llvm::errs() << "[debug] newMemRef: ";newMemRef.dump();
 
       ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
                 (loc, A, memIVmap, ValueRange({vi, vk}), newMemRef);
@@ -313,19 +313,19 @@ WSBodyBuilderFn TileofWeightStationary(
       SmallVector<AffineExpr, 2> Exprs;
       Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
       
-      if(tile_col_size > 4){
+      if(tile_col_size >= 4){
         for(int col = 0; col < tile_col_size / 4; col++){
           SmallVector<AffineExpr, 2> Exprs;
           Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
           Exprs.push_back(builder.getAffineDimExpr(1) + col*4); // last dim's affine expr
 
           SmallVector<int64_t, 4> shape;
-          shape.push_back(tile_row_size * temporal_count_dim_k);
+          shape.push_back(temporal_count_dim_k);
           shape.push_back(4);
 
           AffineMap memIVmap = AffineMap::get(2, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
           MemRefType newMemRef = MemRefType::get(shape, dtype);
-          llvm::errs() << "[debug] newMemRef: ";newMemRef.dump();
+          // llvm::errs() << "[debug] newMemRef: ";newMemRef.dump();
 
           ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
                     (loc, A, memIVmap, ValueRange({vk, vj}), newMemRef);
@@ -350,15 +350,14 @@ WSBodyBuilderFn TileofWeightStationary(
         Exprs.push_back(builder.getAffineDimExpr(1) + (int)tile_col_size/(int)4); // last dim's affine expr
 
         SmallVector<int64_t, 4> shape;
-        shape.push_back(tile_row_size * temporal_count_dim_k);
+        shape.push_back(temporal_count_dim_k);
         shape.push_back(tile_col_size%4);
 
         AffineMap memIVmap = AffineMap::get(2, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
         MemRefType newMemRef = MemRefType::get(shape, dtype);
-        llvm::errs() << "[debug] newMemRef: ";newMemRef.dump();
 
         ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                  (loc, A, memIVmap, ValueRange({vk, vj}), newMemRef);
+                  (loc, B, memIVmap, ValueRange({vk, vj}), newMemRef);
         // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
                   // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
         // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
@@ -377,16 +376,78 @@ WSBodyBuilderFn TileofWeightStationary(
     /////////////////////
 
     /////////////////////
+    /// transfer C
+    /////////////////////
+    for(int col = 0; col < tile_col_size; col++){
+      SmallVector<AffineExpr, 2> Exprs;
+      Exprs.push_back(builder.getAffineDimExpr(0) + col); // last dim's affine expr
+      Exprs.push_back(builder.getAffineDimExpr(1)); // last dim's affine expr
+
+      SmallVector<int64_t, 4> shape;
+      shape.push_back(temporal_count_dim_m);
+      shape.push_back(1);
+
+      AffineMap memIVmap = AffineMap::get(2, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
+      MemRefType newMemRef = MemRefType::get(shape, dtype);
+
+      ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
+              (loc, C, memIVmap, ValueRange({vi, vj}), newMemRef);
+      // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
+                    // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
+      // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
+      // BlockLoad.getOperation()->moveBefore(Kernel);
+      
+      BlockLoad.setKernelName("GEMMWS");
+      BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
+
+      /// has stride
+      // if(temporal_count_dim_k != 1){
+      //   BlockLoad.setStrides(ArrayRef<int64_t>({tile_row_size, 1}));
+      // }
+      ///////////
+      /// generate the store back
+      ///////////
+      ADORA::LocalMemAllocOp alloc = builder.create<ADORA::LocalMemAllocOp>(newMemRef);
+      alloc.setKernelName(Kernel.getKernelName());
+      alloc.setId(std::to_string(BlockLoadStoreOpId));
+
+
+      ADORA::DataBlockStoreOp BlockStore = builder.create<ADORA::DataBlockStoreOp>\
+              (loc, BlockLoad, C, memIVmap, ValueRange({vi, vj}));
+      // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
+                    // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
+      // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
+      // BlockLoad.getOperation()->moveBefore(Kernel);
+      
+      BlockStore.setKernelName("GEMMWS");
+      BlockStore.setId(std::to_string(BlockLoadStoreOpId++));     
+
+      stores.push_back(BlockStore); 
+    }   
+    /////////////////////
+    /// End of transfer C
+    /////////////////////
+
+    /////////////////////
     /// start generate inner loop
     /////////////////////
-    // loop = GenerateOnDeviceNestedLoopWithoutLoopCarry(
-    //   builder, op.getLoc(), 
-    //   /*level*/1, 
-    //   /*upper bounds*/{N_aftertile, K_aftertile, M_aftertile}, //// N -> K -> M
-    //   /*InnerMostBodyBuilder*/InnermostBodyOfTiledWithWeightStationary(
-    //     op.getA(), op.getB(), op.getC(), Ktiletemporal, Mtiletemporal, tilerow, tilecol
-    //   )
-    // );
+    AffineForOp loop = GenerateOnDeviceNestedLoopWithoutLoopCarry(
+      builder, loc, 
+      /*level*/2, 
+      /*upper bounds*/{temporal_count_dim_k, temporal_count_dim_m}, //// K -> M
+      /*InnerMostBodyBuilder*/InnermostBodyOfTiledWithWeightStationary(
+        A, B, C, tile_row_size, tile_col_size
+      )
+    );
+
+    affine::AffineYieldOp yield = builder.create<affine::AffineYieldOp>(loc);
+
+
+    for(auto store : stores){
+      store.getOperation()->moveBefore(yield);
+    }
+
+
   };
 
 }
@@ -457,6 +518,7 @@ affine::AffineForOp OffDeviceLoopOfWeightStationary(
 //// when tile size = 3, (M_temporal_tile, K_spatial_tile, N_spatial_tile), K_temporal_tile == 1
 //// when tile size = 2, (K_spatial_tile, N_spatial_tile), K_temporal_tile == 1, M_temporal_tile = M
 AffineForOp TiledWeightStationaryGemm(
+  OpBuilder opbuilder,
   ADORATensor::GemmOp op, 
   ArrayRef<int64_t> tilesize //(K_temporal_tile, M_temporal_tile, K_spatial_tile, N_spatial_tile)
 ){
@@ -489,9 +551,13 @@ AffineForOp TiledWeightStationaryGemm(
   // make sure matmul is legal
   assert(ShapeA.size() == 2 && ShapeB.size() == 2 && ShapeC.size() == 2);
   assert(ShapeA[0] == ShapeC[0] && ShapeA[1] == ShapeB[0] && ShapeB[1] == ShapeC[1]);
-  assert(ShapeA[1] % (tilecol * K_temporal_tile) == 0 
-      && ShapeB[0] % tilerow == 0 
+  assert(ShapeA[1] % (tilerow * K_temporal_tile) == 0 
+      && ShapeB[1] % tilecol == 0 
       && ShapeA[0] % M_temporal_tile == 0);
+  
+  if(ShapeA[0] != M_temporal_tile){
+    assert(K_temporal_tile == 1);
+  }
   
   int64_t M_aftertile, N_aftertile, K_aftertile;
 
@@ -502,16 +568,18 @@ AffineForOp TiledWeightStationaryGemm(
   //////////////////////////////////////
   /// Generate systolic gemm
   //////////////////////////////////////
-  OpBuilder builder(op);
   AffineForOp loop;
-  loop = OffDeviceLoopOfWeightStationary(
-    builder, op.getLoc(), 
-    /*level*/2, 
-    /*upper bounds*/{N_aftertile, K_aftertile}, //// N -> K -> M
-    /*InnerMostBodyBuilder*/TileofWeightStationary(
-      op.getA(), op.getB(), op.getC(), K_temporal_tile, M_temporal_tile, tilerow, tilecol
-    )
-  );
+    loop = OffDeviceLoopOfWeightStationary(
+      opbuilder, op.getLoc(), 
+      /*level*/3, 
+      /*upper bounds*/{N_aftertile, K_aftertile, M_aftertile}, //// N -> K -> M
+      /*InnerMostBodyBuilder*/TileofWeightStationary(
+        op.getA(), op.getB(), op.getC(), K_temporal_tile, M_temporal_tile, tilerow, tilecol
+      )
+    );
+  
+  op.getOperation()->getBlock()->push_back(loop);
+  loop.getOperation()->moveAfter(op);
   // } 
   // else{
   //   loop = GenerateTiledNestedLoopWithoutLoopCarry(

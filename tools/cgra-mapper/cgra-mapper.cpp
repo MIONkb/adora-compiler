@@ -20,8 +20,8 @@
 
 #include "../../lib/DFG/inc/mlir_cdfg.h"
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
-#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
-#include "ADORA/Dialect/ADORA/Lowering/LowerPasses.h"
+// #include "ADORA/Dialect/ADORA/Transforms/Passes.h"
+// #include "ADORA/Dialect/ADORA/Lowering/LowerPasses.h"
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 #include "ADORA/Misc/Passes.h"
 #include "ADORA/Misc/DFG.h"
@@ -198,6 +198,9 @@ int main(int argc, char **argv) {
   // and the process "appears to be stuck". Print a message to let the user know
   // about it!
   MLIRContext context(registry, MLIRContext::Threading::DISABLED);
+  context.getOrLoadDialect(mlir::ADORA::ADORADialect::getDialectNamespace());
+  context.getOrLoadDialect(mlir::ADORA::ADORATensor::ADORATensorDialect::getDialectNamespace());
+
   if (inputFilename == "-" &&
       sys::Process::FileDescriptorIsDisplayed(fileno(stdin)))
     llvm::errs() << "(processing input from stdin now, hit ctrl-c/ctrl-d to "
@@ -275,7 +278,7 @@ int main(int argc, char **argv) {
   /////////////////////////
   /// Map ADORA Tensor
   /////////////////////////
-  MapAdoraTensorOp(moduleop, tensor_mapper_Vec, adg, timeout_ms, max_iters, objOpt);
+  MapAdoraTensorOp(&context, moduleop, tensor_mapper_Vec, adg, timeout_ms, max_iters, objOpt);
   // if(emit_type == "pytest"){
   //   MapAdoraTensorOp(tensor_mapper_Vec)
   // }

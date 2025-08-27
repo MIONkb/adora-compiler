@@ -30,15 +30,8 @@
 
 // #include "llvm/ADT/SmallSet.h" /// use std::unordered_set instead of std::list
 #include<set>
-//===----------------------------------------------------------------------===//
-// Test Dialect
-//===----------------------------------------------------------------------===//
-
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensorOpsDialect.h.inc"
 
-//===----------------------------------------------------------------------===//
-// Test Dialect Operations
-//===----------------------------------------------------------------------===//
 #include "ADORA/Dialect/ADORATensor/Interface/ShapeInferenceOpInterface.h"
 #include "ADORA/Dialect/ADORATensor/Interface/SystolicImplInterface.h"
 

@@ -27,15 +27,7 @@
 
 // #include "llvm/ADT/SmallSet.h" /// use std::unordered_set instead of std::list
 #include<set>
-//===----------------------------------------------------------------------===//
-// Test Dialect
-//===----------------------------------------------------------------------===//
-
 #include "ADORA/Dialect/ADORA/IR/ADORAOpsDialect.h.inc"
-
-//===----------------------------------------------------------------------===//
-// Test Dialect Operations
-//===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
 #include "ADORA/Dialect/ADORA/IR/ADORAOps.h.inc"

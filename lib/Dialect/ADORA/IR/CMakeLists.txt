@@ -10,7 +10,6 @@ add_mlir_dialect_library(MLIRADORAOps
   MLIRADORAOpsAttributesIncGen
   MLIRADORAOpInterfacesIncGen
   MLIRTensorDialect
-  MLIRSupport
   MLIRFuncDialect
 
 
@@ -18,6 +17,7 @@ add_mlir_dialect_library(MLIRADORAOps
   Core
 
   LINK_LIBS PUBLIC
+  MLIRSupport
   MLIRInferTypeOpInterface
   MLIRDialectUtils
   MLIRIR

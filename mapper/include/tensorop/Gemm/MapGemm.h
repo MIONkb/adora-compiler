@@ -14,6 +14,7 @@ namespace ADORA{
 ////  N - col of B, col of C
 ////  K - reduction dim
 affine::AffineForOp TiledWeightStationaryGemm(
+  OpBuilder opbuilder,
   ADORATensor::GemmOp op, 
   ArrayRef<int64_t> tilesize
 );

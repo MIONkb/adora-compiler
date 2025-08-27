@@ -20,7 +20,7 @@ bool TensoDataflowGen::visitOp(ADORATensor::GemmOp op){
   ArrayRef<int64_t> tilesize = SystolicPara.getTileSize();
   StringRef stragegy = SystolicPara.getStationaryKind();
   if(stragegy == getMethodStrRef(MatMulStrategy::WeightStationary)){
-    AffineForOp newfor = TiledWeightStationaryGemm(op, tilesize); 
+    AffineForOp newfor = TiledWeightStationaryGemm(opbuilder, op, tilesize); 
   }
   return true;
 }
