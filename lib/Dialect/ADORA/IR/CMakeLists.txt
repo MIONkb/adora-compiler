@@ -6,20 +6,21 @@ add_mlir_dialect_library(MLIRADORAOps
   ${PROJ_INCLUDE_DIR}/ADORA/Dialect/ADORA
 
   DEPENDS
-  MLIRADORAOpInterfacesIncGen
   MLIRADORAOpsEnumsGen
   MLIRADORAOpsAttributesIncGen
+  MLIRADORAOpInterfacesIncGen
+  MLIRTensorDialect
+  MLIRSupport
+  MLIRFuncDialect
+
 
   LINK_COMPONENTS
   Core
 
   LINK_LIBS PUBLIC
+  MLIRInferTypeOpInterface
   MLIRDialectUtils
   MLIRIR
-  MLIRTensorDialect
-  MLIRInferTypeOpInterface
-  MLIRSideEffectInterfaces
-  MLIRSupport
-  MLIRFuncDialect
   MLIRViewLikeInterface
+  MLIRSideEffectInterfaces
   )

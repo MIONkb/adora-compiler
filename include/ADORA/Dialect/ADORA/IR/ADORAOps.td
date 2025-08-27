@@ -595,13 +595,13 @@ def IselOp : ADORA_Op<"isel">{
 }
 
 //===----------------------------------------------------------------------===//
-// Merge op
+// InterleaverOp op
 //===----------------------------------------------------------------------===//
-def MergeOp : ADORA_Op<"merge">{
-  let summary = "Merge node in CGRA processing elements (PE) used in systolic execution.";
+def InterleaverOp : ADORA_Op<"interleaver">{
+  let summary = "Merge/interleave node in CGRA processing elements (PE) used in systolic execution.";
   let description = [{
-    "Merge" combines multiple inputs into a single sequence of outputs, akin to Parallel-to-Sequential conversion. 
-    The merge operation should be linked to an output node.
+    "Interleave" combines multiple inputs into a single sequence of outputs, akin to Parallel-to-Sequential conversion. 
+    The interleave operation should be linked to an output node (or a add?).
   }];
 
   let builders = [
@@ -636,9 +636,14 @@ def MergeOp : ADORA_Op<"merge">{
       return getInputs()[idx];
     }
 
+    int getInterleaveNumber(){
+      return getInputs().size();
+    }
+
     int getMergeNumber(){
       return getInputs().size();
     }
+
   }];
 
   // let hasCustomAssemblyFormat = 1;
@@ -647,5 +652,70 @@ def MergeOp : ADORA_Op<"merge">{
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// DeinterleaverOp op
+//===----------------------------------------------------------------------===//
+def DeinterleaverOp : ADORA_Op<"deinterleaver">{
+  let summary = "split/deinterleave node in CGRA processing elements (PE) used in systolic execution.";
+  let description = [{
+    "Deinterleave": "The Deinterleave node distributes a time-multiplexed (sequential) input 
+    stream across multiple parallel output channels. It effectively performs a 
+    Sequential-to-Parallel conversion, allowing data arriving over several cycles on a 
+    single input port to be fanned out into multiple parallel outputs in the same cycle. 
+    This is opposite to interleave op."
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$source)>,
+  ];
+
+  /// serial input
+  let arguments = (ins
+    AnyVectorOfAnyRank:$input
+  );
+
+  /// mutiple output
+  let results = (outs Variadic<AnyType>:$results); 
+  
+  let extraClassDeclaration = [{
+    ValueRange getOutputs(){
+      return getResults();
+    }
+
+    ::mlir::VectorType getInputVectorType() {
+      return ::llvm::cast<VectorType>(getInput().getType());
+    }
+
+    ArrayRef<int64_t> getInputVectorShape() {
+      return getInputVectorType().getShape();
+    }
+
+    Type getElementType(){
+      return getInputVectorType().getElementType();
+    }
+
+    ::mlir::Value getOutput(int idx){
+      return getOutputs()[idx];
+    }
+
+    ::mlir::Value getResult(int idx){
+      return getResults()[idx];
+    }
+
+    int getDeinterleaveNumber(){
+      return getOutputs().size();
+    }
+
+    int getSplitNumber(){
+      return getOutputs().size();
+    }
+
+  }];
+
+  // let hasCustomAssemblyFormat = 1;
+  // let assemblyFormat = "$in attr-dict `:` type($in) `->` type($out)";
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
 
 #endif // ADORA_OPS

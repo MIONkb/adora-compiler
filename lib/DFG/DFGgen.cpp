@@ -2129,7 +2129,7 @@ static bool HandlCompareNode(LLVMCDFG* CDFG, bool verbose = true){
 /// 
 /// This function iterates through all nodes in the CDFG and looks for operations 
 /// of type "vector.extract". If such an operation is found, it checks if its 
-/// inputs are nodes of type "MERGE". If they are, it connects the output nodes 
+/// inputs are nodes of type "INTLV". If they are, it connects the output nodes 
 /// to the input nodes and deletes the extract node from the CDFG.
 /// 
 /// @param CDFG A pointer to the LLVMCDFG representing the current control data flow graph.
@@ -2143,11 +2143,11 @@ void HandleVectorExtractNode(LLVMCDFG* CDFG, bool verbose = true){
       mlir::vector::ExtractOp extractop = dyn_cast<mlir::vector::ExtractOp>(op);
       mlir::Operation* vecop = extractop.getVector().getDefiningOp();
 
-      if(isa<ADORA::MergeOp>(vecop)){
+      if(isa<ADORA::InterleaverOp>(vecop)){
         auto outnodes = node->outputNodes();
         auto innodes = node->inputNodes();
         for(LLVMCDFGNode* innode : innodes){
-          if(innode->getTypeName().substr(0,5) == "MERGE"){
+          if(innode->getTypeName().substr(0,5) == "INTLV"){
             for(LLVMCDFGNode* outnode : outnodes){
               std::vector<NodeInfo> infos = outnode->getinputInfoMap()[innode];
               for(NodeInfo info: infos){
@@ -2166,13 +2166,13 @@ void HandleVectorExtractNode(LLVMCDFG* CDFG, bool verbose = true){
             continue;
           }
           else {
-            assert(false && "Vector extract op could only support input as merge op.");
+            assert(false && "Vector extract op could only support input as Interleaver op.");
           }
         }
         CDFG->delNode(node);  
       }
       else{
-        assert(false && "Vector extract op could only support input as merge op.");
+        assert(false && "Vector extract op could only support input as interleaver op.");
       }
     }
   }
@@ -2181,8 +2181,8 @@ void HandleVectorExtractNode(LLVMCDFG* CDFG, bool verbose = true){
 
 
 /// @brief Fixes the linear access pattern of vector store nodes in the CDFG.
-/// Based on the number of merge inputs, it fixes the linear access pattern 
-/// associated with the merge operation and updates the linear access string of that node.
+/// Based on the number of interleaverleaver inputs, it fixes the linear access pattern 
+/// associated with the interleaver operation and updates the linear access string of that node.
 /// 
 /// @param CDFG A pointer to the LLVMCDFG representing the current control data flow graph.
 /// @param verbose A boolean indicating whether to print detailed information (default is true).
@@ -2196,9 +2196,9 @@ void FixLinearAccessOfVectorStoreNode(LLVMCDFG* CDFG, bool verbose = true){
       mlir::Operation* vecop = vecstoreop.getValue().getDefiningOp();
       int ElementBytes = vecstoreop.getMemRefType().getElementTypeBitWidth()/8;
 
-      if(isa<ADORA::MergeOp>(vecop)){
-        /// get the input num of merge
-        int mergeNum = dyn_cast<ADORA::MergeOp>(vecop).getMergeNumber();
+      if(isa<ADORA::InterleaverOp>(vecop)){
+        /// get the input num of interleaver
+        int interleaverNum = dyn_cast<ADORA::InterleaverOp>(vecop).getInterleaveNumber();
 
         /// fix linear access of extractop
         assert(node->isLSaffine() && node->getTypeName() == "Output");
@@ -2208,15 +2208,15 @@ void FixLinearAccessOfVectorStoreNode(LLVMCDFG* CDFG, bool verbose = true){
         std::string step, count;
 
         SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
-        newLinearAccess.push_back(std::pair(ElementBytes, mergeNum));
-        // newLinearAccess.push_back(std::pair( -1 * ElementBytes * mergeNum, 1));
+        newLinearAccess.push_back(std::pair(ElementBytes, interleaverNum));
+        // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
 
         int level = 0;
         while (std::getline(ss, step, ',')) {
           std::getline(ss, count, ',');
 
           if(level == 1){
-            int newstep = std::stoi(step) - ElementBytes * mergeNum + ElementBytes;
+            int newstep = std::stoi(step) - ElementBytes * interleaverNum + ElementBytes;
             newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
           }
           else if(level != 0) {
@@ -2231,7 +2231,7 @@ void FixLinearAccessOfVectorStoreNode(LLVMCDFG* CDFG, bool verbose = true){
         node->setLinearAccess(LinearAccessToStr(newLinearAccess));
       }
       else{
-        assert(false && "vectorstore op could only support input as merge op right now.");
+        assert(false && "vectorstore op could only support input as interleaver op right now.");
       }
     }
   }
@@ -2404,14 +2404,14 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           // // TODO: settle this
           return WalkResult::advance();
         } 
-        else if(op->getName().getStringRef() == "ADORA.merge"){
-          ADORA::MergeOp mergeop = dyn_cast<ADORA::MergeOp>(op);
-          int mergenum = mergeop.getMergeNumber();
-          std::string mergetypename = "MERGE" + std::to_string(mergenum);
-          LLVMCDFGNode* node = CDFG->addNode(op, /*typeName=*/mergetypename); 
+        else if(op->getName().getStringRef() == "ADORA.interleave"){
+          ADORA::InterleaverOp interleaverop = dyn_cast<ADORA::InterleaverOp>(op);
+          int interleavernum = interleaverop.getInterleaveNumber();
+          std::string interleavertypename = "INTLV" + std::to_string(interleavernum);
+          LLVMCDFGNode* node = CDFG->addNode(op, /*typeName=*/interleavertypename); 
           node->setLoopLevel(level);
 
-          //// set acc for merge op
+          //// set acc for interleaver op
           SmallVector<std::string, 3> count_interval_repeat = {"1", "1", "1"};///count/interval/repeat
           node->setAcc();
           node->setACCinit("0");

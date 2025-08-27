@@ -25,6 +25,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
             %15 = affine.load %arg2[%arg5 + 3, %arg3] : memref<?x36xi32>
             %16 = arith.addi %15, %14 : i32
             affine.store %16, %arg2[%arg5 + 3, %arg3] : memref<?x36xi32>
+            %17 = ADORA.interleaver %16, %15 : i32, i32 -> vector<2xi32>
+
+            %18:2 = ADORA.deinterleaver %17 : vector<2xi32> -> (i32, i32)
+            affine.vector_store %17, %arg2[%arg5 + 3, %arg3]: memref<?x36xi32>, vector<2xi32> 
           }
         }
       }

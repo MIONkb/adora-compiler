@@ -13,7 +13,7 @@ set(LIBS
   # Core
   MLIRIR
   MLIRTransforms
-  # MLIROptLib
+  MLIROptLib
   
   # Dialects
   MLIRLLVMDialect

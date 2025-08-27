@@ -62,6 +62,8 @@ arith.subf FSUB32
 
 /// ADORA defined op
 ADORA.merge MERGE
+ADORA.interleave INTLV
+ADORA.deinterleave DEINTLV
 
 /// Load Store
 memref.load load

@@ -813,13 +813,13 @@ LogicalResult IselOp::verify() {
 
 
 //===----------------------------------------------------------------------===//
-// MergeOp
+// InterleaverOp
 //===----------------------------------------------------------------------===//
-void MergeOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ValueRange inputs){
+void InterleaverOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ValueRange inputs){
   assert(inputs.size() > 1);
   ::mlir::Type intype = inputs[0].getType();
   for(auto input : inputs){
-    assert(input.getType() == intype && "All inputs of merge op should be the same type.");
+    assert(input.getType() == intype && "All inputs of interleaver op should be the same type.");
   }
 
   SmallVector<int64_t> shape;
@@ -829,23 +829,23 @@ void MergeOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsSt
   build(odsBuilder, odsState, outtype, inputs);
 }
 
-LogicalResult MergeOp::verify() {
+LogicalResult InterleaverOp::verify() {
   if(!(getInputs().size() > 1)){
     return emitOpError(
-        "merge op: input number of merge op should be larger than 1");
+        "Interleaver op: input number of Interleaver op should be larger than 1");
   }
   ::mlir::Type intype = getInput(0).getType();
   for(auto input : getInputs()){
     if(input.getType() != intype){
       return emitOpError(
-        "merge op: all inputs of merge op should be the same type.");
+        "Interleaver op: all inputs of Interleaver op should be the same type.");
     }
   }
 
   ::mlir::Type outtype = ::llvm::cast<VectorType>(getOut().getType()).getElementType();
   if(outtype != intype){
     return emitOpError(
-        "merge op: input and output element type should be the same");
+        "Interleaver op: input and output element type should be the same");
   }
 
   llvm::ArrayRef<int64_t> shape = ::llvm::cast<VectorType>(getOut().getType()).getShape();
@@ -856,13 +856,13 @@ LogicalResult MergeOp::verify() {
 
   if(num != getInputs().size()){
     return emitOpError(
-        "merge op: the count of inputs must correspond to the sum of the element count in the output vectors");
+        "Interleaver op: the count of inputs must correspond to the sum of the element count in the output vectors");
   }
 
   return success();
 }
 
-void MergeOp::print(OpAsmPrinter &p) {
+void InterleaverOp::print(OpAsmPrinter &p) {
   Type intype = getElementType();
   p << " " ;
   /// print inputs
@@ -880,7 +880,7 @@ void MergeOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict((*this)->getAttrs());
 }
 
-ParseResult MergeOp::parse(OpAsmParser &parser, OperationState &result) {
+ParseResult InterleaverOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
   Type outType;
 
@@ -899,6 +899,101 @@ ParseResult MergeOp::parse(OpAsmParser &parser, OperationState &result) {
     if (parser.resolveOperand(std::get<0>(pair),std::get<1>(pair), result.operands))
       return failure();
   }
+
+  /// parse output type
+  if (parser.parseArrowTypeList(result.types))
+  {
+    return failure();
+  }
+
+  return parser.parseOptionalAttrDict(result.attributes);
+}
+
+
+//===----------------------------------------------------------------------===//
+// DeinterleaverOp
+//===----------------------------------------------------------------------===//
+void DeinterleaverOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, Value input){
+  ::mlir::Type intype = input.getType();
+  assert(isa<VectorType>(intype));
+  VectorType vectype = dyn_cast<VectorType>(intype);
+  ::mlir::Type elemtype = vectype.getElementType();
+
+  llvm::ArrayRef<int64_t> shape = vectype.getShape();
+  assert(shape.size() == 1);
+  int64_t size = shape[0];
+
+  SmallVector<mlir::Type> resultTypes;
+  for(int64_t i = 0; i < size; i++){
+    resultTypes.push_back(elemtype);
+  }
+
+  build(odsBuilder, odsState, resultTypes, input);
+}
+
+LogicalResult DeinterleaverOp::verify() {
+  if(!(getOutputs().size() > 1)){
+    return emitOpError(
+        "Deinterleaver op: output number of Deinterleaver op should be larger than 1");
+  }
+  ::mlir::Type intype = getElementType();
+  for(auto output : getOutputs()){
+    if(output.getType() != intype){
+      return emitOpError(
+        "Deinterleaver op: all outputs of Deinterleaver op should be the same type.");
+    }
+  }
+
+  llvm::ArrayRef<int64_t> shape = ::llvm::cast<VectorType>(getInput().getType()).getShape();
+  int num = 1;
+  for(auto s : shape){
+    num *= s;
+  }
+
+  if(num != getOutputs().size()){
+    return emitOpError(
+        "Deinterleaver op: the count of outputs must correspond to the sum of the element count in the input vector.");
+  }
+
+  return success();
+}
+
+void DeinterleaverOp::print(OpAsmPrinter &p) {
+  Type outtype = getElementType();
+  p << " " ;
+  /// print input
+  p << getInput();
+
+  p << " : " ;
+
+  /// print input type
+  p << getInputVectorType();
+
+  p << " -> (" ;
+  llvm::interleaveComma(getOutputs(), p, [&](auto it) {
+    p << outtype;
+  });
+  p << ")" ;
+
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+ParseResult DeinterleaverOp::parse(OpAsmParser &parser, OperationState &result) {
+  auto &builder = parser.getBuilder();
+  Type outType;
+
+  /// parse inputs
+  OpAsmParser::UnresolvedOperand input;
+  if (parser.parseOperand(input))
+    return failure();
+
+  /// parse input type
+  Type inputtype;
+  if (parser.parseColonType(inputtype))
+    return failure();
+
+  if (parser.resolveOperand(input, inputtype, result.operands))
+    return failure();
 
   /// parse output type
   if (parser.parseArrowTypeList(result.types))

@@ -1,5 +1,5 @@
-#ifndef __LLVM_CDFG_H__
-#define __LLVM_CDFG_H__
+#ifndef __MLIR_CGRA_CDFG_H__
+#define __MLIR_CGRA_CDFG_H__
 
 #define BITWIDTH 8
 

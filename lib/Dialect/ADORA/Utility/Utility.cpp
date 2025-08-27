@@ -2220,9 +2220,9 @@ void ADORA::ResetIndexOfBlockAccessOpInFunc(func::FuncOp& func){
 
 
 
-// /// Merge 2 SmallVectors and only reserve 1 element for same elements, just like set merge 
+// /// Interleaver 2 SmallVectors and only reserve 1 element for same elements, just like set merge 
 // template <typename T>
-// SmallVector<T> mlir::ADORA::SetMergeForVector(const llvm::SmallVector<T>& v1, const llvm::SmallVector<T>& v2){
+// SmallVector<T> mlir::ADORA::SetInterleaverForVector(const llvm::SmallVector<T>& v1, const llvm::SmallVector<T>& v2){
 //   SmallVector<T> v;
 //   for(auto e : v1){
 //     if(findElement(v, e) == -1){
