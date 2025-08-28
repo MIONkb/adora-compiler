@@ -29,6 +29,7 @@
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
 #include "ADORA/Misc/DFG.h"
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
+#include "ADORA/Dialect/ADORATensor/Lowering/TensorOpLowerToKernel.h"
 #include "PassDetail.h"
 // lower tensor op
 #include "../../../../mapper/include/tensorop/TensorOp.h"
@@ -97,13 +98,14 @@ void ADORATensorOpCdfgGenPass::runOnOperation()
     // });
     int kernel_cnt = 0;
 
-    TensorDataflowGen engine(m->getContext());
+    TensorOpCDFGVisitor engine(m->getContext());
     m.walk([&](mlir::Operation* op) {
       if(engine.dispatchVisitor(op)){
         m.dump();
       }
     });
-    simplifyLoopLevelsInModuleOp(m);
+    // simplifyLoopLevelsInModuleOp(m);
+    // m.dump();
     m.walk([&](ADORA::KernelOp kernel) {
       std::string kernelName = kernel.getKernelName();
       if(kernelName.empty()){

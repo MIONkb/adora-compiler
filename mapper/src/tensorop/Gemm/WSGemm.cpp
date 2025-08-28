@@ -25,204 +25,116 @@ static llvm::SmallVector<int64_t, 2> getShape(mlir::Value v) {
   return {};
 }
 
+Value getConstantOpAccordingToDataType(OpBuilder &builder, Location loc, Type datatype, float value = 0) {
+  arith::ConstantOp newconst;
+  if(datatype.isBF16()||datatype.isF32()) {
+    float constvalue = value;
+    FloatAttr constAttr = FloatAttr::get(datatype, constvalue);
+    newconst = builder.create<arith::ConstantOp>(loc, datatype , constAttr);
+  }
+  else if(datatype.isF64()){
+    double constvalue = (double)value;
+    FloatAttr constAttr = FloatAttr::get(datatype, constvalue);
+    newconst = builder.create<arith::ConstantOp>(loc, datatype , constAttr);
+  }
+  else {
+    int64_t constvalue = (int)value;
+    IntegerAttr constAttr = IntegerAttr::get(datatype, constvalue);
+    newconst = builder.create<arith::ConstantOp>(loc, datatype , constAttr);    
+  }
+  return newconst.getResult();
+}
+
+mlir::Operation* genArithAddOpAccordingToDataType(OpBuilder &builder, Location loc, mlir::Value lhs, mlir::Value rhs) {
+  assert(lhs.getType() == rhs.getType());
+  mlir::Type datatype = lhs.getType();
+  mlir::Operation* add;
+  if(datatype.isBF16()|| datatype.isF32() || datatype.isF64()) {
+    add = builder.create<arith::AddFOp>(loc, lhs, rhs);
+  }
+  else {
+    add = builder.create<arith::AddIOp>(loc, lhs, rhs);
+  }
+  return add;
+}
+
+mlir::Operation* genArithMulOpAccordingToDataType(OpBuilder &builder, Location loc, mlir::Value lhs, mlir::Value rhs) {
+  assert(lhs.getType() == rhs.getType());
+  mlir::Type datatype = lhs.getType();
+  mlir::Operation* mul;
+  if(datatype.isBF16()|| datatype.isF32() || datatype.isF64()) {
+    mul = builder.create<arith::MulFOp>(loc, lhs, rhs);
+  }
+  else {
+    mul = builder.create<arith::MulIOp>(loc, lhs, rhs);
+  }
+  return mul;
+}
+
 using WSBodyBuilderFn = std::function<void(OpBuilder &, Location, ValueRange)>;
 
-affine::AffineForOp GenerateOnDeviceNestedLoopWithoutLoopCarry(
+affine::AffineForOp GenerateOnDeviceNestedLoop(
     OpBuilder &builder, Location loc,
     int level = 2, SmallVector<int> Upperbounds = {1, 1}, 
-    WSBodyBuilderFn InnerMostBodyBuilder = nullptr) 
+    WSBodyBuilderFn BodyBuilder = nullptr) 
 {
 
   assert(level > 0 && "Loop nest level must be > 0");
   assert((int)Upperbounds.size() == level && 
          "Upperbounds size must == loop level");
   // create outermost loop 
+  SmallVector<Value> allIvs;
   AffineForOp outer = builder.create<AffineForOp>(
-      loc, /*lb*/ 0, /*ub*/ Upperbounds[0], /*step*/ 1);
-  AffineForOp current = outer;
+    loc, /*lb*/ 0, /*ub*/ Upperbounds[0], /*step*/ 1, /*iterArgs =*/ ValueRange(), 
+      [&](OpBuilder &b, Location loc, Value v, ValueRange vs) {
+        /// v here is useless
+        allIvs.push_back(v);
+        // assert(allIvs.size() >= 2);
+        SmallVector<Value> OutermostIvs(allIvs.end() - 1, allIvs.end());
+        BodyBuilder(b, loc, OutermostIvs);
+    });
 
-  SmallVector<Value> allIvs; /// collect itervar from every level
-  allIvs.push_back(current.getInductionVar());
+  // AffineForOp current = outer;
 
-  // create inner loop one by one
-  for (int i = 1; i < level; i++) {
-    OpBuilder innerBuilder(current.getBody(),
-                           std::prev(current.getBody()->end()));
+  // SmallVector<Value> allIvs; /// collect itervar from every level
+  // allIvs.push_back(current.getInductionVar());
 
-    //// 
-    if(i == level - 1){
-      ///////////////////////
-      //// create innermost for loop: last level of temporal map
-      //////////////////////      
+  // // create inner loop one by one
+  // for (int i = 1; i < level; i++) {
+  //   OpBuilder innerBuilder(current.getBody(),
+  //                          std::prev(current.getBody()->end()));
 
-      ///////////////////////
-      //// create innermost for loop: last level of temporal map
-      //////////////////////
-      auto inner = innerBuilder.create<affine::AffineForOp>(
-        // loc, 0, Upperbounds[i], 1, /*iterArgs =*/ ValueRange({}), InnerMostBodyBuilder);
-        loc, (int64_t)0, (int64_t)Upperbounds[i], (int64_t)1, /*iterArgs =*/ ValueRange(), 
-        [&](OpBuilder &b, Location loc, Value v, ValueRange vs) {
-          /// v here is useless
-          allIvs.push_back(v);
-          assert(allIvs.size() >= 2);
-          SmallVector<Value> lastTwoIvs(allIvs.end() - 2, allIvs.end());
-          InnerMostBodyBuilder(b, loc, lastTwoIvs);
-        });
-      current = inner;
-    }
-    else {
-      auto inner = innerBuilder.create<affine::AffineForOp>(
-        loc, 0, Upperbounds[i], 1);
+  //   //// 
+  //   if(i == level - 1){
+  //     ///////////////////////
+  //     //// create innermost for loop: last level of temporal map
+  //     //////////////////////      
+
+  //     ///////////////////////
+  //     //// create innermost for loop: last level of temporal map
+  //     //////////////////////
+  //     auto inner = innerBuilder.create<affine::AffineForOp>(
+  //       // loc, 0, Upperbounds[i], 1, /*iterArgs =*/ ValueRange({}), InnerMostBodyBuilder);
+  //       loc, (int64_t)0, (int64_t)Upperbounds[i], (int64_t)1, /*iterArgs =*/ ValueRange(), 
+  //       [&](OpBuilder &b, Location loc, Value v, ValueRange vs) {
+  //         /// v here is useless
+  //         allIvs.push_back(v);
+  //         assert(allIvs.size() >= 2);
+  //         SmallVector<Value> lastTwoIvs(allIvs.end() - 2, allIvs.end());
+  //         InnerMostBodyBuilder(b, loc, lastTwoIvs);
+  //       });
+  //     current = inner;
+  //   }
+  //   else {
+  //     auto inner = innerBuilder.create<affine::AffineForOp>(
+  //       loc, 0, Upperbounds[i], 1);
         
-      current = inner;
-      allIvs.push_back(current.getInductionVar());
-    }
-  }
+  //     current = inner;
+  //     allIvs.push_back(current.getInductionVar());
+  //   }
+  // }
 
   return outer;
-}
-
-
-
-/// @brief Loop body builder for the innermost tiled GEMM computation 
-///        under Weight-Stationary (WS) dataflow. 
-///
-/// This function returns a body-builder lambda of type `WSBodyBuilderFn`, 
-/// which is meant to be plugged into an `affine.for` nest. 
-/// Within the loop body, affine load/store operations are generated to:
-///   - Load an activation element from A, indexed by (i, k),
-///   - Load a weight element from B, indexed by (k, j), 
-///   - Load the current partial sum from C, indexed by (i, j),
-///   - Perform multiply-accumulate (A * B + C),
-///   - Store the updated result back into C.
-///
-/// The induction variables (`ivs`) are expected to come in the order {j, k, i}, 
-/// corresponding to the outer loop nest over (N, K, M). 
-/// For each loop iteration, the builder further expands a `tile_row_size × tile_col_size` 
-/// micro-kernel of MAC operations inside the loop body.
-///
-/// @param A            MemRef value representing the activation/input tensor.
-/// @param B            MemRef value representing the weight tensor (stationary).
-/// @param C            MemRef value representing the output/accumulation tensor.
-/// @param tile_row_size Number of rows in the tile (micro-kernel row dimension).
-/// @param tile_col_size Number of columns in the tile (micro-kernel column dimension).
-///
-/// Example pseudocode for one tile iteration:
-/// ```text
-/// for j in N
-///   for k in K
-///     for i in M
-///       for n in tile_row_size
-///         for t in tile_col_size
-///           C[i, j+n] += A[i, k+t] * B[k+t, j+n]
-WSBodyBuilderFn InnermostBodyOfTiledWithWeightStationary(
-    // OpBuilder builder,
-    mlir::ValueRange A,
-    mlir::ValueRange B,
-    mlir::ValueRange C_in,
-    mlir::ValueRange C_out,
-    int tile_row_size,
-    int tile_col_size
-) {
-  return [=](OpBuilder &builder, Location loc, ValueRange ivs, ValueRange loopcarries) {
-    // ivs = {j k i}
-    assert(ivs.size() == 2 && "Expect 2 loop induction variables (i,j,k)");
-    assert(A.size() == tile_row_size);
-    assert(C_in.size() == tile_col_size && C_in.size() == C_out.size());
-
-    // Value j_it = ivs[0];
-    Value k_it = ivs[0];
-    Value i_it = ivs[1];
-
-    SmallVector<SmallVector<Value>> mul_results;
-
-    // j_it.dump();
-    // k_it.dump();
-    // i_it.dump();
-
-    // auto i32Type = builder.getI32Type();
-
-    /**
-     * Example: N K M (j k i)
-        affine.for %arg4 = 0 to 2 {  /// K
-          affine.for %arg5 = 0 to 36 { /// M
-            %0 = affine.load %A[%arg5, %arg4] : memref<?x36xi32> // A
-            %1 = affine.load %arg1[%arg4, 0] : memref<?x36xi32>
-            %2 = arith.muli %0, %1 : i32
-            %3 = affine.load %arg2[%arg5, 0] : memref<?x36xi32>
-            %4 = arith.addi %3, %2 : i32
-            affine.store %4, %arg2[%arg5, 0] : memref<?x36xi32>
-            ...
-          }
-        }
-     */
-    for (int k = 0; k < tile_row_size; ++k) {
-      for (int n = 0; n < tile_col_size; ++n) {
-        /// affine map of A : 
-        /// %0 = affine.load %arg0[%arg5, %arg4] : memref<?x36xi32>
-        /// A[i, k]
-        AffineExpr rowExpr_A = builder.getAffineDimExpr(0);
-        AffineExpr colExpr_A = builder.getAffineDimExpr(1) + k;
-        AffineMap map_A = AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
-                                  {rowExpr_A, colExpr_A}, builder.getContext());
-        AffineLoadOp LoadA = builder.create<affine::AffineLoadOp>(
-            loc, A[k], map_A, ValueRange{i_it, k_it});
-
-        /// affine map of B : stationary
-        /// %1 = affine.load %arg1[%arg4, 0] : memref<?x36xi32>
-        /// B[k, j]
-        AffineExpr rowExpr_B = builder.getAffineDimExpr(0) + k;
-        AffineExpr colExpr_B = builder.getAffineConstantExpr(n);
-        AffineMap map_B = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0,
-                                  {rowExpr_B, colExpr_B}, builder.getContext());
-        AffineLoadOp LoadB = builder.create<affine::AffineLoadOp>(
-            loc, B[k], map_B, ValueRange{k_it});
-
-        /// C is in second innermost level
-        /// affine map of C
-        /// %3 = affine.load %arg2[%arg5, 0] : memref<?x36xi32>
-        /// C[i, j]
-        // AffineExpr rowExpr_C = builder.getAffineDimExpr(0);
-        // AffineExpr colExpr_C = builder.getAffineConstantExpr(n);
-        // AffineMap map_C = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0,
-        //                           {rowExpr_C, colExpr_C}, builder.getContext());
-        // AffineLoadOp LoadC = builder.create<affine::AffineLoadOp>(
-        //     loc, C_in[n], map_C, ValueRange{i_it});
-
-        /// get the rhs of add
-        Value add_rhs;
-        add_rhs = k == 0 ? loopcarries[n] : mul_results[k-1][n];
-
-        //// get data type of mul and add
-        Value mul, add;
-        mlir::Type dtype = dyn_cast<::mlir::MemRefType>(A[0].getType()).getElementType();
-
-        if(dtype.isSignlessInteger() || dtype.isSignedInteger() ||
-          dtype.isUnsignedInteger()){
-          mul = builder.create<arith::MulIOp>(loc, LoadA, LoadB);
-          add = builder.create<arith::AddIOp>(loc, mul, add_rhs);
-        }
-        else if(dtype.isBF16() || dtype.isF16() || dtype.isF32() || 
-          dtype.isF64() || dtype.isF128()){
-          mul = builder.create<arith::MulFOp>(loc, LoadA, LoadB);
-          add = builder.create<arith::AddFOp>(loc, mul, add_rhs);
-        }
-        else{
-          assert(false && "Unsupprted data type.");
-        }
-
-        mul_results[k].push_back(mul);
-
-        // // store back to C
-        // AffineStoreOp StoreC = builder.create<affine::AffineStoreOp>(
-        //     loc, add, C_out[n], map_C, ValueRange{i_it});
-        
-        // LoadC.getOperation()->getBlock()->dump();
-      }
-    }
-
-    builder.create<affine::AffineYieldOp>(loc);
-  };
 }
 
 /// @brief Loop body builder for the innermost tiled GEMM computation 
@@ -264,9 +176,10 @@ WSBodyBuilderFn BodyOfTiledWithWeightStationary(
     mlir::ValueRange C_in,
     mlir::ValueRange C_out,
     int tile_row_size,
-    int tile_col_size
+    int tile_col_size,
+    int innermostTripCount
 ) {
-  mlir::Type dtype = dyn_cast<::mlir::MemRefType>(A.getType()).getElementType();
+  mlir::Type dtype = dyn_cast<::mlir::MemRefType>(A[0].getType()).getElementType();
   return [=](OpBuilder &builder, Location loc, ValueRange ivs) {
     // ivs = {j k i}
     ///////////////////////
@@ -274,47 +187,158 @@ WSBodyBuilderFn BodyOfTiledWithWeightStationary(
     //////////////////////    
     SmallVector<mlir::Value> B_stationaries;
     for(int row = 0; row < tile_row_size; row++){
-      SmallVector<AffineExpr, 2> Exprs;
-      Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
-      
       int col = 0;
       if(tile_col_size >= 4){
         for(; 4*col + 4 <= tile_col_size; col++){
           /// generate deinterleaver for B
           SmallVector<AffineExpr, 2> Exprs;
-          Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
-          Exprs.push_back(builder.getConstantAffineMap(4*col)); // last dim's affine expr
+          Exprs.push_back(builder.getAffineDimExpr(0) + row); 
+          Exprs.push_back(builder.getAffineConstantExpr(4*col)); 
 
           SmallVector<int64_t, 4> shape;
           shape.push_back(4);
 
           AffineMap memIVmap = AffineMap::get(1, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
-          MemRefType newMemRef = MemRefType::get(shape, dtype);
+          VectorType newVec = VectorType::get(shape, dtype);
 
           AffineVectorLoadOp vecLoadB = builder.create<affine::AffineVectorLoadOp>(
-              loc, B[row * (tile_col_size / 4) + col], memIVmap, ivs[0], newMemRef);
+              loc, newVec, B[row * (tile_col_size / 4) + col], ivs[0], memIVmap);
           
-          ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(vecLoadB);
+          ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadB.getResult());
 
           for(int idx = 0; idx < 4; idx++){
             B_stationaries.push_back(deinterleaver.getResult(idx));
           }
         }
-      }    
+      }
+      // last several stationaries
+      // for(; col <= tile_col_size%4; col++){
+        /// generate deinterleaver for B
+      if(tile_col_size % 4 != 0){
+        SmallVector<AffineExpr, 2> Exprs;
+        Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
+        Exprs.push_back(builder.getAffineConstantExpr(4*col)); // last dim's affine expr
+
+        SmallVector<int64_t, 4> shape;
+        shape.push_back(tile_col_size%4);
+
+        AffineMap memIVmap = AffineMap::get(1, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
+        VectorType newVec = VectorType::get(shape, dtype);
+
+        AffineVectorLoadOp vecLoadB = builder.create<affine::AffineVectorLoadOp>(
+            loc, newVec, B[row * (tile_col_size / 4) + col], ivs[0], memIVmap);
+        
+        ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadB.getResult());
+
+        for(int idx = 0; idx < tile_col_size % 4; idx++){
+          B_stationaries.push_back(deinterleaver.getResult(idx));
+        }
+      }      
+
+    }
 
     ///////////////////////
     //// create innermost for loop: last level of temporal map
-    //////////////////////
-      auto inner = innerBuilder.create<affine::AffineForOp>(
-        // loc, 0, Upperbounds[i], 1, /*iterArgs =*/ ValueRange({}), InnerMostBodyBuilder);
-        loc, (int64_t)0, (int64_t)Upperbounds[i], (int64_t)1, /*iterArgs =*/ ValueRange(), 
-        [&](OpBuilder &b, Location loc, Value v, ValueRange vs) {
-          /// v here is useless
-          allIvs.push_back(v);
-          assert(allIvs.size() >= 2);
-          SmallVector<Value> lastTwoIvs(allIvs.end() - 2, allIvs.end());
-          InnerMostBodyBuilder(b, loc, lastTwoIvs);
-        });
+    ///////////////////////
+    // SmallVector<Value> constants;
+    mlir::Value zero = getConstantOpAccordingToDataType(builder, loc, dtype, 0);
+    // for(int col = 0; col < tile_col_size; col++){
+    //   constants.push_back(getConstantOpAccordingToDataType(builder, loc, dtype, 0));
+    // }
+
+    affine::AffineForOp inner = builder.create<affine::AffineForOp>(
+      // loc, 0, Upperbounds[i], 1, /*iterArgs =*/ ValueRange({}), InnerMostBodyBuilder);
+      loc, (int64_t)0, (int64_t)innermostTripCount, (int64_t)1, /*iterArgs =*/ ValueRange());
+    mlir::Block* innermostBody = inner.getBody();
+    builder.setInsertionPointToStart(innermostBody);
+
+    // assert(ivs.size() == 2 && "Expect 2 loop induction variables (i,j,k)");
+    assert(A.size() == tile_row_size);
+    assert(C_in.size() == tile_col_size && C_in.size() == C_out.size());
+
+    ///////////////////
+    /// Generate body of loop
+    ///////////////////
+    Value k_it = ivs[0];
+    Value i_it = inner.getInductionVar();
+
+    SmallVector<SmallVector<Value>> sum_results;
+
+    // j_it.dump();
+    // k_it.dump();
+    // i_it.dump();
+
+    // auto i32Type = builder.getI32Type();
+
+    /**
+     * Example: N K M (j k i)
+        affine.for %arg4 = 0 to 2 {  /// K
+          affine.for %arg5 = 0 to 36 { /// M
+            %0 = affine.load %A[%arg5, %arg4] : memref<?x36xi32> // A
+            %1 = affine.load %arg1[%arg4, 0] : memref<?x36xi32>
+            %2 = arith.muli %0, %1 : i32
+            %3 = affine.load %arg2[%arg5, 0] : memref<?x36xi32>
+            %4 = arith.addi %3, %2 : i32
+            affine.store %4, %arg2[%arg5, 0] : memref<?x36xi32>
+            ...
+          }
+        }
+     */
+    for (int k = 0; k < tile_row_size; ++k) {
+      sum_results.push_back(SmallVector<Value>()); /// initial k row's sum
+      for (int n = 0; n < tile_col_size; ++n) {
+        /// affine map of A : 
+        /// %0 = affine.load %arg0[%arg5, %arg4] : memref<?x36xi32>
+        /// A[i, k]
+        AffineExpr rowExpr_A = builder.getAffineDimExpr(0);
+        AffineExpr colExpr_A = builder.getAffineDimExpr(1) + k;
+        AffineMap map_A = AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
+                                  {rowExpr_A, colExpr_A}, builder.getContext());
+        AffineLoadOp LoadA = builder.create<affine::AffineLoadOp>(
+            loc, A[k], map_A, ValueRange{i_it, k_it});
+        // innermostBody->push_back(LoadA);
+        
+        mlir::Value mul_rhs_b = B_stationaries[k*tile_col_size + n];
+
+        /// get the rhs of add
+        Value add_rhs;
+        add_rhs = k == 0 ? zero : sum_results[k-1][n];
+
+        //// get data type of mul and add
+        Value mul, add;
+        mlir::Type dtype = dyn_cast<::mlir::MemRefType>(A[0].getType()).getElementType();
+        mul = genArithMulOpAccordingToDataType(builder, loc, LoadA, mul_rhs_b)->getResult(0);
+        if(k != 0){
+          add = genArithAddOpAccordingToDataType(builder, loc, mul, add_rhs)->getResult(0);
+        }
+        else{
+          add = mul;
+        }
+
+        sum_results[k].push_back(add);
+      }
+    }
+
+    ///////////////////
+    /// Generate store back of C 
+    ///////////////////
+    for (int n = 0; n < tile_col_size; ++n) {   
+        /// %3 = affine.load %arg2[%arg5, 0] : memref<?x36xi32>
+        /// C[i, j]
+      AffineExpr rowExpr_C = builder.getAffineDimExpr(0);
+      AffineExpr colExpr_C = builder.getAffineConstantExpr(n);
+      AffineMap map_C = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0,
+                                  {rowExpr_C, colExpr_C}, builder.getContext());
+      AffineLoadOp LoadC = builder.create<affine::AffineLoadOp>(
+            loc, C_in[n], map_C, ValueRange{i_it});
+      
+      mlir::Value add = genArithAddOpAccordingToDataType(builder, loc, sum_results[tile_row_size-1][n], LoadC)->getResult(0);
+      AffineStoreOp StoreC = builder.create<affine::AffineStoreOp>(
+            loc, add, C_out[n], map_C, ValueRange{i_it});      
+    } 
+
+    builder.setInsertionPointAfter(inner);
+    builder.create<affine::AffineYieldOp>(loc);
   };
 }
 
@@ -549,12 +573,12 @@ WSBodyBuilderFn TileofWeightStationary(
     /////////////////////
     /// start generate inner loop
     /////////////////////
-    AffineForOp loop = GenerateOnDeviceNestedLoopWithoutLoopCarry(
+    AffineForOp loop = GenerateOnDeviceNestedLoop(
       builder, loc, 
       /*level*/2, 
       /*upper bounds*/{temporal_count_dim_k, temporal_count_dim_m}, //// K -> M
       /*BodyBuilder*/BodyOfTiledWithWeightStationary(
-        A_in, B_in, C_in, C_out, tile_row_size, tile_col_size
+        A_in, B_in, C_in, C_out, tile_row_size, tile_col_size, temporal_count_dim_m
       )
     );
 
@@ -612,6 +636,9 @@ affine::AffineForOp OffDeviceLoopOfWeightStationary(
           allIvs.push_back(v);
           assert(allIvs.size() >= 3);
           SmallVector<Value> lastThreeIvs(allIvs.end() - 3, allIvs.end());
+          for(auto value : lastThreeIvs){
+            value.dump();
+          }
           InnerMostBodyBuilder(b, loc, lastThreeIvs);
         });
       current = inner;
@@ -689,7 +716,7 @@ AffineForOp TiledWeightStationaryGemm(
   /// Generate systolic gemm
   //////////////////////////////////////
   AffineForOp loop;
-    loop = OffDeviceLoopOfWeightStationary(
+  loop = OffDeviceLoopOfWeightStationary(
       opbuilder, op.getLoc(), 
       /*level*/3, 
       /*upper bounds*/{N_aftertile, K_aftertile, M_aftertile}, //// N -> K -> M

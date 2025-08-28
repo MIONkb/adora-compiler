@@ -931,6 +931,22 @@ void DeinterleaverOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationStat
   build(odsBuilder, odsState, resultTypes, input);
 }
 
+void DeinterleaverOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypedValue<::mlir::VectorType> input){
+  ::mlir::VectorType vectype = input.getType();
+  ::mlir::Type elemtype = vectype.getElementType();
+
+  llvm::ArrayRef<int64_t> shape = vectype.getShape();
+  assert(shape.size() == 1);
+  int64_t size = shape[0];
+
+  SmallVector<mlir::Type> resultTypes;
+  for(int64_t i = 0; i < size; i++){
+    resultTypes.push_back(elemtype);
+  }
+
+  build(odsBuilder, odsState, resultTypes, input);
+}
+
 LogicalResult DeinterleaverOp::verify() {
   if(!(getOutputs().size() > 1)){
     return emitOpError(

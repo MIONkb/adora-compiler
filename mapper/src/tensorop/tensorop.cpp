@@ -9,39 +9,18 @@
 namespace mlir{
 namespace ADORA{
 
+
 void MapAdoraTensorOp(MLIRContext* context, mlir::ModuleOp moduleop, std::vector<ADORA_TENSOR_MAPPER*> mappers,
-                    ADG* adg, int timeout_ms, int max_iters, bool objOpt){
+                    ADG* adg, std::string& OpNameFile_str,
+                    int timeout_ms, int max_iters, bool objOpt){
   TensorDataflowGen engine(context);
+  engine.setMappingArgs(adg, OpNameFile_str, timeout_ms, max_iters, objOpt);
   moduleop.walk([&](mlir::Operation* op) {
     if(engine.dispatchVisitor(op)){
       moduleop.dump();
     }
-    // ADORA_TENSOR_MAPPER* mapper = new ADORA_TENSOR_MAPPER(adg, timeout_ms, max_iters, objOpt);
-    // mappers.push_back(mapper);
-    // /// Generating DFG
-    // // std::string fileName = kernel.getKernelName();
-  
-    // std::string kernelName = kernel.getKernelName();
-    // if(kernelName.empty()){
-    //   kernelName = "kernel_" + std::to_string(kernel_cnt);
-    // }
-    // LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile_str);
-    // generateCDFGfromKernel(CDFG, kernel, /*verbose=*/true);
-    // // CDFG->CDFGtoDOT(CDFG->name_str()+"_CDFG.dot");
-
-    // /// DFG Mapping to CGRA architecture
-    // DFGIR* dfg_ir = new DFGIR(CDFG);
-    // DFGIR_Vec.push_back(dfg_ir);
-
-    // DFG* dfg = dfg_ir->getDFG();
-    // int numNodes = dfg->nodes().size();
-    // int numOpNodes = numNodes - dfg->ioNodes().size();
-    // std::cout << "numOpNodes: " << numOpNodes << ", numDfgNodes(Op+IO): "  << numNodes << std::endl;
-    // std::cout << "//============== Print DFG =================//" << std::endl;
-    // dfg->print();
-    // std::cout << "//============== End Print DFG =================//" << std::endl;
-    // // dfg->print();
-    // // map DFG to ADG
+    
+ 
     // mapper->setDFG(dfg);
 
     // // some io nodes must be placed at some place

@@ -278,7 +278,8 @@ int main(int argc, char **argv) {
   /////////////////////////
   /// Map ADORA Tensor
   /////////////////////////
-  MapAdoraTensorOp(&context, moduleop, tensor_mapper_Vec, adg, timeout_ms, max_iters, objOpt);
+  MapAdoraTensorOp(&context, moduleop, tensor_mapper_Vec, 
+    adg, GeneralOpNameFile_str, timeout_ms, max_iters, objOpt);
   // if(emit_type == "pytest"){
   //   MapAdoraTensorOp(tensor_mapper_Vec)
   // }

@@ -12,6 +12,9 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/ADT/APFloat.h"            // llvm::APFloat
+#include "llvm/ADT/APInt.h"              // llvm::APInt
+
 #include <iostream>
 #include <string>
 #include <bit>
@@ -215,7 +218,7 @@ void RemoveConstantTruncF(ADORA::KernelOp kernel){
       mlir::Attribute constattr = in->getAttr(constin.getValueAttrName());
       // llvm::errs() << "constattr: "<< constattr << "\n";
       arith::ConstantOp newconst;
-      if(outtype.isF32()){
+      if(outtype.isF32() || outtype.isF16() || outtype.isBF16()){
         float r = DataAttrValue2NewType<float>(constattr);
         FloatAttr outAttr = FloatAttr::get(outtype, r);
         newconst = b.create<arith::ConstantOp>(kernel.getLoc(), outtype , outAttr);
@@ -395,236 +398,6 @@ static bool checkAccumulationChain(mlir::Operation* op, affine::AffineStoreOp st
 /// @param kernel 
 void HoistLoadStoreInKernelOp(ADORA::KernelOp kernel){
   HoistLoadStoreOpsInOp(kernel);
-  // bool NoChange = 0;
-  // while(!NoChange){ // Keep walking the func until no change occurs in this func
-  //   NoChange = 1;
-  //   SmallVector<AffineLoadOp,  4> ToHoistLoads;
-  //   SmallVector<AffineStoreOp, 4> ToHoistStores;
-  //   /////////
-  //   /// Step 1 : Get all loads op to be hoisted
-  //   /////////
-  //   kernel.walk([&](AffineLoadOp loadop)
-  //   {
-  //     Operation* ParentOp = loadop.getOperation()->getParentOp();
-  //     if(ParentOp->getName().getStringRef() == AffineForOp::getOperationName() )
-  //     { 
-  //       AffineForOp ParentForOp = dyn_cast<AffineForOp>(*ParentOp);
-  //       // MemRefRegion memrefRegion(Func.getLoc());
-  //       // mlir::Value memref;
-  //       // SmallVector<mlir::Value, 4> IVs;
-  //       for(mlir::Value index : loadop.getIndices()){
-  //         if(index == ParentForOp.getInductionVar()){
-  //           // This load op can't be hoisted because it is constrained by loop of its level. 
-  //           return WalkResult::advance();
-  //         }
-  //       }
-  //       // This load op can be hoisted because it is not constrained by IV of its parent fopOp. 
-  //       ToHoistLoads.push_back(loadop);
-  //       // llvm::errs() << "[info] move: " << loadop << "\n";
-  //     }
-  //     return WalkResult::advance();
-  //   });
-
-  //   /////////
-  //   /// Step 2 : Get all stores op to be hoisted
-  //   /////////
-  //   kernel.walk([&](AffineStoreOp storeop)
-  //   {
-  //     // llvm::errs() << "[info] -----------------------------------\n";
-  //     // llvm::errs() << "[info] func: \n" << Func << "\n";      
-  //     // llvm::errs() << "[info] storeop: " << storeop << "\n";
-  //     Operation* ParentOp = storeop.getOperation()->getParentOp();
-  //     if(ParentOp->getName().getStringRef() == AffineForOp::getOperationName() )
-  //     { 
-  //       AffineForOp ParentForOp = dyn_cast<AffineForOp>(*ParentOp);
-  //       // MemRefRegion memrefRegion(Func.getLoc());
-  //       // mlir::Value memref;
-  //       // SmallVector<mlir::Value, 4> IVs;
-  //       for(mlir::Value index : storeop.getIndices()){
-  //         if(index == ParentForOp.getInductionVar()){
-  //           // This store op can't be hoisted because it is constrained by loop of its level. 
-  //           return WalkResult::advance();
-  //         }
-  //       }
-  //       // This storeop can be hoisted because it is not constrained by IV of its parent fopOp. 
-  //       // construct a loop-carried varaible
-  //       ToHoistStores.push_back(storeop);
-  //     }
-  //     return WalkResult::advance();
-  //   });
-
-  //   /////////
-  //   /// Step 3 : Do hoists for load-store pairs
-  //   /////////
-  //   SmallVector<AffineLoadOp,  4> ToHoistLoads_copy = ToHoistLoads;
-  //   SmallVector<AffineStoreOp, 4> ToHoistStores_copy = ToHoistStores;
-  //   for(AffineLoadOp loadop : ToHoistLoads_copy){
-  //     /// Check whether this load occurs with a corresponding store which have
-  //     /// the same memref and address to access. 
-  //     /// If so, this load-store pair 
-  //     /// should be hoisted while construct a loop-carried variable.
-  //     for(AffineStoreOp storeop : ToHoistStores_copy){
-  //       // llvm::errs() << "[info] loadop: " << loadop << "\n";  
-  //       // llvm::errs() << "[info] storeop: " << storeop << "\n"; 
-  //       if(ADORA::LoadStoreSameMemAddr(loadop, storeop) 
-  //         && checkAccumulationChain<arith::AddIOp>(loadop, storeop)
-  //         && checkAccumulationChain<arith::AddFOp>(loadop, storeop)
-  //         && checkAccumulationChain<arith::MulIOp>(loadop, storeop)
-  //         && checkAccumulationChain<arith::MulFOp>(loadop, storeop)
-  //         && checkAccumulationChain<arith::SelectOp>(loadop, storeop)
-  //       ){
-  //         AffineLoadOp* it_ld;
-  //         AffineStoreOp* it_st;   
-  //         PositionRelationInLoop PosRelation =
-  //               getPositionRelationship(loadop.getOperation(), storeop.getOperation());
-  //         switch (PosRelation)
-  //         {
-  //         case PositionRelationInLoop::SameLevel :
-  //         {
-  //           // Loadop and store op are in same level so 
-  //           // both should be hoisted.
-  //           NoChange = 0;
-
-  //           /// Get mlir::Value to be yielded
-  //           mlir::Value toYield = storeop.getValue();
-
-  //           /// Get ValueRanges of old for op
-  //           SmallVector<mlir::Value, 4> dupIterOperands, dupIterArgs, dupYieldOperands;
-  //           Operation* ParentOp = loadop.getOperation()->getParentOp();
-  //           if(isa<ADORA::KernelOp>(ParentOp))
-  //             continue;
-
-  //           AffineForOp oldForOp = dyn_cast<AffineForOp>(*ParentOp);
-  //           OpBuilder builder(oldForOp.getContext());
-  //           ValueRange oldIterOperands = oldForOp.getInits();
-  //           // ValueRange oldIterArgs = oldForOp.getRegionIterArgs();
-  //           ValueRange oldYieldOperands =
-  //               cast<AffineYieldOp>(oldForOp.getBody()->getTerminator()).getOperands();
-  //           // dupIterOperands.append(oldIterOperands.begin(), oldIterOperands.end());
-  //           // dupIterArgs.append(oldIterArgs.begin(), oldIterArgs.end());
-  //           dupYieldOperands.append(oldYieldOperands.begin(), oldYieldOperands.end());
-
-  //           // /// Add new mlir::Value to be yielded to dupIterOperands and dupYieldOperands
-  //           dupIterOperands.push_back(toYield);
-  //           // dupIterArgs.push_back(toYield);
-  //           dupYieldOperands.push_back(toYield);
-
-  //           // // Create a new loop with additional iterOperands, iter_args and yield
-  //           // // operands. This new loop will take the loop body of the original loop.
-  //           // AffineForOp newForOp = replaceForOpWithNewYields(
-  //           //     builder, oldForOp, dupIterOperands, dupYieldOperands, dupIterArgs); 
-  //           // oldForOp.getOperation()->erase();
-  //           IRRewriter rewriter(oldForOp->getContext());
-
-  //           AffineForOp newForOp =
-  //             cast<AffineForOp>(*oldForOp.replaceWithAdditionalYields(
-  //               rewriter, dupIterOperands, /*replaceInitOperandUsesInLoop=*/false,
-  //               [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBbArgs) {
-  //                 return dupYieldOperands;
-  //               }));
- 
-  //           // Move load-store pair
-  //           loadop.getOperation()->moveBefore(newForOp);           
-  //           storeop.getOperation()->moveAfter(newForOp);
-      
-  //           // Change the input of the new forop
-  //           unsigned newOperandIndex = newForOp.getOperation()->getNumOperands() - 1;
-  //           newForOp.getOperation()->setOperand(newOperandIndex, loadop);
-
-  //           // Replace all uses of loadop with new iter_arg of forop
-  //           replaceAllUsesInRegionWith( loadop.getResult(), 
-  //                                       newForOp.getRegionIterArgs()[newOperandIndex],
-  //                                       newForOp.getRegion());
-
-  //           // Change the input of the store op
-  //           unsigned newResultIndex = newForOp.getOperation()->getNumResults() - 1;
-  //           mlir::Value newForResult = newForOp.getOperation()->getResult(newResultIndex);
-  //           storeop.getOperation()
-  //                     ->setOperand(storeop.getStoredValOperandIndex(),newForResult);
-  //           // llvm::errs() << "[info] -----------------------------------\n";
-  //           // llvm::errs() << "[info] after move func: \n" << Func << "\n";   
-  //           // llvm::errs() << "[info] after newForOp: \n" << newForOp << "\n";     
-
-  //           // Remove hoisted load/store ops from to-check vector
-  //           it_ld = std::find(ToHoistLoads.begin(), ToHoistLoads.end(), loadop);
-  //           assert(it_ld != ToHoistLoads.end());
-  //           ToHoistLoads.erase(it_ld);
-  //           it_st = std::find(ToHoistStores.begin(), ToHoistStores.end(), storeop);
-  //           assert(it_st != ToHoistStores.end());
-  //           ToHoistStores.erase(it_st);
-  //           break;
-  //         }
-
-  //         case PositionRelationInLoop::LhsOuter :
-  //         {
-  //           /// load op is in outer level
-  //           /// hoist store op only
-  //           NoChange = 0;
-  //           Operation* storeParentOp = storeop.getOperation()->getParentOp();
-  //           if(isa<ADORA::KernelOp>(storeParentOp))
-  //             continue;
-  //           storeop.getOperation()->moveAfter(storeParentOp);
-            
-  //           // Remove hoisted load/store ops from to-check vector
-  //           it_ld = std::find(ToHoistLoads.begin(), ToHoistLoads.end(), loadop);
-  //           assert(it_ld != ToHoistLoads.end());
-  //           ToHoistLoads.erase(it_ld);
-  //           it_st = std::find(ToHoistStores.begin(), ToHoistStores.end(), storeop);
-  //           assert(it_st != ToHoistStores.end());
-  //           ToHoistStores.erase(it_st);
-  //           break;
-  //         }
-
-  //         case PositionRelationInLoop::RhsOuter : 
-  //         {
-  //           /// store op is in outer level
-  //           /// hoist load op only
-  //           NoChange = 0;
-  //           Operation* loadopParentOp = loadop.getOperation()->getParentOp();
-  //           loadop.getOperation()->moveBefore(loadopParentOp);
-  //           if(isa<ADORA::KernelOp>(loadopParentOp))
-  //             continue;
-
-  //           // Remove hoisted load/store ops from to-check vector
-  //           it_ld = std::find(ToHoistLoads.begin(), ToHoistLoads.end(), loadop);
-  //           assert(it_ld != ToHoistLoads.end());
-  //           ToHoistLoads.erase(it_ld);
-  //           it_st = std::find(ToHoistStores.begin(), ToHoistStores.end(), storeop);
-  //           assert(it_st != ToHoistStores.end());
-  //           ToHoistStores.erase(it_st);
-  //           break;
-  //         }
-          
-  //         default:
-  //           break;
-  //         }
-  //       }
-  //     }
-  //   }
-
-  //   /////////
-  //   /// Step 4 : Do hoists for remaining load/store 
-  //   /////////
-  //   for(AffineLoadOp loadop : ToHoistLoads){
-  //     /// If the loadop has no corresponding store then just hoist.
-  //     Operation* ParentOp = loadop.getOperation()->getParentOp();
-  //     if(isa<ADORA::KernelOp>(ParentOp))
-  //       continue;
-
-  //     assert(ParentOp->getName().getStringRef() == AffineForOp::getOperationName());
-  //     NoChange = 0;
-  //     loadop.getOperation()->moveBefore(ParentOp);
-  //   }    
-  //   for(AffineStoreOp storeop : ToHoistStores){
-  //     Operation* ParentOp = storeop.getOperation()->getParentOp();
-  //     if(isa<ADORA::KernelOp>(ParentOp))
-  //       continue;
-
-  //     assert(ParentOp->getName().getStringRef() == AffineForOp::getOperationName());
-  //     NoChange = 0;
-  //     storeop.getOperation()->moveAfter(ParentOp);
-  //   }
-  // }  
 }
 
 /**
@@ -678,7 +451,7 @@ bool MoveAccumulationInitialValue(affine::AffineForOp forop, mlir::Value InitVal
   OpBuilder b(forop);
   mlir::Type datatype = InitValue.getType();
   arith::ConstantOp newconst;
-  if(datatype.isF32()){
+  if(datatype.isF32() || datatype.isF16() || datatype.isBF16()){
     float constvalue = 0;
     FloatAttr constAttr = FloatAttr::get(datatype, constvalue);
     newconst = b.create<arith::ConstantOp>(forop.getLoc(), datatype , constAttr);
@@ -1244,22 +1017,22 @@ std::string GetCMPTypeStr(mlir::Operation* op){
     arith::CmpFOp cmpop = dyn_cast <arith::CmpFOp> (op);
     arith::CmpFPredicate cmppred = cmpop.getPredicate();
     cmptype = stringifyCmpFPredicate(cmppred);
-    if(cmptype == "ueq") return "FEQ32";
-    else if(cmptype == "une") return "FNE32";
-    else if(cmptype == "ugt") /*return "FUGT32";*/return "FOGT32";
-    else if(cmptype == "uge") /*return "FUGE32";*/return "FOGE32";
-    else if(cmptype == "ult") /*return "FULT32";*/return "FOLT32";
-    else if(cmptype == "ule") /*return "FULE32";*/return "FOLE32";
+    if(cmptype == "ueq") return "FEQ";
+    else if(cmptype == "une") return "FNE";
+    else if(cmptype == "ugt") /*return "FUGT32";*/return "FOGT";
+    else if(cmptype == "uge") /*return "FUGE32";*/return "FOGE";
+    else if(cmptype == "ult") /*return "FULT32";*/return "FOLT";
+    else if(cmptype == "ule") /*return "FULE32";*/return "FOLE";
     /*CGRA only support ordered float computing in current version.*/
 
-    else if(cmptype == "oeq") return "FEQ32";
-    else if(cmptype == "one") return "FNE32";
-    else if(cmptype == "ogt") return "FOGT32";
-    else if(cmptype == "oge") return "FOGE32";
-    else if(cmptype == "olt") return "FOLT32";
-    else if(cmptype == "ole") return "FOLE32";
+    else if(cmptype == "oeq") return "FEQ";
+    else if(cmptype == "one") return "FNE";
+    else if(cmptype == "ogt") return "FOGT";
+    else if(cmptype == "oge") return "FOGE";
+    else if(cmptype == "olt") return "FOLT";
+    else if(cmptype == "ole") return "FOLE";
 
-    else if(cmptype == "uno") /*return "FULE32";*/return "FUNO32";
+    else if(cmptype == "uno") /*return "FULE32";*/return "FUNO";
 
     else assert(0 && "Unsupported compare type.");   
   }
@@ -1273,10 +1046,10 @@ std::string GetCMPTypeStr(mlir::Operation* op){
 bool ConvertGreaterToLess(LLVMCDFGNode* node){
   if(node->getTypeName() == "UGT") node->setTypeName("ULT");
   else if(node->getTypeName() == "UGE") node->setTypeName("ULE");
-  else if(node->getTypeName() == "FUGT32") node->setTypeName("FULT32");
-  else if(node->getTypeName() == "FUGE32") node->setTypeName("FULE32");
-  else if(node->getTypeName() == "FOGT32") node->setTypeName("FOLT32");
-  else if(node->getTypeName() == "FOGE32") node->setTypeName("FOLE32");
+  else if(node->getTypeName() == "FUGT") node->setTypeName("FULT");
+  else if(node->getTypeName() == "FUGE") node->setTypeName("FULE");
+  else if(node->getTypeName() == "FOGT") node->setTypeName("FOLT");
+  else if(node->getTypeName() == "FOGE") node->setTypeName("FOLE");
   else return true;
 
   /// exchange operand idx
@@ -1851,6 +1624,37 @@ void setConstantNode(LLVMCDFGNode* node){
       node->setConstValHex(ConstCal_hex);
       node->setDataBits(32);
     }
+    else if (floatattr.getType().isBF16()) {
+      llvm::APFloat apf = floatattr.getValue();
+
+      bool losesInfo;
+      apf.convert(llvm::APFloat::BFloat(),
+                  llvm::APFloat::rmNearestTiesToEven, &losesInfo);
+
+      uint16_t raw = apf.bitcastToAPInt().getZExtValue();
+
+      std::vector<unsigned char> ConstCal_hex;
+      ConstCal_hex.push_back(static_cast<unsigned char>(raw & 0xFF));
+      ConstCal_hex.push_back(static_cast<unsigned char>((raw >> 8) & 0xFF));
+
+      node->setConstValHex(ConstCal_hex);
+      node->setDataBits(16);
+    }
+    else if (floatattr.getType().isF16()) {
+      llvm::APFloat apf = floatattr.getValue();
+      bool losesInfo;
+      apf.convert(llvm::APFloat::IEEEhalf(),
+                  llvm::APFloat::rmNearestTiesToEven, &losesInfo);
+
+      uint16_t raw = apf.bitcastToAPInt().getZExtValue();
+
+      std::vector<unsigned char> ConstCal_hex;
+      ConstCal_hex.push_back(static_cast<unsigned char>(raw & 0xFF));
+      ConstCal_hex.push_back(static_cast<unsigned char>((raw >> 8) & 0xFF));
+
+      node->setConstValHex(ConstCal_hex);
+      node->setDataBits(16);
+    }
   } 
   else if(isa<IntegerAttr>(constattr))
   {
@@ -2106,7 +1910,7 @@ static void HandleSelfCycle(LLVMCDFG* CDFG, bool verbose = true){
 }
 
 
-static bool HandlCompareNode(LLVMCDFG* CDFG, bool verbose = true){
+static bool HandleCompareNode(LLVMCDFG* CDFG, bool verbose = true){
   auto nodes = CDFG->nodes();
   for(auto &elem : nodes){
     // int node_id = elem.first;
@@ -2186,7 +1990,7 @@ void HandleVectorExtractNode(LLVMCDFG* CDFG, bool verbose = true){
 /// 
 /// @param CDFG A pointer to the LLVMCDFG representing the current control data flow graph.
 /// @param verbose A boolean indicating whether to print detailed information (default is true).
-void FixLinearAccessOfVectorStoreNode(LLVMCDFG* CDFG, bool verbose = true){
+void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
   auto nodes = CDFG->nodes();
   for(auto &elem : nodes){
     LLVMCDFGNode* node = elem.second;
@@ -2202,6 +2006,51 @@ void FixLinearAccessOfVectorStoreNode(LLVMCDFG* CDFG, bool verbose = true){
 
         /// fix linear access of extractop
         assert(node->isLSaffine() && node->getTypeName() == "Output");
+        std::string linearAccess = node->getLinearAccess();
+
+        std::stringstream ss(node->getLinearAccess());
+        std::string step, count;
+
+        SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
+        newLinearAccess.push_back(std::pair(ElementBytes, interleaverNum));
+        // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
+
+        int level = 0;
+        while (std::getline(ss, step, ',')) {
+          std::getline(ss, count, ',');
+
+          if(level == 1){
+            int newstep = std::stoi(step) - ElementBytes * interleaverNum + ElementBytes;
+            newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
+          }
+          else if(level != 0) {
+            newLinearAccess.push_back(std::pair(std::stoi(step), std::stoi(count)));
+          }
+
+          level++;
+        }
+
+        assert (!newLinearAccess.empty());
+        
+        node->setLinearAccess(LinearAccessToStr(newLinearAccess));
+      }
+      else{
+        assert(false && "vectorstore op could only support input as interleaver op right now.");
+      }
+    }
+    else if(op->getName().getStringRef() == "affine.vector_load"){
+      mlir::affine::AffineVectorLoadOp vecloadop = dyn_cast<mlir::affine::AffineVectorLoadOp>(op);
+      // for(LLVMCDFGNode* outputnode : node->outputNodes()){
+      Operation* userop = node->outputNodes()[0]->operation();
+      // }
+      int ElementBytes = vecloadop.getMemRefType().getElementTypeBitWidth()/8;
+
+      if(isa<ADORA::DeinterleaverOp>(userop)){
+        /// get the input num of interleaver
+        int interleaverNum = dyn_cast<ADORA::DeinterleaverOp>(userop).getDeinterleaveNumber();
+
+        /// fix linear access of extractop
+        assert(node->isLSaffine() && node->getTypeName() == "Input");
         std::string linearAccess = node->getLinearAccess();
 
         std::stringstream ss(node->getLinearAccess());
@@ -2264,6 +2113,54 @@ static void fuseMulAccToMAC(LLVMCDFG* CDFG, const std::string& mul_name, const s
       }
     }
 
+  }
+}
+
+////////////////////////
+/// Handle floatpoint bitwidth
+////////////////////////
+static void SpecifyFPNodePrecision(LLVMCDFG* CDFG, bool verbose){
+  auto nodes = CDFG->nodes();
+  for (auto &elem : nodes) {
+    LLVMCDFGNode* node = elem.second;
+    mlir::Operation* op = node->operation();
+    if (!op) continue;
+    if (llvm::isa<mlir::arith::AddFOp>(op) ||
+        llvm::isa<mlir::arith::SubFOp>(op) ||
+        llvm::isa<mlir::arith::MulFOp>(op) ||
+        llvm::isa<mlir::arith::DivFOp>(op) ||
+        llvm::isa<mlir::arith::CmpFOp>(op)) 
+    {
+      mlir::Type resultTy;
+      if (op->getNumResults() > 0)
+        resultTy = op->getResult(0).getType();
+      else
+        continue;
+
+      if (!resultTy.isa<mlir::FloatType>())
+        continue;
+
+      auto floatTy = resultTy.cast<mlir::FloatType>();
+      unsigned width = floatTy.getWidth();
+      std::string precision;
+
+      if (floatTy.isF16())
+        precision = "F16";
+      else if (floatTy.isBF16())
+        precision = "BF16";
+      else if (floatTy.isF32())
+        precision = "F32";
+      else if (floatTy.isF64())
+        precision = "F64";
+
+      std::string oldName, newName;
+      oldName = node->getTypeName();
+      if(precision == "BF16"){
+        newName = "B" + oldName;
+      }
+      newName = newName + precision.substr(2);
+      node->setTypeName(newName);
+    }
   }
 }
 
@@ -2430,6 +2327,34 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           std::string initAddr_str = "0";
           int memrefsize = GetMemrefSize(vecstore);
           mlir::Operation* mrefop = vecstore.getMemref().getDefiningOp();
+          std::string ref_name;
+          if(isa<ADORA::DataBlockLoadOp>(mrefop)){
+            ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(Bload.getId());
+          }
+          else if(isa<ADORA::LocalMemAllocOp>(mrefop)){
+            ADORA::LocalMemAllocOp BAlloc = dyn_cast<ADORA::LocalMemAllocOp>(mrefop);
+            ref_name = std::string(kernel.getKernelName()) + ":" + std::string(BAlloc.getId());
+          }
+          else{
+            assert(0);
+          }
+          // op->getResult(0).addAttribute("LinearAccess", b.getStringAttr(linearaccess_str));
+          node->setLinearAccess(linearaccess_str);
+          node->setInitAddr(initAddr_str);
+          node->setMemrefSize(memrefsize);
+          node->setMemrefName(ref_name);
+          node->setLSaffine(true);
+        }
+        else if (op->getName().getStringRef() == "affine.vector_load" ){
+          LLVMCDFGNode* node = CDFG->addNode(op); 
+          node->setLoopLevel(level);
+          affine::AffineVectorLoadOp vecload = dyn_cast<affine::AffineVectorLoadOp>(op);
+          std::string linearaccess_str = LinearAccessToStr(GetLinearAccess(vecload, For_loop_level));
+          // std::string initAddr_str = std::to_string(GetInitAddr(vecstore, For_loop_level));
+          std::string initAddr_str = "0";
+          int memrefsize = GetMemrefSize(vecload);
+          mlir::Operation* mrefop = vecload.getMemref().getDefiningOp();
           std::string ref_name;
           if(isa<ADORA::DataBlockLoadOp>(mrefop)){
             ADORA::DataBlockLoadOp Bload = dyn_cast<ADORA::DataBlockLoadOp>(mrefop);
@@ -2767,7 +2692,7 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
   ////////////////////////
   /// Handle compare node
   ////////////////////////
-  bool result = HandlCompareNode(CDFG, verbose);
+  bool result = HandleCompareNode(CDFG, verbose);
   if(!result) return false;
 
   ////////////////////////
@@ -2778,7 +2703,7 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
   ////////////////////////
   /// Handle affine.vector_store node
   ////////////////////////
-  FixLinearAccessOfVectorStoreNode(CDFG, verbose);
+  FixLinearAccessOfVectorNode(CDFG, verbose);
 
   ////////////////////////
   /// Remove redundant nodes: bitcast, for with no source and sink, truncf
@@ -2864,6 +2789,11 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
       }
     }    
   }
+
+  ////////////////////////
+  /// Handle floatpoint bitwidth
+  ////////////////////////
+  SpecifyFPNodePrecision(CDFG, verbose);
 
   ////////////////////////
   /// fuse operators: MAC, FMAC32

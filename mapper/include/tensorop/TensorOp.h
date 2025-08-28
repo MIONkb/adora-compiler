@@ -10,19 +10,42 @@
 
 #define ADORA_TENSOR_MAPPER MapperSA
 
+
+
 namespace mlir{
 namespace ADORA{
+#pragma once
+inline int tensorOpCnt = 0;
+
+
 
 void MapAdoraTensorOp(MLIRContext* context, mlir::ModuleOp module, 
                     std::vector<ADORA_TENSOR_MAPPER*> mappers,
-                    ADG* adg, int timeout_ms, int max_iters, bool objOpt);
+                    ADG* adg, std::string& OpNameFile_str,
+                    int timeout_ms, int max_iters, bool objOpt);
 
 
 class TensorDataflowGen : public ADORATensorOpVisitorBase<TensorDataflowGen, bool> {
 public:
   /// Class define
   OpBuilder opbuilder;
+
+
+  // mapping args
   std::vector<ADORA_TENSOR_MAPPER*> mappers;
+  ADG* _adg = nullptr;
+  std::string _OpNameFile_str = "";
+  int _timeout_ms;
+  int _max_iters; 
+  bool _objOpt;
+  void setMappingArgs(ADG* adg, std::string& OpNameFile_str,
+    int timeout_ms, int max_iters, bool objOpt){
+    _adg = adg;
+    _OpNameFile_str = OpNameFile_str;
+    _timeout_ms = timeout_ms;
+    _max_iters = max_iters;
+    _objOpt = objOpt;
+  }
 
   /// TensorDataflowGen
   // TensorDataflowGen(){}
@@ -32,6 +55,9 @@ public:
 
 
   /// Function members
+  void MapNestedForOrKernel(ADORA_TENSOR_MAPPER* mapper, 
+    mlir::Operation* forOrKernel, std::string& OpNameFile_str);
+
   bool visitOp(ADORATensor::GemmOp op);
 
   bool visitInvalidOp(Operation* op) override {

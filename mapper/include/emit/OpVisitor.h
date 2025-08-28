@@ -8,6 +8,7 @@
 #define ADORA_EMITCGRA_VISITOR_H
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -30,6 +31,9 @@ public:
             ADORA::KernelOp, 
             ADORA::DataBlockLoadOp, ADORA::DataBlockStoreOp, 
             ADORA::LocalMemAllocOp,
+
+            // ADORATensor Dialect
+            ADORA::ADORATensor::GemmOp,
 
 
             // // Function operations.
@@ -118,6 +122,7 @@ public:
   HANDLE(ADORA::DataBlockStoreOp);
   HANDLE(ADORA::LocalMemAllocOp);
   HANDLE(ADORA::KernelOp);
+  HANDLE(ADORA::ADORATensor::GemmOp);
   // HANDLE(StreamOp);
   // HANDLE(StreamReadOp);
   // HANDLE(StreamWriteOp);
@@ -229,6 +234,7 @@ public:
   // HANDLE(arith::FPToUIOp);
   // HANDLE(arith::FPToSIOp);
 #undef HANDLE
+
 };
 } // namespace ADORA
 } // namespace mlir

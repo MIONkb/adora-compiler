@@ -667,6 +667,7 @@ def DeinterleaverOp : ADORA_Op<"deinterleaver">{
 
   let builders = [
     OpBuilder<(ins "Value":$source)>,
+    OpBuilder<(ins "::mlir::TypedValue<::mlir::VectorType>":$source)>,
   ];
 
   /// serial input

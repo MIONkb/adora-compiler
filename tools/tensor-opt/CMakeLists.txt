@@ -45,6 +45,7 @@ set(LIBS
   #ADORATensor
   ADORATensorOps
   ADORATensorTransforms
+  ADORATensorLower
 )
 
 set(SOURCES

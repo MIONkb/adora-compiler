@@ -25,7 +25,9 @@ int NewValueNameId(const llvm::SmallDenseMap<mlir::Value, Op_Name_C>& value_name
   return new_id + 1;
 }
 
-
+void setEmitSkipAttr(mlir::Operation* op){
+  op->setAttr("EmitSkip", mlir::UnitAttr::get(op->getContext()));
+}
 
 // void emitAffineLoad(AffineLoadOp op) {
 //   indent();
@@ -86,8 +88,10 @@ public:
           << " = " << Lhs << " " << op_symbol << " " << Rhs << ";\n"; 
       return true;
     }
-
+  ///////////////////////////////
   /// ADORA dialect operations.
+  ///////////////////////////////
+
   /// TODO: 1. support np.array 2.strided blockload 3.mutiple-dimmension list. only support one dimmension list rightnow
   bool visitOp(ADORA::DataBlockLoadOp op) {
     /// DataBlockLoadOp can be seen as a memref subview op, 
@@ -561,6 +565,9 @@ public:
 
 
   bool visitOp(ADORA::KernelOp op) {
+    if(op.getOperation()->hasAttr("EmitSkip")){
+      return true;
+    }
     indent() << "\n";
     if(!MapHasKey(_pytestemitter->KnToCfgExe, op)){
       // Configuration cfg = ;
@@ -579,6 +586,32 @@ public:
     indent() << "\n\n";
     return true;
   }
+
+  ///////////////////////////////
+  /// ADORA Tensor dialect operations.
+  ///////////////////////////////
+  bool visitOp(ADORA::ADORATensor::GemmOp gemmop) {
+    mlir::Operation* op = gemmop.getOperation()->getNextNode();
+    setEmitSkipAttr(op);
+    // indent() << "\n";
+    // if(!MapHasKey(_pytestemitter->KnToCfgExe, op)){
+    //   // Configuration cfg = ;
+    //   ADG* adg = _pytestemitter->getADG();
+    //   _pytestemitter->GenerateCGRACFGAndEXE(op, _pytestemitter->KnToConfiguration[op], adg);
+    // }
+    // if(!op.getKernelName().empty()){
+    //   indent() << "### " << op.getKernelName() << "\n";
+    // }
+
+    // std::vector<std::string> strs = split_str_by_char(_pytestemitter->KnToCfgExe[op], '\n');
+    // for(std::string str: strs){
+    //   indent() << str << "\n";
+    // }
+    
+    // indent() << "\n\n";
+    // return true;
+  }
+
   // bool visitOp(BufferOp op) {
   //   if (op.getDepth() == 1)
   //     return emitter.emitAlloc(op), true;
@@ -627,6 +660,10 @@ public:
 
   /// Affine statements.
   bool visitOp(affine::AffineForOp op) { 
+    if(op.getOperation()->hasAttr("EmitSkip")){
+      return true;
+    }
+
     indent() << "for (";
     auto iterVar = op.getInductionVar();
 
@@ -652,6 +689,7 @@ public:
     indent() << "\n";
     return true;
   }
+
   // bool visitOp(AffineIfOp op) { return emitter.emitAffineIf(op), true; }
   // bool visitOp(AffineParallelOp op) {
   //   return emitter.emitAffineParallel(op), true;
