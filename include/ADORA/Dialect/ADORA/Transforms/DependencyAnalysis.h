@@ -32,6 +32,7 @@
 #include "llvm/ADT/DenseMap.h"
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 // #include "llvm/ADT/SmallSet.h" /// use std::unordered_set instead of std::list
 #include<set>
 

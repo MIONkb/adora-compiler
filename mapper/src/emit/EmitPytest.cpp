@@ -8,8 +8,12 @@
 #include "emit/OpVisitor.h"
 #include "mlir/Dialect/Affine/Utils.h"
 
+#include <ctime>
+
 using namespace mlir;
+using namespace mlir::affine;
 using namespace mlir::ADORA;
+using namespace mlir::ADORA::ADORATensor;
 
 
 //===----------------------------------------------------------------------===//
@@ -84,8 +88,8 @@ public:
         Rhs = ConstOpToValueStr[op.getRhs()];
       assert(Lhs != "" && Rhs != "");
 
-      indent() << type << " " << EmitNewValueAndGetName(op.getResult(), type) 
-          << " = " << Lhs << " " << op_symbol << " " << Rhs << ";\n"; 
+      indent() << EmitNewValueAndGetName(op.getResult(), type) 
+          << " = " << Lhs << " " << op_symbol << " " << Rhs << "\n"; 
       return true;
     }
   ///////////////////////////////
@@ -150,17 +154,7 @@ public:
     uint64_t DMA_Len = DataBytes;
 
     for(int r = ResultShape.size() - 1; r >= 0; r--){
-      // assert(SourceShape[r] >= ResultShape[r]);
-      // if(op.getOriginalMemrefType().isDynamicDim(r)){
-      //   DMA_Len = DMA_Len * ResultShape[r];
-      //   break;
-      // }
-      // else{
-      //   assert(SourceShape[r] >= ResultShape[r]);
         DMA_Len = DMA_Len * ResultShape[r];
-        // if(SourceShape[r] > ResultShape[r])
-        //   break;
-      // }
     }
     
     /// Get DRAM_BaseAddr
@@ -191,163 +185,59 @@ public:
             DRAM_Offset_EachDim[exprIdx] = operandname;
           }
         }
-        // SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/operandIdx, /*map=*/op.getAffineMap());
-        // assert(Dimensions.size() == 1);
-        // mlir::Value operand = op.getMapOperands()[exprIdx];
       }
       else{
         assert(false && "Unsupported Block Access.");
       }
-
-      // assert(cstValue != "");
-      // if(cstValue == "0"){
-      //   DRAM_Offset_EachDim.push_back("0");
-      //   continue;
-      // }
-      // else{
-      //   // SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/exprIdx, /*map=*/op.getAffineMap());
-      //   int64_t elements_each_step = DataBytes;
-      //   for (unsigned i = exprIdx + 1; i < SourceShape.size(); i++){
-      //     elements_each_step *= SourceShape[i];
-      //   }
-      //   // if(DRAM_Offset != "")
-      //   //   DRAM_Offset = DRAM_Offset + " + ";
-      //   // DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + cstValue;
-      // }
     }
-    // for(int operandIdx = 0; operandIdx < op.getMapOperands().size(); operandIdx++){
-    //   std::string DRAM_Offset;
-    //   mlir::Value operand = op.getMapOperands()[operandIdx];
-    //   std::string operandname = _pytestemitter->lookupName(operand);
-    //   if(operandname == "")      
-    //     operandname = ConstOpToValueStr[operand];
-    //   assert(operandname != "");
-    //   DRAM_Offset_EachDim.push_back(operandname);
-      // if(operandname == "0"){
-      //   DRAM_Offset_EachDim.push_back("0");
-      //   continue;
-      // }
-      // else{
-      //   SmallVector<int>Dimensions = getOperandDimensionsInMap(/*dim=*/operandIdx, /*map=*/op.getAffineMap());
-      //   assert(Dimensions.size() == 1);
-      //   DRAM_Offset_EachDim
-      //   // for(unsigned d = 0; d < Dimensions.size(); d++){
-      //   //   int64_t elements_each_step = DataBytes;
-      //   //   for (unsigned i = Dimensions[d] + 1; i < SourceShape.size(); i++){
-      //   //     elements_each_step *= SourceShape[i];
-      //   //   }
-      //   //   if(DRAM_Offset != "")
-      //   //     DRAM_Offset = DRAM_Offset + " + ";
-      //   //   DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + operandname;
-      //   // }
-      // }
-    // }
-    // for(unsigned d = 0; d < Dimensions.size(); d++){
-    //   int64_t elements_each_step = DataBytes;
-    //   for (unsigned i = Dimensions[d] + 1; i < SourceShape.size(); i++){
-    //     elements_each_step *= SourceShape[i];
-    //   }
-    //   if(DRAM_Offset != "")
-    //     DRAM_Offset = DRAM_Offset + " + ";
-    //   DRAM_Offset = DRAM_Offset + std::to_string(elements_each_step) + " * " + operandname;
-    // }
-    // if(DRAM_Offset == "") {
-    //   if(op.getAffineMap().isEmpty()){
-    //     ///// For %2 = ADORA.BlockLoad %arg2 [] : memref<?xi32> -> memref<2xi32>
-    //     DRAM_Offset = "0";
-    //   }
-    //   else{
-    //     ///// For %2 = ADORA.BlockLoad %arg2 [11, 10] : memref<20x506xi32> -> memref<2x506xi32>
 
-    //   }
-    //   if(DRAM_Offset == "") {
-    //     DRAM_Offset = "0";
-    //   }
-    // }
 
     /// Get DMA_Request_Len from every dim
     std::vector<int64_t> LenEachDim;
     bool continuous = true;
     for(int r = ResultShape.size() - 1; r >= 0; r--){
       LenEachDim.insert(LenEachDim.begin(), ResultShape[r]);
-      // if(!continuous){
-      /// For Python List
-        // if(SourceShape[r] == 1)
-        //   DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is overlooked
-        // else 
-        //   DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), ResultShape[r]);
-      // }
-      // else {/// continuous
-      //   if(SourceShape[r] > ResultShape[r]){
-      //     DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is continuous
-      //     continuous = false;
-      //   }
-      //   else if(SourceShape[r] == ResultShape[r]){
-      //     DMA_Request_Offsets.insert(DMA_Request_Offsets.begin(), -1); /// -1 means transfer of this rank is continuous
-      //   }
-      // }
     }    
 
     /// SPAD_BaseAddr
     /// SPAD_Offset: keep increasing by DMA_Len.
     llvm::SmallVector<dfgIoInfo> DfgIoInfos = _pytestemitter->getDfgIoInfosFromBlockLoad(op);
+
     llvm::SmallVector<uint64_t> SPAD_BaseAddrs;
     for(dfgIoInfo elem: DfgIoInfos){
       SPAD_BaseAddrs.push_back(elem.addr);
     }
 
-    /// Emit python
-    // unsigned cur_indent = _indent;
-    // unsigned idx_num = 0;
-    // llvm::SmallDenseMap<int, int64_t> LItoStep;
-    // indent() << "dramoffset_" << BLid << " = " << DRAM_Offset <<";\n";
-    // std::string DMA_Request_Len_str = "rlen_" + BLid + " = ";
-    // indent() << "spadoffset_" << BLid << " = 0;\n";
-    // for(int r = 0; r < DMA_Request_Offsets.size(); r++){
-    //   int64_t Roffset = DMA_Request_Offsets[r];
-    //   std::string idx = "idx_" + std::to_string(r);
-    //   if(Roffset != -1){
-    //     idx_num++;
-    //     int64_t elements_each_step = DataBytes;
-    //     for (unsigned i = r + 1; i < SourceShape.size(); i++){
-    //       elements_each_step *= SourceShape[i];
-    //     }
-    //     indent() << "for(" << idx << " in range(" 
-    //           << Roffset << "):\n";
-    //     // LItoStep[idx] = elements_each_step;
-    //     DMA_Request_Offsets_str += " " + std::to_string(elements_each_step)
-    //                             + "*" + idx + " +";
-    //     _indent += 4;
-    //     setIndent(_indent);
-    //   }
-    // }
-    // if(DMA_Request_Len_str.substr(DMA_Request_Offsets_str.size()-2, 2) == "= ")
-    //   DMA_Request_Offsets_str += "0;";
-    // else
-    //   DMA_Request_Offsets_str.back() = ';';
-    // indent() << DMA_Request_Offsets_str << "\n";
-    // _indent += 2;
-    // setIndent(_indent);
-    // for(auto spadbaddr : SPAD_BaseAddrs){
     for(int i = 0; i < SPAD_BaseAddrs.size(); i++)
     {
       auto spadbaddr = SPAD_BaseAddrs[i];
       int fuse = (i == SPAD_BaseAddrs.size() - 1)? 0 : 1; /// fuse: 0 - broadcast, 1 - non-broadcast
       std::stringstream load_data, spm_ptr;
-      // load_data <<"load_data(" << Memref_BaseAddr 
-      //         <<" + " << "dramoffset_" << BLid
-      //         <<" + " << "roffset_" << BLid
-      //         <<", 0x" << std::hex << spadbaddr 
-      //         <<" + " << "spadoffset_" << BLid 
-      //         <<", " << std::dec << DMA_Len 
-      //         <<", " << std::dec << fuse  /*fuse*/
-      //         <<", _task_id" /*Task id*/ << ", LD_DEP_ST_LAST_TASK" /*Task dep*/
-      //         <<");\n";
+     
       load_data << "idata.append(" << Memref_BaseAddr;
       assert(DRAM_Offset_EachDim.size() == LenEachDim.size());
       for(int i = 0; i < DRAM_Offset_EachDim.size(); i++){
-        load_data << "[" << DRAM_Offset_EachDim[i] 
-                  << ":" << DRAM_Offset_EachDim[i] << "+" << LenEachDim[i] << "]";
+        if(i == 0){
+          load_data << "[" ;
+        }
+
+        if(op.hasStrides()){
+          load_data << DRAM_Offset_EachDim[i] 
+                    << ":" << DRAM_Offset_EachDim[i] << "+" << LenEachDim[i] * op.getStridesAsArrayRef()[i]
+                    << ":" << op.getStridesAsArrayRef()[i];
+        }
+        else{
+          load_data << DRAM_Offset_EachDim[i] 
+                    << ":" << DRAM_Offset_EachDim[i] << "+" << LenEachDim[i];          
+        }
+
+        if(i == DRAM_Offset_EachDim.size() - 1){
+          load_data << "]";
+        }
+        else{
+          load_data << ",";
+        }
+
       }
       load_data << ")";
 
@@ -356,23 +246,9 @@ public:
               << ", " << std::dec<< DMA_Len 
               << "))";
       indent() << load_data.str() << "\n" ;
-      indent() << spm_ptr.str();
+      indent() << spm_ptr.str() << "\n\n" ;
 
     }
-    // indent()<< "spadoffset_" << BLid 
-    //         << " = spadoffset_" << BLid 
-    //         << " + " << DMA_Len <<";\n";
-
-
-
-    // _indent = cur_indent;
-    // setIndent(_indent);
-    indent();
-    // for(int _ = 0 ; _ < idx_num ; _++){
-    //   _os << "} ";
-    // }
-    _os << "\n";
-    // indent() << "}\n";
 
     return true;
   }
@@ -422,11 +298,13 @@ public:
 
       if(IsLastBlockStoreOp(op)){
         indent() << "stream = runtime.create_stream()\n\n";
-        indent() << "await aux_stream(\n"
-                 << "\tstream=stream, config=configs,\n"
-                 << "\tiptrs=iptrs, idata=idata,\n"
-                 << "\toptrs=optrs, odata=odata, olen =olen\n"
-                 <<")\n";
+        indent() << "await aux_stream(\n";
+        indent() << "\tstream=stream, config=configs,\n";
+        indent() << "\tiptrs=iptrs, idata=idata,\n";
+        indent() << "\toptrs=optrs, odata=odata, olen =olen\n";
+        indent() <<")\n\n";
+        indent() <<"iptrs.clear(), idata.clear()\n";
+        indent() <<"optrs.clear(), odata.clear(), olen.clear()\n\n";
       }
 
       return true;
@@ -502,8 +380,25 @@ public:
       store_data << "odata.append(" << Memref_BaseAddr;
       assert(DRAM_Offset_EachDim.size() == LenEachDim.size());
       for(int i = 0; i < DRAM_Offset_EachDim.size(); i++){
-        store_data << "[" << DRAM_Offset_EachDim[i] 
-                  << ":" << DRAM_Offset_EachDim[i] << "+" << LenEachDim[i] << "]";
+        if(i == 0){
+          store_data << "[" ;
+        }
+
+        if(op.hasStrides()){
+          store_data << DRAM_Offset_EachDim[i] 
+                  << ":" << DRAM_Offset_EachDim[i] << "+" << LenEachDim[i] * op.getStridesAsArrayRef()[i] 
+                  << ":" << op.getStridesAsArrayRef()[i];
+        }
+        else{
+          store_data << DRAM_Offset_EachDim[i] 
+                  << ":" << DRAM_Offset_EachDim[i] << "+" << LenEachDim[i];
+        }
+        if(i == DRAM_Offset_EachDim.size() - 1){
+          store_data << "]";
+        }
+        else{
+          store_data << ",";
+        }
       }
       store_data << ")";
 
@@ -516,19 +411,21 @@ public:
 
       indent() << store_data.str() << "\n" ;
       indent() << spm_ptr.str() << "\n";
-      indent() << olen.str() << "\n";
+      indent() << olen.str() << "\n\n";
 
     }
 
-    indent() << "\n";
+    // indent() << "\n";
 
     if(IsLastBlockStoreOp(op)){
       indent() << "stream = runtime.create_stream()\n\n";
-      indent() << "await aux_stream(\n"
-               << "\tstream=stream, config=configs,\n"
-               << "\tiptrs=iptrs, idata=idata,\n"
-               << "\toptrs=optrs, odata=odata, olen =olen\n"
-               <<")\n";
+      indent() << "await aux_stream(\n";
+      indent() << "\tstream=stream, config=configs,\n";
+      indent() << "\tiptrs=iptrs, idata=idata,\n";
+      indent() << "\toptrs=optrs, odata=odata, olen =olen\n";
+      indent() <<")\n\n";
+      indent() <<"iptrs.clear(), idata.clear()\n";
+      indent() <<"optrs.clear(), odata.clear(), olen.clear()\n\n";
     }
 
     return true;    
@@ -592,6 +489,14 @@ public:
   ///////////////////////////////
   bool visitOp(ADORA::ADORATensor::GemmOp gemmop) {
     mlir::Operation* op = gemmop.getOperation()->getNextNode();
+    // if(isa<affine::AffineForOp>(op)){
+    //   op->setAttr("ADORAGemm", mlir::UnitAttr::get(op->getContext()));
+    // }
+    if(isa<mlir::affine::AffineForOp>(op) && op->hasAttr("ADORAGemm")){
+      visitOp(dyn_cast<mlir::affine::AffineForOp>(op));
+    }
+
+
     setEmitSkipAttr(op);
     // indent() << "\n";
     // if(!MapHasKey(_pytestemitter->KnToCfgExe, op)){
@@ -638,7 +543,7 @@ public:
     mlir::Type t = mt.getElementType();
 
     std::string type = getEmitType(t);
-    indent() << type << " " << EmitNewValueAndGetName(op.getResult(), type) << ";\n";
+    indent() << EmitNewValueAndGetName(op.getResult(), type) << "\n";
 
     return true; 
   }
@@ -664,29 +569,27 @@ public:
       return true;
     }
 
-    indent() << "for (";
+    indent() << "for ";
     auto iterVar = op.getInductionVar();
-
-    // Emit lower bound.
     assert(op.getLowerBoundMap().getResults().size()==1);
-    _os << "int " << EmitNewValueAndGetName(iterVar, "int") << " = ";
-    _os << op.getLowerBoundMap().getResult(0) << "; ";
+    _os << EmitNewValueAndGetName(iterVar, "int") << " in range(";
+    _os << op.getLowerBoundMap().getResult(0) << ", ";
 
     // Emit loop invariant(upper bound)
     assert(op.getUpperBoundMap().getResults().size()==1);
-    _os << _pytestemitter->lookupName(iterVar) << " < " ;
-    _os << op.getUpperBoundMap().getResult(0) << "; ";
+    _os << op.getUpperBoundMap().getResult(0) << ", ";
 
     // Emit loop step
-    _os << _pytestemitter->lookupName(iterVar) << " = " ;
-    _os << _pytestemitter->lookupName(iterVar) << " + "  << op.getStep() << "){\n";
+    _os  << op.getStep() << "):\n";
 
-    _pytestemitter->emitBlock(*(op.getBody()), _os);
-    // reduce
-    indent() << "}\n";
-    indent() << "\n";
-    indent() << "\n";
-    indent() << "\n";
+    if(op.getOperation()->hasAttr("ADORAGemm")){
+      _pytestemitter->emitGemmBlock(*(op.getBody()), _os);
+    }
+    else{
+      _pytestemitter->emitBlock(*(op.getBody()), _os);
+    }
+
+    _os << "\n";
     return true;
   }
 
@@ -718,7 +621,7 @@ public:
 
     assert(op.getMemref().getType().cast<MemRefType>().getShape().size() == 0);
     std::string memref = _pytestemitter->lookupName(op.getMemref());
-    indent() << memref << " = " << value << ";\n";
+    indent() << memref << " = " << value << "\n";
     return true;
     // return emitter.emitAffineStore(op), true; 
   }
@@ -827,7 +730,6 @@ public:
     }
     else if(isa<BoolAttr>(constattr))
     {
-
       BoolAttr boolattr = dyn_cast<BoolAttr>(constattr);
       bool value = boolattr.getValue(); 
       ConstOpToValueStr[op.getResult()] = std::to_string(value);
@@ -872,17 +774,17 @@ public:
       assert(Lhs != "" && Rhs != "");
 
       if( Lhs == "0" && Rhs == "0")
-        indent() << type << " " << EmitNewValueAndGetName(op.getResult(), type) 
-          << " = " << "0" << ";\n";
+        indent() << EmitNewValueAndGetName(op.getResult(), type) 
+          << " = " << "0" << "\n";
       else if( Lhs == "0" && Rhs != "0")
-        indent() << type << " " << EmitNewValueAndGetName(op.getResult(), type) 
-          << " = " << Rhs << ";\n";
+        indent() << EmitNewValueAndGetName(op.getResult(), type) 
+          << " = " << Rhs << "\n";
       else if( Lhs != "0" && Rhs == "0")
-        indent() << type << " " << EmitNewValueAndGetName(op.getResult(), type) 
-          << " = " << Lhs << ";\n";
+        indent() << EmitNewValueAndGetName(op.getResult(), type) 
+          << " = " << Lhs << "\n";
       else
-        indent() << type << " " << EmitNewValueAndGetName(op.getResult(), type) 
-          << " = " << Lhs << " " << "+" << " " << Rhs << ";\n"; 
+        indent()  << EmitNewValueAndGetName(op.getResult(), type) 
+          << " = " << Lhs << " " << "+" << " " << Rhs << "\n"; 
       
       return true;
     // return EmitBinary(op, "+");
@@ -899,13 +801,13 @@ public:
       assert(Lhs != "" && Rhs != "");
 
       if( Lhs == "0" && Rhs == "0")
-        indent() << type << " " << EmitNewValueAndGetName(op.getResult(), type) 
-          << " = " << "0" << ";\n";
+        indent() << EmitNewValueAndGetName(op.getResult(), type) 
+          << " = " << "0" << "\n";
       else if( Lhs != "0" && Rhs == "0")
-        indent() << type << " " << EmitNewValueAndGetName(op.getResult(), type) 
-          << " = " << Lhs << ";\n";
+        indent() << EmitNewValueAndGetName(op.getResult(), type) 
+          << " = " << Lhs << "\n";
       else
-        indent() << type << " " << EmitNewValueAndGetName(op.getResult(), type) 
+        indent() << EmitNewValueAndGetName(op.getResult(), type) 
           << " = " << Lhs << " " << "-" << " " << Rhs << ";\n"; 
       
       return true;
@@ -971,7 +873,7 @@ void PytestEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os
     Op_Name_C arg_info("arg", argIdx);
     appendValueNameList(funcop.getBody().getArgument(argIdx), arg_info);
     if(argType.isa<MemRefType>()){
-      ostr <<"arg_" << argIdx  << ": List" ;
+      ostr <<"arg_" << argIdx  << ": ndarray" ;
     } 
     else if(argType.isIndex()){
       ostr << "arg_" << argIdx  << ": int";
@@ -993,7 +895,7 @@ void PytestEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os
   ostr << "):\n";
 
   ostr << "    # axibus.log.info(\"[ADORA] Starting CGRA call (" 
-       << funcop.getSymName().str() << ")\")";
+       << funcop.getSymName().str() << ")\")\n";
 
   ostr << "    iptrs, idata = [],[]\n" 
        << "    optrs, odata, olen = [],[],[]\n" 
@@ -1048,15 +950,29 @@ bool PytestEmitter::emitPytest(llvm::raw_ostream &os) {
   // ADORAEmitterState state(os);
   // ModuleEmitter(state).emitModule(module);
   // return failure(state.encounteredError);
+  /// get time
+  std::time_t t = std::time(nullptr);
+  std::tm tm;
+  #ifdef _WIN32
+  localtime_s(&tm, &t);
+  #else
+  localtime_r(&t, &tm);
+  #endif
+  char timebuf[64];
+  std::strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", &tm);
+
   os << R"XXX(
 """
 Copyright (c) 2025 ADORA
 All rights reserved.
-
 Automatically generated file for pytest/cocotb based CGRA call function from ADORA.
+)XXX";  
+  os << "Generated on: " << timebuf << "\n";
+  os << R"XXX(
 """
 from test_runif import DeviceData, DeviceConfig, DeviceStream, DeviceRuntime
 from typing import List
+from numpy import ndarray
 
 async def aux_stream(
     stream: DeviceStream, config: List[DeviceConfig], 
@@ -1091,7 +1007,7 @@ async def aux_stream(
     # 2. Host -> Device transfer
     # ------------------------------
     for i in range(len(iptrs)):
-        await stream.memcpyHostToDevice(d_data=iptrs[i], h_data=idata[i], size=len(idata[i]), dtype='i')
+        await stream.memcpyHostToDevice(d_data=iptrs[i], h_data=idata[i], size=len(idata[i]))
     # ------------------------------
     # 3. Execute on device
     # ------------------------------
@@ -1263,14 +1179,14 @@ void PytestEmitter::GenerateCGRACFGAndEXE(
         CFGandEXE << std::hex << "(" << varcfg_name << " >> 0x" << replace.rshift << ")"
                   << " | " 
                   << std::dec << "(" << CFGarrayName  <<"[" << replace.Idx0 << "][" << replace.Idx1 << "]" 
-                  << std::hex << " & 0x" << replace.getMask() << ");\n" ;
+                  << std::hex << " & 0x" << replace.getMask() << ")\n" ;
       }
       else{
         // left shift
         CFGandEXE << std::hex << "(" << varcfg_name << " << 0x" << replace.lshift << ")"
                   << " | " 
                   << std::dec << "(" << CFGarrayName <<"[" << replace.Idx0 << "][" << replace.Idx1 << "]" 
-                  << std::hex << " & 0x" << replace.getMask() << ");\n" ;
+                  << std::hex << " & 0x" << replace.getMask() << ")\n" ;
       }
     }
   }
@@ -1341,3 +1257,42 @@ void PytestEmitter::GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, MapperSA* map
   GenerateCGRACFGAndEXE(kernel, cfg, adg);
 }
 
+/////////////////////////
+/// emit Gemm block
+/////////////////////////
+/// @brief Emit a block nested in "for" op for adora Gemm
+/// @param os
+void PytestEmitter::emitGemmBlock(mlir::Block &block, llvm::raw_ostream &os) {
+  // std::stringstream ostr;
+  addIndent();
+
+  opEmitter->setIndent(getIndent());
+  block.dump();
+
+  for (auto &op : block) {
+    op.dump();
+    // TypeSwitch<Operation *, bool>(&op)
+    //   .template Case<
+    //     // Affine statements.
+    //     affine::AffineForOp,
+    //     // // Special expressions.
+    //     arith::ConstantOp
+    //   >([&](auto opNode) -> bool {
+    //     op.dump();
+    //     return true;
+    //   })
+    //   .Default([&](auto opNode) -> bool {
+    //     llvm::errs() << "No support!\n";
+    //     return false;
+    //   });
+    if(opEmitter->dispatchVisitor(&op)){
+      continue;
+    }
+    else{
+      op.emitError("can't be correctly emitted.");
+    } 
+  }
+  reduceIndent();
+  opEmitter->setIndent(getIndent());
+  // os << ostr.str();
+}

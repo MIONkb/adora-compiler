@@ -3,6 +3,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 
 /// ADORA dialect
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
+
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 #include "ADORA/Dialect/ADORATensor/Interface/SystolicImplInterface.h"
 
@@ -202,7 +204,7 @@ WSBodyBuilderFn BodyOfTiledWithWeightStationary(
           VectorType newVec = VectorType::get(shape, dtype);
 
           AffineVectorLoadOp vecLoadB = builder.create<affine::AffineVectorLoadOp>(
-              loc, newVec, B[row * (tile_col_size / 4) + col], ivs[0], memIVmap);
+              loc, newVec, B[row * (tile_col_size / 4 + 1) + col], ivs[0], memIVmap);
           
           ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadB.getResult());
 
@@ -214,9 +216,9 @@ WSBodyBuilderFn BodyOfTiledWithWeightStationary(
       // last several stationaries
       // for(; col <= tile_col_size%4; col++){
         /// generate deinterleaver for B
-      if(tile_col_size % 4 != 0){
+      if(tile_col_size % 4 != 0 && tile_col_size % 4 > 1 ){
         SmallVector<AffineExpr, 2> Exprs;
-        Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
+        Exprs.push_back(builder.getAffineDimExpr(0)); // last dim's affine expr
         Exprs.push_back(builder.getAffineConstantExpr(4*col)); // last dim's affine expr
 
         SmallVector<int64_t, 4> shape;
@@ -226,14 +228,30 @@ WSBodyBuilderFn BodyOfTiledWithWeightStationary(
         VectorType newVec = VectorType::get(shape, dtype);
 
         AffineVectorLoadOp vecLoadB = builder.create<affine::AffineVectorLoadOp>(
-            loc, newVec, B[row * (tile_col_size / 4) + col], ivs[0], memIVmap);
+            loc, newVec, B[row * (tile_col_size / 4 + 1) + col], ivs[0], memIVmap);
         
         ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadB.getResult());
 
         for(int idx = 0; idx < tile_col_size % 4; idx++){
           B_stationaries.push_back(deinterleaver.getResult(idx));
         }
-      }      
+      }   
+      else if(tile_col_size % 4 == 1) {
+        SmallVector<AffineExpr, 2> Exprs;
+        Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
+        Exprs.push_back(builder.getAffineConstantExpr(4*col)); // last dim's affine expr
+
+        SmallVector<int64_t, 4> shape;
+        shape.push_back(tile_col_size%4);
+
+        AffineMap memIVmap = AffineMap::get(1, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
+        // VectorType newVec = VectorType::get(shape, dtype);
+
+        AffineLoadOp LoadB = builder.create<affine::AffineLoadOp>(
+            loc, B[row * (tile_col_size / 4 + 1) + col], memIVmap, ivs[0]);   
+
+        B_stationaries.push_back(LoadB);     
+      }  
 
     }
 
@@ -241,7 +259,7 @@ WSBodyBuilderFn BodyOfTiledWithWeightStationary(
     //// create innermost for loop: last level of temporal map
     ///////////////////////
     // SmallVector<Value> constants;
-    mlir::Value zero = getConstantOpAccordingToDataType(builder, loc, dtype, 0);
+    // mlir::Value zero = getConstantOpAccordingToDataType(builder, loc, dtype, 0);
     // for(int col = 0; col < tile_col_size; col++){
     //   constants.push_back(getConstantOpAccordingToDataType(builder, loc, dtype, 0));
     // }
@@ -291,7 +309,7 @@ WSBodyBuilderFn BodyOfTiledWithWeightStationary(
         /// %0 = affine.load %arg0[%arg5, %arg4] : memref<?x36xi32>
         /// A[i, k]
         AffineExpr rowExpr_A = builder.getAffineDimExpr(0);
-        AffineExpr colExpr_A = builder.getAffineDimExpr(1) + k;
+        AffineExpr colExpr_A = builder.getAffineDimExpr(1);
         AffineMap map_A = AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
                                   {rowExpr_A, colExpr_A}, builder.getContext());
         AffineLoadOp LoadA = builder.create<affine::AffineLoadOp>(
@@ -301,14 +319,13 @@ WSBodyBuilderFn BodyOfTiledWithWeightStationary(
         mlir::Value mul_rhs_b = B_stationaries[k*tile_col_size + n];
 
         /// get the rhs of add
-        Value add_rhs;
-        add_rhs = k == 0 ? zero : sum_results[k-1][n];
 
         //// get data type of mul and add
         Value mul, add;
         mlir::Type dtype = dyn_cast<::mlir::MemRefType>(A[0].getType()).getElementType();
         mul = genArithMulOpAccordingToDataType(builder, loc, LoadA, mul_rhs_b)->getResult(0);
         if(k != 0){
+          Value add_rhs = sum_results[k-1][n];
           add = genArithAddOpAccordingToDataType(builder, loc, mul, add_rhs)->getResult(0);
         }
         else{
@@ -326,7 +343,7 @@ WSBodyBuilderFn BodyOfTiledWithWeightStationary(
         /// %3 = affine.load %arg2[%arg5, 0] : memref<?x36xi32>
         /// C[i, j]
       AffineExpr rowExpr_C = builder.getAffineDimExpr(0);
-      AffineExpr colExpr_C = builder.getAffineConstantExpr(n);
+      AffineExpr colExpr_C = builder.getAffineConstantExpr(0);
       AffineMap map_C = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0,
                                   {rowExpr_C, colExpr_C}, builder.getContext());
       AffineLoadOp LoadC = builder.create<affine::AffineLoadOp>(
@@ -414,13 +431,13 @@ WSBodyBuilderFn TileofWeightStationary(
     /////////////////////
     for(int row = 0; row < tile_row_size; row++){
       SmallVector<AffineExpr, 2> Exprs;
-      Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
-      Exprs.push_back(builder.getAffineDimExpr(1)); // last dim's affine expr
+      Exprs.push_back(builder.getAffineDimExpr(0)); // last dim's affine expr
+      Exprs.push_back(builder.getAffineDimExpr(1) + row); // last dim's affine expr
 
 
       SmallVector<int64_t, 4> shape;
-      shape.push_back(temporal_count_dim_k);
       shape.push_back(temporal_count_dim_m);
+      shape.push_back(temporal_count_dim_k);
 
       AffineMap memIVmap = AffineMap::get(2, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
       MemRefType newMemRef = MemRefType::get(shape, dtype);
@@ -520,8 +537,8 @@ WSBodyBuilderFn TileofWeightStationary(
     /////////////////////
     for(int col = 0; col < tile_col_size; col++){
       SmallVector<AffineExpr, 2> Exprs;
-      Exprs.push_back(builder.getAffineDimExpr(0) + col); // last dim's affine expr
-      Exprs.push_back(builder.getAffineDimExpr(1)); // last dim's affine expr
+      Exprs.push_back(builder.getAffineDimExpr(0)); // last dim's affine expr
+      Exprs.push_back(builder.getAffineDimExpr(1) + col); // last dim's affine expr
 
       SmallVector<int64_t, 4> shape;
       shape.push_back(temporal_count_dim_m);
@@ -555,7 +572,7 @@ WSBodyBuilderFn TileofWeightStationary(
       C_out.push_back(alloc);
 
       ADORA::DataBlockStoreOp BlockStore = builder.create<ADORA::DataBlockStoreOp>\
-              (loc, BlockLoad, C, memIVmap, ValueRange({vi, vj}));
+              (loc, alloc, C, memIVmap, ValueRange({vi, vj}));
       // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
                     // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
       // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
@@ -738,7 +755,12 @@ AffineForOp TiledWeightStationaryGemm(
   //     )
   //   );    
   // }
+  loop.dump();
+  SimplifyLoadStoreOpsInRegion(loop.getRegion());
 
+  loop.walk([&](Operation *op) {
+    op->setAttr("ADORAGemm", UnitAttr::get(loop.getContext()));
+  });
 
   loop.dump();
 

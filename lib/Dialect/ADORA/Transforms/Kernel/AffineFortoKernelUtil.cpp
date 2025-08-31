@@ -15,6 +15,7 @@
 #include "llvm/ADT/Twine.h"
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 
 using namespace llvm; // for llvm.errs()
 // using namespace llvm::detail;

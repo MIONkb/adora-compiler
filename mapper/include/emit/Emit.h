@@ -10,6 +10,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 
 #include "mapper/mapper.h"
 #include "mapper/mapper_sa.h"
@@ -49,7 +50,8 @@ namespace mlir{
 namespace ADORA{
 /// @brief A function to simplify affine map of datablockload or datablockstore op
 /// @param op 
-void SimplifyBlockAccessOp(mlir::ModuleOp m);
+void SimplifyBlockAccessOp(mlir::Region& region);
+void SimplifyBlockAccessOp(mlir::ModuleOp& m);
 
 //////
 /// Check whether a DataBlockStoreOp is the last of one kernel in one Block.

@@ -32,6 +32,7 @@
 
 #include "../../../DFG/inc/mlir_cdfg.h"
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 #include "ADORA/Dialect/ADORA/Transforms/SimplifyLoadStore.h"
 #include "ADORA/Dialect/ADORA/Transforms/Passes.h"
 #include "ADORA/Dialect/ADORA/Transforms/DSE.h"
@@ -2435,4 +2436,21 @@ std::optional<AffineForOp> mlir::ADORA::MoveLoadStorePairOut(AffineLoadOp loadop
       // break;
   }
    return std::nullopt;
+}
+
+
+
+ADORA::KernelOp mlir::ADORA::findTheOnlyKernelInNestedLoop(affine::AffineForOp forOp) {
+  ADORA::KernelOp result = nullptr;
+
+  forOp.getBody()->walk([&](ADORA::KernelOp kernelOp) {
+    if (result) {
+      llvm::errs() << "Error: Multiple KernelOps found inside nested loop!\n";
+      forOp.dump();
+      assert(false && "Expected only one KernelOp in nested loop");
+    }
+    result = kernelOp;
+  });
+
+  return result;
 }

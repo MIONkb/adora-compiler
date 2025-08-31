@@ -16,6 +16,7 @@
 #include "mlir/IR/OpImplementation.h"
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 namespace mlir {
 namespace ADORA {
 #define GeneralOpNameFile std::getenv("GeneralOpNameFile") //// linux env

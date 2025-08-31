@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
     "dump-mapped-viz",
     cl::Optional, 
     cl::desc("dump-mapped-viz"), 
-    cl::init(false));
+    cl::init(true));
   
   static cl::opt<bool> objOpt(
     "obj-opt",
@@ -261,6 +261,7 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////
   CGRACallEmitter CEmitter(moduleop);
   PytestEmitter PyEmitter(moduleop);
+  
   std::vector<MapperSA*>mapper_Vec;
   std::vector<DFGIR*>DFGIR_Vec;
 
@@ -278,7 +279,7 @@ int main(int argc, char **argv) {
   /////////////////////////
   /// Map ADORA Tensor
   /////////////////////////
-  MapAdoraTensorOp(&context, moduleop, tensor_mapper_Vec, 
+  MapAdoraTensorOp(&context, moduleop, tensor_mapper_Vec, &CEmitter, &PyEmitter,
     adg, GeneralOpNameFile_str, timeout_ms, max_iters, objOpt);
   // if(emit_type == "pytest"){
   //   MapAdoraTensorOp(tensor_mapper_Vec)
@@ -310,6 +311,9 @@ int main(int argc, char **argv) {
 
   int kernel_cnt = 0;
   moduleop.walk([&](ADORA::KernelOp kernel) {
+    if(kernel->hasAttr("ADORAGemm"))
+      return WalkResult::advance();
+      
     MapperSA* mapper = new MapperSA(adg, timeout_ms, max_iters, objOpt);
     mapper_Vec.push_back(mapper);
     /// Generating DFG

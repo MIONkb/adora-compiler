@@ -35,6 +35,7 @@
 // #include "llvm/Support/FileSystem.h"
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 #include "ADORA/Dialect/ADORA/Transforms/Passes.h"
 #include "ADORA/Dialect/ADORA/Transforms/DependencyAnalysis.h"
 #include "../PassDetail.h"

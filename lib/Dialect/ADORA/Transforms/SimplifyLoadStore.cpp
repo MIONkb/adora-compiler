@@ -32,6 +32,7 @@
 #include "llvm/Support/Debug.h"
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 #include "ADORA/Dialect/ADORA/Transforms/Passes.h"
 #include "ADORA/Dialect/ADORA/Transforms/DSE.h"
 #include "ADORA/Dialect/ADORA/Transforms/SimplifyLoadStore.h"
@@ -73,146 +74,9 @@ namespace
 
 #define PASS_NAME "ADORA-simplify-loadstore"
 
-
-bool TwoLoadsAccessSameMemAddr(AffineLoadOp load0, AffineLoadOp load1) {
-  return TwoAccessSameMemAddr(load0, load1);
-}
-bool StoreLoadAccessSameMemAddr(AffineStoreOp store0, AffineLoadOp load1) {
-  return TwoAccessSameMemAddr(store0, load1);
-}
-bool LoadStoreAccessSameMemAddr(AffineLoadOp load0, AffineStoreOp store1) {
-  return TwoAccessSameMemAddr(load0, store1);
-}
-
-static bool ConsecutiveLoadsAccessSameMemAddr(AffineLoadOp load0, AffineLoadOp load1){
-  return ConsecutiveAccessSameMemAddr<AffineLoadOp, AffineLoadOp>(load0, load1);
-}
-static bool ConsecutiveStoreLoadAccessSameMemAddr(AffineStoreOp store0, AffineLoadOp load1){
-  return ConsecutiveAccessSameMemAddr<AffineStoreOp, AffineLoadOp>(store0, load1);
-}
-static bool ConsecutiveStoresAccessSameMemAddr(AffineStoreOp store0, AffineStoreOp store1){
-  return ConsecutiveAccessSameMemAddr<AffineStoreOp, AffineStoreOp>(store0, store1);
-}
-
-/// Remove Redundant Loads
-template <typename RegionOpT>
-static bool RemoveRedundantLoads(RegionOpT RegionOp){
-  LLVM_DEBUG(llvm::errs() << "Before RemoveRedundantLoads:\n");
-  LLVM_DEBUG(RegionOp.dump());
-
-  //// remove Consecutive Loads which access the same mem Addr
-  bool NoChange = false;
-  while(!NoChange){ // Keep walking the func until no change occurs in this func
-    NoChange = true;
-
-    for(AffineLoadOp load : RegionOp.template getOps<AffineLoadOp>()){
-      for(AffineLoadOp otherload : RegionOp.template getOps<AffineLoadOp>()){
-        if(load == otherload){ continue; }
-        else if(ConsecutiveLoadsAccessSameMemAddr(load, otherload)){
-          otherload.getOperation()->replaceAllUsesWith(load);
-          otherload->erase();
-          NoChange = false;
-          break;
-        }
-      }
-
-      if(!NoChange){ break; }
-    }
-  }
-
-  LLVM_DEBUG(llvm::errs() << "After RemoveRedundantLoads:\n");
-  LLVM_DEBUG(RegionOp.dump());
-
-  //// remove Consecutive store-load which access the same mem Addr
-  NoChange = false;
-  while(!NoChange){ // Keep walking the func until no change occurs in this func
-    NoChange = true;
-
-    for(AffineStoreOp store : RegionOp.template getOps<AffineStoreOp>()){
-      for(AffineLoadOp load : RegionOp.template getOps<AffineLoadOp>()){
-        if(store == load){ continue; }
-        else if(ConsecutiveStoreLoadAccessSameMemAddr(store, load)){
-          load.getOperation()->replaceAllUsesWith(store.getValue().getDefiningOp());
-          load->erase();
-          NoChange = false;
-          break;
-        }
-      }
-      
-      if(!NoChange){ break; }
-    }
-  }
-
-
-  LLVM_DEBUG(llvm::errs() << "After RemoveRedundantstore-load:\n");
-  LLVM_DEBUG(RegionOp.dump());
-
-  return true;
-}
-
-
-/// Remove Redundant Loads
-template <typename RegionOpT>
-static bool RemoveRedundantStores(RegionOpT RegionOp){
-  LLVM_DEBUG(llvm::errs() << "Before RemoveRedundantStores:\n");
-  LLVM_DEBUG(RegionOp.dump());
-
-  //// remove Consecutive Loads which access the same mem Addr
-  bool NoChange = false;
-  while(!NoChange){ // Keep walking the func until no change occurs in this func
-    NoChange = true;
-
-    for(AffineStoreOp store : RegionOp.template getOps<AffineStoreOp>()){
-      for(AffineStoreOp otherstore : RegionOp.template getOps<AffineStoreOp>()){
-        if(store == otherstore){ continue; }
-        else if(ConsecutiveStoresAccessSameMemAddr(store, otherstore)){
-          // otherstore.getOperation()->replaceAllUsesWith(store);
-          store->erase();
-          NoChange = false;
-          break;
-        }
-      }
-
-      if(!NoChange){ break; }
-    }
-  }
-
-  LLVM_DEBUG(llvm::errs() << "After RemoveRedundantStores:\n");
-  LLVM_DEBUG(RegionOp.dump());
-
-  return true;
-}
-
 void SimplifyLoadStoreOpsInFunc(func::FuncOp f){
-  SmallVector<ADORA::KernelOp> kernels;
-  f.walk([&](ADORA::KernelOp kernel){
-    kernels.push_back(kernel);
-  });
-
-  for(ADORA::KernelOp kernel: kernels){
-    SmallVector<ADORA::ForNode> ForNodes = createAffineForTreeInsideKernel(kernel);
-    for(auto n : ForNodes){
-      n.dumpForOp();
-      mlir::affine::AffineForOp forop = n.getForOp();
-      RemoveRedundantLoads(forop);
-      HoistLoadStoreOpsInOp(forop);
-    }
-  }
-
-  for(ADORA::KernelOp kernel: kernels){
-    SmallVector<ADORA::ForNode> ForNodes = createAffineForTreeInsideKernel(kernel);
-    for(auto n : ForNodes){
-      // n.dumpForOp();
-      mlir::affine::AffineForOp forop = n.getForOp();
-      RemoveRedundantStores(forop);
-    }
-  }
-
-
-  return ;
+  SimplifyLoadStoreOpsInRegion(f.getBody());
 }
-
-
 
 void SimplifyLoadStoreInLoopNestPass::runOnOperation()
 {

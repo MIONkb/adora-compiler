@@ -8,4 +8,5 @@ target_link_libraries(ADORATensorOpGemmLower
   ADORATensorOps
   ADORATensorInterface
   MLIRADORAKernelExtract
+  MLIRADORATransformsUtility
 )

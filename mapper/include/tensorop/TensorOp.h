@@ -5,6 +5,8 @@
 #include "mlir/IR/Builders.h"
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 
+#include "emit/EmitCGRACall.h"
+#include "emit/EmitPytest.h"
 #include "mapper/mapper_sa.h"
 #include "TensorOpVisitor.h"
 
@@ -21,6 +23,7 @@ inline int tensorOpCnt = 0;
 
 void MapAdoraTensorOp(MLIRContext* context, mlir::ModuleOp module, 
                     std::vector<ADORA_TENSOR_MAPPER*> mappers,
+                    CGRACallEmitter* CEmitter, PytestEmitter* PyEmitter,
                     ADG* adg, std::string& OpNameFile_str,
                     int timeout_ms, int max_iters, bool objOpt);
 
@@ -29,6 +32,8 @@ class TensorDataflowGen : public ADORATensorOpVisitorBase<TensorDataflowGen, boo
 public:
   /// Class define
   OpBuilder opbuilder;
+  CGRACallEmitter* cEmitter;
+  PytestEmitter* pyEmitter;
 
 
   // mapping args
@@ -57,6 +62,8 @@ public:
   /// Function members
   void MapNestedForOrKernel(ADORA_TENSOR_MAPPER* mapper, 
     mlir::Operation* forOrKernel, std::string& OpNameFile_str);
+  void setEmitter(CGRACallEmitter* _) {cEmitter = _;}
+  void setEmitter(PytestEmitter* _) {pyEmitter = _;}
 
   bool visitOp(ADORATensor::GemmOp op);
 

@@ -17,6 +17,7 @@ add_mlir_dialect_library(ADORATensorLower
   ADORATensorOps
   MLIRTensorDialect
   ADORATensorOpGemmLower
+  MLIRADORATransformsUtility
 
   # GeneralCDFGGen
   # MLIRADORALoopTransforms

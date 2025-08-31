@@ -27,6 +27,7 @@
 #include "mlir/Pass/Pass.h"
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 #include "ADORA/Misc/DFG.h"
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 #include "ADORA/Dialect/ADORATensor/Lowering/TensorOpLowerToKernel.h"

@@ -4,6 +4,7 @@
 #include "mlir/IR/Builders.h"
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 
 #include <iostream>

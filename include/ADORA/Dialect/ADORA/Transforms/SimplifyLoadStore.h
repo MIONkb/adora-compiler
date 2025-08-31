@@ -26,6 +26,7 @@
 #include "llvm/Support/Debug.h"
 
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 #include "ADORA/Dialect/ADORA/Transforms/Passes.h"
 #include "ADORA/Dialect/ADORA/Transforms/DSE.h"
 
@@ -85,13 +86,21 @@ bool TwoAccessSameMemAddr(Access0_T access0, Access1_T access1)
     !isa<BlockArgument>(Memref0) && !isa<BlockArgument>(Memref1)
     && isa<ADORA::DataBlockLoadOp>(MemrefOp0) && isa<ADORA::DataBlockLoadOp>(MemrefOp1)
     && dyn_cast<ADORA::DataBlockLoadOp>(MemrefOp0).getOriginalMemref() 
-    == dyn_cast<ADORA::DataBlockLoadOp>(MemrefOp1).getOriginalMemref())
+    == dyn_cast<ADORA::DataBlockLoadOp>(MemrefOp1).getOriginalMemref() 
+    && dyn_cast<ADORA::DataBlockLoadOp>(MemrefOp0).getAffineMap() 
+    == dyn_cast<ADORA::DataBlockLoadOp>(MemrefOp1).getAffineMap() )
   {
     for(unsigned i = 0; i < Indices0.size(); i++){
       if(Indices0[i] != Indices1[i])
         return false;
     }
-    return true;      
+    /// check map
+    if(MapAttr0.getAffineMap() == MapAttr1.getAffineMap()){
+      return true;      
+    }
+    else{
+      return false;    
+    }
   }
   
   else if(!isa<BlockArgument>(Memref0) && !isa<BlockArgument>(Memref1)
@@ -126,6 +135,8 @@ bool TwoAccessSameMemAddr(Access0_T access0, Access1_T access1)
   else{
     return false;
   }
+
+  return false;
 }
 
 

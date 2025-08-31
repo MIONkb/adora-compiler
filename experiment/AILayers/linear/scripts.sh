@@ -23,3 +23,12 @@ cgra-mapper \
     --output="/home/jhlou/CGRVOPT/cgra-opt/experiment/AILayers/linear/linear.py" \
     --output-type="pytest" \
     "/home/jhlou/CGRVOPT/cgra-opt/experiment/AILayers/linear/IR/0_kernels/gemm.mlir" 
+
+cgra-mapper \
+    --adg="/home/jhlou/chipyard/generators/fdra/cgra-mg/src/main/vitra_spec/vitra_cgra_adg.json" \
+    --op-file="/home/jhlou/chipyard/generators/fdra/cgra-mg/src/main/vitra_spec/operations.json" \
+    --output="/home/jhlou/CGRVOPT/cgra-opt/experiment/AILayers/linear/IR/0_kernels/linear.py" \
+    --output-type="pytest" \
+    --obj-opt=false \
+    --max-iters=2 \
+    "/home/jhlou/CGRVOPT/cgra-opt/experiment/AILayers/linear/IR/0_kernels/gemm_withnotensor.mlir"

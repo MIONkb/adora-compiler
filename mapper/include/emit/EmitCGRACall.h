@@ -22,7 +22,6 @@ using namespace mlir::ADORA;
 
 namespace mlir {
 namespace ADORA {
-void SimplifyBlockAccessOp(mlir::ModuleOp m);
 } /// ADORA
 } /// mlir
 

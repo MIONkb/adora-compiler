@@ -19,6 +19,7 @@
 #include <string>
 #include <bit>
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 // #include "PassDetail.h"
 // #include "ADORA/Dialect/ADORA/Transforms/Passes.h"
 #include "ADORA/Dialect/ADORA/Transforms/SimplifyLoadStore.h"
@@ -2301,7 +2302,7 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           // // TODO: settle this
           return WalkResult::advance();
         } 
-        else if(op->getName().getStringRef() == "ADORA.interleave"){
+        else if(op->getName().getStringRef() == "ADORA.interleaver"){
           ADORA::InterleaverOp interleaverop = dyn_cast<ADORA::InterleaverOp>(op);
           int interleavernum = interleaverop.getInterleaveNumber();
           std::string interleavertypename = "INTLV" + std::to_string(interleavernum);
@@ -2309,6 +2310,23 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           node->setLoopLevel(level);
 
           //// set acc for interleaver op
+          SmallVector<std::string, 3> count_interval_repeat = {"1", "1", "1"};///count/interval/repeat
+          node->setAcc();
+          node->setACCinit("0");
+          node->setACCcount(count_interval_repeat[0]);
+          node->setACCinterval(count_interval_repeat[1]);
+          node->setACCrepeat(count_interval_repeat[2]);    
+          // // TODO: settle this
+          return WalkResult::advance();
+        } 
+        else if(op->getName().getStringRef() == "ADORA.deinterleaver"){
+          ADORA::DeinterleaverOp deinterleaverop = dyn_cast<ADORA::DeinterleaverOp>(op);
+          int deinterleavernum = deinterleaverop.getDeinterleaveNumber();
+          std::string deinterleavertypename = "DEINTLV" + std::to_string(deinterleavernum);
+          LLVMCDFGNode* node = CDFG->addNode(op, /*typeName=*/deinterleavertypename); 
+          node->setLoopLevel(level);
+
+          //// set acc for deinterleaver op
           SmallVector<std::string, 3> count_interval_repeat = {"1", "1", "1"};///count/interval/repeat
           node->setAcc();
           node->setACCinit("0");

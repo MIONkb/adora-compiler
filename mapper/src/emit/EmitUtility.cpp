@@ -106,8 +106,8 @@ std::vector<int> spadBankToIobs(ADG* adg, int bankId) {
 
 /// @brief A function to simplify affine map of datablockload or datablockstore op
 /// @param op 
-void mlir::ADORA::SimplifyBlockAccessOp(mlir::ModuleOp m){
-  m.walk([&](ADORA::DataBlockLoadOp blockload) {
+void mlir::ADORA::SimplifyBlockAccessOp(mlir::Region& region){
+  region.walk([&](ADORA::DataBlockLoadOp blockload) {
     /// If block load op is simple, such as:
     /// %4 = ADORA.BlockLoad %arg2 [%arg3, %arg4, %arg5, %arg6]
     /// Then there is no need to simplify.
@@ -141,7 +141,7 @@ void mlir::ADORA::SimplifyBlockAccessOp(mlir::ModuleOp m){
   });
 
   //// DataBlockStoreOp
-  m.walk([&](ADORA::DataBlockStoreOp blockstore) {
+  region.walk([&](ADORA::DataBlockStoreOp blockstore) {
     /// If block load op is simple, such as:
     /// %4 = ADORA.BlockLoad %arg2 [%arg3, %arg4, %arg5, %arg6]
     /// Then there is no need to simplify.
@@ -175,6 +175,10 @@ void mlir::ADORA::SimplifyBlockAccessOp(mlir::ModuleOp m){
 
     return WalkResult::advance();
   });
+}
+
+void mlir::ADORA::SimplifyBlockAccessOp(mlir::ModuleOp& m){
+  SimplifyBlockAccessOp(m.getRegion());
 }
 
 //////
@@ -413,7 +417,7 @@ void BaseEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, MapperS
     if(findElement(blockload.getKernelNameAsStrVector(), kernel.getKernelName()) != -1){
       //// this block load belongs to this kernels 
       std::string BlockLoadName = kernel.getKernelName() + ":" + blockload.getId().str();
-
+      blockload.dump();
       if(_LoadToSPMInfos.count(blockload) != 0){
         //// TODO: what to do?
       }
@@ -519,7 +523,13 @@ void BaseEmitter::DataBlockOperationsToSPADInfo(ADORA::KernelOp& kernel, MapperS
       }
     }
   });
-
+  
+  for(auto elem: _LoadToDfgIoInfos){
+    llvm::errs() << elem.first << "\n";
+    for(auto e : elem.second){
+      llvm::errs() << e.addr << ", " << e.iobAddr << "\n";        
+    } 
+  }  
   // /// Get io information of every local allocation ops, including Addr(Spad), iobAddr, LorS
   // _moduleop.walk([&](ADORA::LocalMemAllocOp alloc) {  
   //   if(findElement(alloc.getKernelNameAsStrVector(), kernel.getKernelName()) != -1){

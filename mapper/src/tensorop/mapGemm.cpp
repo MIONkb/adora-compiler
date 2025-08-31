@@ -4,6 +4,7 @@
 
 /// ADORA dialect
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 #include "ADORA/Dialect/ADORATensor/Interface/SystolicImplInterface.h"
@@ -21,21 +22,6 @@ using namespace ::mlir::affine;
 namespace mlir{
 namespace ADORA{
 
-ADORA::KernelOp findTheOnlyKernelInNestedLoop(affine::AffineForOp forOp) {
-  ADORA::KernelOp result = nullptr;
-
-  forOp.getBody()->walk([&](ADORA::KernelOp kernelOp) {
-    if (result) {
-      llvm::errs() << "Error: Multiple KernelOps found inside nested loop!\n";
-      forOp.dump();
-      assert(false && "Expected only one KernelOp in nested loop");
-    }
-    result = kernelOp;
-  });
-
-  return result;
-}
-
 
 void TensorDataflowGen::MapNestedForOrKernel(ADORA_TENSOR_MAPPER* mapper, mlir::Operation* forOrKernel, std::string& OpNameFile_str){
   ADORA::KernelOp kernel;
@@ -45,7 +31,7 @@ void TensorDataflowGen::MapNestedForOrKernel(ADORA_TENSOR_MAPPER* mapper, mlir::
   else if(isa<affine::AffineForOp>(forOrKernel)){
     kernel = findTheOnlyKernelInNestedLoop(dyn_cast<affine::AffineForOp>(forOrKernel));
   }
-
+  
   /// Generating DFG
   std::string kernelName = kernel.getKernelName();
 
@@ -77,20 +63,20 @@ void TensorDataflowGen::MapNestedForOrKernel(ADORA_TENSOR_MAPPER* mapper, mlir::
     // std::filesystem::create_directory("map_result");
     // CDFG->CDFGtoDOT("map_result/before_map_" + CDFG->name_str() + "_CDFG.dot");
     // bool succeed = mapper->execute(/*dumpCallFunc=*/false, /*dumpMappedViz*/true, /*resultDir=*/"map_result");
-  // if(succeed){
-  //     // Mapping is successful, get all blockload and blockstore op and corresponding spad memory addresses.
-  //     if(_emit_type == "pytest"){
-  //       PyEmitter.setMapResult(kernel, mapper);
-  //       PyEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
-  //       PyEmitter.GenerateCGRAConfig(kernel, mapper);
-  //     }
-  //     else{ /// default to be C
-  //       CEmitter.setMapResult(kernel, mapper);
-  //       CEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
-  //       CEmitter.GenerateCGRAConfig(kernel, mapper);
-  //     }
-  //   }
-  //   kernel_cnt++;
+  if(succeed){
+      // Mapping is successful, get all blockload and blockstore op and corresponding spad memory addresses.
+      // if(_emit_type == "pytest"){
+        pyEmitter->setMapResult(kernel, mapper);
+        pyEmitter->DataBlockOperationsToSPADInfo(kernel, mapper);
+        pyEmitter->GenerateCGRAConfig(kernel, mapper);
+      // }
+      // else{ /// default to be C
+      //   cEmitter->setMapResult(kernel, mapper);
+      //   cEmitter->DataBlockOperationsToSPADInfo(kernel, mapper);
+      //   cEmitter->GenerateCGRAConfig(kernel, mapper);
+      // }
+    }
+    // kernel_cnt++;
 
 }
 
@@ -103,6 +89,8 @@ bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
     newfor = TiledWeightStationaryGemm(opbuilder, op, tilesize); 
   }
 
+  SimplifyBlockAccessOp(newfor.getRegion());
+  
   ADORA_TENSOR_MAPPER* mapper = new ADORA_TENSOR_MAPPER(_adg, _timeout_ms, _max_iters, _objOpt);
   mappers.push_back(mapper);
       

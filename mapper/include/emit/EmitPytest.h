@@ -21,7 +21,6 @@ using namespace mlir::ADORA;
 
 namespace mlir {
 namespace ADORA {
-void SimplifyBlockAccessOp(mlir::ModuleOp m);
 } /// ADORA
 } /// mlir
 
@@ -65,13 +64,17 @@ public:
   llvm::SmallDenseMap<ADORA::KernelOp, std::string> KnToCfgData; // map : kernelop -> total cfg array declaration
   llvm::SmallDenseMap<ADORA::KernelOp, std::string> KnToCfgExe;
 
+  ////////////////
+  /// Gemm
+  ////////////////
+  void emitGemmBlock(mlir::Block &block, llvm::raw_ostream &os);
 private:
   llvm::SmallDenseMap<mlir::Value, Op_Name_C> _value_name_list;
 
   /// reset Indent size for python emit
   // unsigned _currentIndent = 0;
-  void addIndent() override{_currentIndent += 2;}
-  void reduceIndent() override {_currentIndent = _currentIndent >= 2 ? _currentIndent - 2 : 0;}
+  void addIndent() override{_currentIndent += 4;}
+  void reduceIndent() override {_currentIndent = _currentIndent >= 4 ? _currentIndent - 4 : 0;}
 };
 
 namespace mlir {
