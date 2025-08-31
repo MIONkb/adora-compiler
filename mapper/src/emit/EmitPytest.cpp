@@ -894,7 +894,7 @@ void PytestEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os
   }
   ostr << "):\n";
 
-  ostr << "    # axibus.log.info(\"[ADORA] Starting CGRA call (" 
+  ostr << "    # runtime.log.info(\"[ADORA] Starting CGRA call (" 
        << funcop.getSymName().str() << ")\")\n";
 
   ostr << "    iptrs, idata = [],[]\n" 

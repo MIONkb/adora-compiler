@@ -17,98 +17,10 @@ using namespace ::mlir::affine;
 namespace mlir{
 namespace ADORA{
 
-mlir::Value getConstantOpAccordingToDataType(OpBuilder &builder, Location loc, Type datatype, float value) {
-  arith::ConstantOp newconst;
-  if(datatype.isBF16()||datatype.isF32()) {
-    float constvalue = value;
-    FloatAttr constAttr = FloatAttr::get(datatype, constvalue);
-    newconst = builder.create<arith::ConstantOp>(loc, datatype , constAttr);
-  }
-  else if(datatype.isF64()){
-    double constvalue = (double)value;
-    FloatAttr constAttr = FloatAttr::get(datatype, constvalue);
-    newconst = builder.create<arith::ConstantOp>(loc, datatype , constAttr);
-  }
-  else {
-    int64_t constvalue = (int)value;
-    IntegerAttr constAttr = IntegerAttr::get(datatype, constvalue);
-    newconst = builder.create<arith::ConstantOp>(loc, datatype , constAttr);    
-  }
-  return newconst.getResult();
-}
-
-/// @brief Create an `arith.add` op for the given operands.  
-/// 
-/// Selects `AddFOp` for floating-point types (bf16/f32/f64),  
-/// otherwise uses `AddIOp` for integer types.  
-/// Returns the created operation.
-mlir::Operation* genArithAddOpAccordingToDataType(OpBuilder &builder, Location loc, mlir::Value lhs, mlir::Value rhs) {
-  assert(lhs.getType() == rhs.getType());
-  mlir::Type datatype = lhs.getType();
-  mlir::Operation* add;
-  if(datatype.isBF16()|| datatype.isF32() || datatype.isF64()) {
-    add = builder.create<arith::AddFOp>(loc, lhs, rhs);
-  }
-  else {
-    add = builder.create<arith::AddIOp>(loc, lhs, rhs);
-  }
-  return add;
-}
-
-mlir::Operation* genArithMulOpAccordingToDataType(OpBuilder &builder, Location loc, mlir::Value lhs, mlir::Value rhs) {
-  assert(lhs.getType() == rhs.getType());
-  mlir::Type datatype = lhs.getType();
-  mlir::Operation* mul;
-  if(datatype.isBF16()|| datatype.isF32() || datatype.isF64()) {
-    mul = builder.create<arith::MulFOp>(loc, lhs, rhs);
-  }
-  else {
-    mul = builder.create<arith::MulIOp>(loc, lhs, rhs);
-  }
-  return mul;
-}
-
-/// @brief Generate a nested affine.for loop on device(data transfer is already done).
-///  This function is shared by IS and WS
-/// 
-/// Creates a loop nest of depth `level` with upper bounds
-/// specified by `Upperbounds`, and invokes the provided
-/// `BodyBuilder` at the innermost level.  
-/// The function returns the outermost `AffineForOp`.
-///
-/// @param builder     MLIR OpBuilder for loop creation
-/// @param loc         Source location
-/// @param level       Nesting depth (must > 0)
-/// @param Upperbounds Upper bounds per loop level
-/// @param BodyBuilder Callback to build loop body
-affine::AffineForOp GenerateOnDeviceNestedLoop(
-    OpBuilder &builder, Location loc,
-    int level, SmallVector<int> Upperbounds, 
-    StationaryBodyBuilderFn BodyBuilder) 
-{
-
-  assert(level > 0 && "Loop nest level must be > 0");
-  assert((int)Upperbounds.size() == level && 
-         "Upperbounds size must == loop level");
-  // create outermost loop 
-  SmallVector<Value> allIvs;
-  AffineForOp outer = builder.create<AffineForOp>(
-    loc, /*lb*/ 0, /*ub*/ Upperbounds[0], /*step*/ 1, /*iterArgs =*/ ValueRange(), 
-      [&](OpBuilder &b, Location loc, Value v, ValueRange vs) {
-        /// v here is useless
-        allIvs.push_back(v);
-        // assert(allIvs.size() >= 2);
-        SmallVector<Value> OutermostIvs(allIvs.end() - 1, allIvs.end());
-        BodyBuilder(b, loc, OutermostIvs);
-    });
-
-  return outer;
-}
-
 /// @brief Loop body builder for the innermost tiled GEMM computation 
-///        under Weight-Stationary (WS) dataflow. 
+///        under Input-Stationary (IS) dataflow. 
 ///
-/// This function returns a body-builder lambda of type `StationaryBodyBuilderFn`, 
+/// This function returns a body-builder lambda of type `ISBodyBuilderFn`, 
 /// which is meant to be plugged into an `affine.for` nest. 
 /// Within the loop body, affine load/store operations are generated to:
 ///   - Load an activation element from A, indexed by (i, k),
@@ -117,27 +29,26 @@ affine::AffineForOp GenerateOnDeviceNestedLoop(
 ///   - Perform multiply-accumulate (A * B + C),
 ///   - Store the updated result back into C.
 ///
-/// The induction variables (`ivs`) are expected to come in the order {j, k, i}, 
-/// corresponding to the outer loop nest over (N, K, M). 
+/// The induction variables (`ivs`) are expected to come in the order {k, i, j}, 
+/// corresponding to the outer loop nest over (K, M, N). 
 /// For each loop iteration, the builder further expands a `tile_row_size × tile_col_size` 
 /// micro-kernel of MAC operations inside the loop body.
 ///
-/// @param A            MemRef value representing the activation/input tensor.
-/// @param B            MemRef value representing the weight tensor (stationary).
+/// @param A            MemRef value representing the activation/input tensor(stationary).
+/// @param B            MemRef value representing the weight tensor.
 /// @param C            MemRef value representing the output/accumulation tensor.
 /// @param tile_row_size Number of rows in the tile (micro-kernel row dimension).
 /// @param tile_col_size Number of columns in the tile (micro-kernel column dimension).
 ///
 /// Example pseudocode for one tile iteration:
 /// ```text
-/// for j in N
-///   for k in K
-///     for i in M
+/// for k in K
+///   for i in M
+///     for j in N
 ///       for n in tile_row_size
 ///         for t in tile_col_size
-///           C[i, j+n] += A[i, k+t] * B[k+t, j+n]
-//// Second innermost level
-StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
+///           C[i+n, j] += A[i+t, k+n] * B[k+n, j]
+StationaryBodyBuilderFn BodyOfTiledWithInputStationary(
     // OpBuilder builder,
     mlir::ValueRange A,
     mlir::ValueRange B,
@@ -149,11 +60,11 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
 ) {
   mlir::Type dtype = dyn_cast<::mlir::MemRefType>(A[0].getType()).getElementType();
   return [=](OpBuilder &builder, Location loc, ValueRange ivs) {
-    // ivs = {j k i}
+    // ivs = {k i j}
     ///////////////////////
-    //// create deinterleaver for B
+    //// create deinterleaver for A
     //////////////////////    
-    SmallVector<mlir::Value> B_stationaries;
+    SmallVector<mlir::Value> A_stationaries;
     for(int row = 0; row < tile_row_size; row++){
       int col = 0;
       if(tile_col_size >= 4){
@@ -169,19 +80,19 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
           AffineMap memIVmap = AffineMap::get(1, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
           VectorType newVec = VectorType::get(shape, dtype);
 
-          AffineVectorLoadOp vecLoadB = builder.create<affine::AffineVectorLoadOp>(
-              loc, newVec, B[row * (tile_col_size / 4 + 1) + col], ivs[0], memIVmap);
+          AffineVectorLoadOp vecLoadA = builder.create<affine::AffineVectorLoadOp>(
+              loc, newVec, A[row * (tile_col_size / 4 + 1) + col], ivs[0], memIVmap);
           
-          ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadB.getResult());
+          ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadA.getResult());
 
           for(int idx = 0; idx < 4; idx++){
-            B_stationaries.push_back(deinterleaver.getResult(idx));
+            A_stationaries.push_back(deinterleaver.getResult(idx));
           }
         }
       }
       // last several stationaries
       // for(; col <= tile_col_size%4; col++){
-        /// generate deinterleaver for B
+      /// generate deinterleaver for A
       if(tile_col_size % 4 != 0 && tile_col_size % 4 > 1 ){
         SmallVector<AffineExpr, 2> Exprs;
         Exprs.push_back(builder.getAffineDimExpr(0)); // last dim's affine expr
@@ -194,12 +105,12 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
         VectorType newVec = VectorType::get(shape, dtype);
 
         AffineVectorLoadOp vecLoadB = builder.create<affine::AffineVectorLoadOp>(
-            loc, newVec, B[row * (tile_col_size / 4 + 1) + col], ivs[0], memIVmap);
+            loc, newVec, A[row * (tile_col_size / 4 + 1) + col], ivs[0], memIVmap);
         
         ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadB.getResult());
 
         for(int idx = 0; idx < tile_col_size % 4; idx++){
-          B_stationaries.push_back(deinterleaver.getResult(idx));
+          A_stationaries.push_back(deinterleaver.getResult(idx));
         }
       }   
       else if(tile_col_size % 4 == 1) {
@@ -213,10 +124,10 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
         AffineMap memIVmap = AffineMap::get(1, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
         // VectorType newVec = VectorType::get(shape, dtype);
 
-        AffineLoadOp LoadB = builder.create<affine::AffineLoadOp>(
-            loc, B[row * (tile_col_size / 4 + 1) + col], memIVmap, ivs[0]);   
+        AffineLoadOp LoadA = builder.create<affine::AffineLoadOp>(
+            loc, A[row * (tile_col_size / 4 + 1) + col], memIVmap, ivs[0]);   
 
-        B_stationaries.push_back(LoadB);     
+        A_stationaries.push_back(LoadA);     
       }  
 
     }
@@ -224,12 +135,6 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
     ///////////////////////
     //// create innermost for loop: last level of temporal map
     ///////////////////////
-    // SmallVector<Value> constants;
-    // mlir::Value zero = getConstantOpAccordingToDataType(builder, loc, dtype, 0);
-    // for(int col = 0; col < tile_col_size; col++){
-    //   constants.push_back(getConstantOpAccordingToDataType(builder, loc, dtype, 0));
-    // }
-
     affine::AffineForOp inner = builder.create<affine::AffineForOp>(
       // loc, 0, Upperbounds[i], 1, /*iterArgs =*/ ValueRange({}), InnerMostBodyBuilder);
       loc, (int64_t)0, (int64_t)innermostTripCount, (int64_t)1, /*iterArgs =*/ ValueRange());
@@ -237,86 +142,81 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
     builder.setInsertionPointToStart(innermostBody);
 
     // assert(ivs.size() == 2 && "Expect 2 loop induction variables (i,j,k)");
-    assert(A.size() == tile_row_size);
-    assert(C_in.size() == tile_col_size && C_in.size() == C_out.size());
+    assert(B.size() == tile_col_size);
+    assert(C_in.size() == tile_row_size && C_in.size() == C_out.size());
 
     ///////////////////
     /// Generate body of loop
     ///////////////////
-    Value k_it = ivs[0];
-    Value i_it = inner.getInductionVar();
+    Value i_it = ivs[0];
+    Value j_it = inner.getInductionVar();
 
     SmallVector<SmallVector<Value>> sum_results;
-
-    // j_it.dump();
-    // k_it.dump();
-    // i_it.dump();
-
-    // auto i32Type = builder.getI32Type();
-
+    ///////////////////
+    /// Generate B
+    ///////////////////
     /**
-     * Example: N K M (j k i)
-        affine.for %arg4 = 0 to 2 {  /// K
-          affine.for %arg5 = 0 to 36 { /// M
-            %0 = affine.load %A[%arg5, %arg4] : memref<?x36xi32> // A
-            %1 = affine.load %arg1[%arg4, 0] : memref<?x36xi32>
+     * Example: K M N (k i j)
+        affine.for %arg4 = 0 to 2 {  /// M
+          affine.for %arg5 = 0 to 36 { /// N
+            %0 = affine.load %A[%arg4, 0] : memref<?x36xi32> // A
+            %1 = affine.load %arg1[0, %arg5] : memref<?x36xi32>
             %2 = arith.muli %0, %1 : i32
-            %3 = affine.load %arg2[%arg5, 0] : memref<?x36xi32>
+            %3 = affine.load %arg2[0, %arg5] : memref<?x36xi32>
             %4 = arith.addi %3, %2 : i32
-            affine.store %4, %arg2[%arg5, 0] : memref<?x36xi32>
+            affine.store %4, %arg2[0, %arg5] : memref<?x36xi32>
             ...
           }
         }
      */
-    for (int k = 0; k < tile_row_size; ++k) {
-      sum_results.push_back(SmallVector<Value>()); /// initial k row's sum
-      for (int n = 0; n < tile_col_size; ++n) {
-        /// affine map of A : 
-        /// %0 = affine.load %arg0[%arg5, %arg4] : memref<?x36xi32>
-        /// A[i, k]
-        AffineExpr rowExpr_A = builder.getAffineDimExpr(0);
-        AffineExpr colExpr_A = builder.getAffineDimExpr(1);
-        AffineMap map_A = AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
-                                  {rowExpr_A, colExpr_A}, builder.getContext());
-        AffineLoadOp LoadA = builder.create<affine::AffineLoadOp>(
-            loc, A[k], map_A, ValueRange{i_it, k_it});
-        // innermostBody->push_back(LoadA);
-        
+    for (int i = 0; i < tile_row_size; ++i) {
+      sum_results.push_back(SmallVector<Value>()); /// initial i row's sum
+      for (int k = 0; k < tile_col_size; ++k) {
         /// get the rhs of add
-        mlir::Value mul_rhs_b = B_stationaries[k*tile_col_size + n];
+        mlir::Value mul_lhs_a = A_stationaries[i*tile_col_size + k];
+
+        /// affine map of B : 
+        /// %1 = affine.load %arg1[0, %arg5] : memref<?x36xi32>
+        /// B[k, j]
+        AffineExpr rowExpr_B = builder.getAffineConstantExpr(0);
+        AffineExpr colExpr_B = builder.getAffineDimExpr(0);
+        AffineMap map_B = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0,
+                                    {rowExpr_B, colExpr_B}, builder.getContext());
+        AffineLoadOp LoadB = builder.create<affine::AffineLoadOp>(
+              loc, B[k], map_B, ValueRange{j_it});
 
         //// get data type of mul and add
         Value mul, add;
         mlir::Type dtype = dyn_cast<::mlir::MemRefType>(A[0].getType()).getElementType();
-        mul = genArithMulOpAccordingToDataType(builder, loc, LoadA, mul_rhs_b)->getResult(0);
+        mul = genArithMulOpAccordingToDataType(builder, loc, mul_lhs_a, LoadB)->getResult(0);
         if(k != 0){
-          Value add_rhs = sum_results[k-1][n];
+          Value add_rhs = sum_results[i][k-1];
           add = genArithAddOpAccordingToDataType(builder, loc, mul, add_rhs)->getResult(0);
         }
         else{
           add = mul;
         }
 
-        sum_results[k].push_back(add);
+        sum_results[i].push_back(add);
       }
     }
 
     ///////////////////
     /// Generate store back of C 
     ///////////////////
-    for (int n = 0; n < tile_col_size; ++n) {   
-        /// %3 = affine.load %arg2[%arg5, 0] : memref<?x36xi32>
-        /// C[i, j]
-      AffineExpr rowExpr_C = builder.getAffineDimExpr(0);
-      AffineExpr colExpr_C = builder.getAffineConstantExpr(0);
+    for (int i = 0; i < tile_row_size; ++i) { 
+      /// %3 = affine.load %arg2[0, %arg5] : memref<?x36xi32>
+      /// C[i, j]
+      AffineExpr rowExpr_C = builder.getAffineConstantExpr(0);
+      AffineExpr colExpr_C = builder.getAffineDimExpr(0);
       AffineMap map_C = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0,
                                   {rowExpr_C, colExpr_C}, builder.getContext());
       AffineLoadOp LoadC = builder.create<affine::AffineLoadOp>(
-            loc, C_in[n], map_C, ValueRange{i_it});
+            loc, C_in[i], map_C, ValueRange{i_it});
       
-      mlir::Value add = genArithAddOpAccordingToDataType(builder, loc, sum_results[tile_row_size-1][n], LoadC)->getResult(0);
+      mlir::Value add = genArithAddOpAccordingToDataType(builder, loc, sum_results[i][tile_col_size-1], LoadC)->getResult(0);
       AffineStoreOp StoreC = builder.create<affine::AffineStoreOp>(
-            loc, add, C_out[n], map_C, ValueRange{i_it});      
+            loc, add, C_out[i], map_C, ValueRange{i_it});      
     } 
 
     builder.setInsertionPointAfter(inner);
@@ -349,41 +249,42 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
 ///
 /// Example pseudocode for one tile iteration:
 /// ```text
-/// for jj in N
-///   for kk in K
+/// 
+/// for kk in K
+///   for ii in M
 ///     //// followings are temporal map
-///     for kkk in temporal_count_dim_k
-///       (for ii in temporal_count_dim_m (might == M))
-///       for i in temporal_count_dim_m
+///     for iii in temporal_count_dim_i
+///       (for jj in temporal_count_dim_n (might == N))
+///       for j in temporal_count_dim_n
 ///         //// followings are spatial map
-///         for n in tile_row_size
-///           for t in tile_col_size
-///             C[i, j+n] += A[i, k+t] * B[k+t, j+n]
-StationaryBodyBuilderFn TileofWeightStationary(
+///         for i in tile_row_size
+///           for k in tile_col_size
+///             C[i, j] += A[i, k] * B[k, j]
+StationaryBodyBuilderFn TileofInputStationary(
     // OpBuilder builder,
     mlir::Value A,
     mlir::Value B,
     mlir::Value C,
-    int temporal_count_dim_k,
     int temporal_count_dim_m,
+    int temporal_count_dim_n,
     int tile_row_size,
     int tile_col_size
 ) {
   mlir::Type dtype = dyn_cast<::mlir::MemRefType>(A.getType()).getElementType();
   return [=](OpBuilder &builder, Location loc, ValueRange ivs) {
     /**
-     * Example: N K [KK MM M]
-     * affine.for %arg3 = 0 to 9 { /// N
-        affine.for %arg4 = 0 to 9 {  /// K
-          affine.for %arg5 = 0 to 4 {  /// M
-            /// A matrix
+     * Example: K M [MM NN N]
+     * affine.for %arg3 = 0 to 9 { /// K
+        affine.for %arg4 = 0 to 9 {  /// M
+          affine.for %arg5 = 0 to 4 {  /// N
+            /// A sub matrix
 
         }
       }
      */
-    mlir::Value vj = ivs[0];
-    mlir::Value vk = ivs[1];
-    mlir::Value vi = ivs[2];
+    mlir::Value vk = ivs[0];
+    mlir::Value vi = ivs[1];
+    mlir::Value vj = ivs[2];
     ///////////////////////////////////////////////
     ////// generate explicit data transfer: host to device
     ///////////////////////////////////////////////
@@ -395,42 +296,6 @@ StationaryBodyBuilderFn TileofWeightStationary(
     /// transfer A 
     /////////////////////
     for(int row = 0; row < tile_row_size; row++){
-      SmallVector<AffineExpr, 2> Exprs;
-      Exprs.push_back(builder.getAffineDimExpr(0)); // last dim's affine expr
-      Exprs.push_back(builder.getAffineDimExpr(1) + row); // last dim's affine expr
-
-
-      SmallVector<int64_t, 4> shape;
-      shape.push_back(temporal_count_dim_m);
-      shape.push_back(temporal_count_dim_k);
-
-      AffineMap memIVmap = AffineMap::get(2, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
-      MemRefType newMemRef = MemRefType::get(shape, dtype);
-
-      ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                (loc, A, memIVmap, ValueRange({vi, vk}), newMemRef);
-      // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
-      // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
-      // BlockLoad.getOperation()->moveBefore(Kernel);
-      BlockLoad.setKernelName("GEMMWS");
-      BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
-
-      /// has stride
-      if(temporal_count_dim_m != 1){
-        BlockLoad.setStrides(ArrayRef<int64_t>({1, tile_row_size}));
-      }
-
-      A_in.push_back(BlockLoad);
-    }
-
-    /////////////////////
-    /// transfer B 
-    /////////////////////
-    for(int row = 0; row < tile_row_size; row++){
-      SmallVector<AffineExpr, 2> Exprs;
-      Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
-      
       if(tile_col_size >= 4){
         for(int col = 0; col < tile_col_size / 4; col++){
           SmallVector<AffineExpr, 2> Exprs;
@@ -438,7 +303,7 @@ StationaryBodyBuilderFn TileofWeightStationary(
           Exprs.push_back(builder.getAffineDimExpr(1) + col*4); // last dim's affine expr
 
           SmallVector<int64_t, 4> shape;
-          shape.push_back(temporal_count_dim_k);
+          shape.push_back(temporal_count_dim_m);
           shape.push_back(4);
 
           AffineMap memIVmap = AffineMap::get(2, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
@@ -446,7 +311,7 @@ StationaryBodyBuilderFn TileofWeightStationary(
           // llvm::errs() << "[debug] newMemRef: ";newMemRef.dump();
 
           ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                    (loc, B, memIVmap, ValueRange({vk, vj}), newMemRef);
+                    (loc, A, memIVmap, ValueRange({vi, vk}), newMemRef);
           // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
                     // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
           // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
@@ -455,11 +320,11 @@ StationaryBodyBuilderFn TileofWeightStationary(
           BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
 
           /// has stride
-          if(temporal_count_dim_k != 1){
+          if(temporal_count_dim_m != 1){
             BlockLoad.setStrides(ArrayRef<int64_t>({tile_row_size, 1}));
           }
 
-          B_in.push_back(BlockLoad);
+          A_in.push_back(BlockLoad);
         }
       }
 
@@ -470,14 +335,14 @@ StationaryBodyBuilderFn TileofWeightStationary(
         Exprs.push_back(builder.getAffineDimExpr(1) + (int)tile_col_size/(int)4); // last dim's affine expr
 
         SmallVector<int64_t, 4> shape;
-        shape.push_back(temporal_count_dim_k);
+        shape.push_back(temporal_count_dim_m);
         shape.push_back(tile_col_size%4);
 
         AffineMap memIVmap = AffineMap::get(2, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
         MemRefType newMemRef = MemRefType::get(shape, dtype);
 
         ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                  (loc, B, memIVmap, ValueRange({vk, vj}), newMemRef);
+                  (loc, A, memIVmap, ValueRange({vi, vk}), newMemRef);
         // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
                   // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
         // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
@@ -486,34 +351,34 @@ StationaryBodyBuilderFn TileofWeightStationary(
         BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
 
         /// has stride
-        if(temporal_count_dim_k != 1){
+        if(temporal_count_dim_m != 1){
           BlockLoad.setStrides(ArrayRef<int64_t>({tile_row_size, 1}));
         }
 
-        B_in.push_back(BlockLoad);
+        A_in.push_back(BlockLoad);
       }
     }
     /////////////////////
-    /// End of transfer B 
+    /// End of transfer A 
     /////////////////////
 
     /////////////////////
-    /// transfer C
+    /// transfer B 
     /////////////////////
     for(int col = 0; col < tile_col_size; col++){
       SmallVector<AffineExpr, 2> Exprs;
-      Exprs.push_back(builder.getAffineDimExpr(0)); // last dim's affine expr
-      Exprs.push_back(builder.getAffineDimExpr(1) + col); // last dim's affine expr
+      Exprs.push_back(builder.getAffineDimExpr(0) + col); // last dim's affine expr
+      Exprs.push_back(builder.getAffineDimExpr(1)); // last dim's affine expr
 
       SmallVector<int64_t, 4> shape;
-      shape.push_back(temporal_count_dim_m);
       shape.push_back(1);
+      shape.push_back(temporal_count_dim_n);
 
       AffineMap memIVmap = AffineMap::get(2, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
       MemRefType newMemRef = MemRefType::get(shape, dtype);
 
       ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-              (loc, C, memIVmap, ValueRange({vi, vj}), newMemRef);
+              (loc, B, memIVmap, ValueRange({vk, vj}), newMemRef);
       // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
                     // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
       // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
@@ -522,12 +387,46 @@ StationaryBodyBuilderFn TileofWeightStationary(
       BlockLoad.setKernelName("GEMMWS");
       BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
 
+      B_in.push_back(BlockLoad);
+
+      /// has NO stride
+    }   
+    /////////////////////
+    /// End of transfer B 
+    /////////////////////
+
+    /////////////////////
+    /// transfer C
+    /////////////////////
+    for(int row = 0; row < tile_row_size; row++){
+      SmallVector<AffineExpr, 2> Exprs;
+      Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
+      Exprs.push_back(builder.getAffineDimExpr(1)); // last dim's affine expr
+
+
+      SmallVector<int64_t, 4> shape;
+      shape.push_back(temporal_count_dim_m);
+      shape.push_back(temporal_count_dim_n);
+
+      AffineMap memIVmap = AffineMap::get(2, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
+      MemRefType newMemRef = MemRefType::get(shape, dtype);
+
+      ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
+                (loc, C, memIVmap, ValueRange({vi, vj}), newMemRef);
+      // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
+                // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
+      // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
+      // BlockLoad.getOperation()->moveBefore(Kernel);
+      BlockLoad.setKernelName("GEMMWS");
+      BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
+      
       C_in.push_back(BlockLoad);
 
       /// has stride
-      // if(temporal_count_dim_k != 1){
-      //   BlockLoad.setStrides(ArrayRef<int64_t>({tile_row_size, 1}));
-      // }
+      if(temporal_count_dim_m != 1){
+        BlockLoad.setStrides(ArrayRef<int64_t>({tile_row_size, 1}));
+      }
+
       ///////////
       /// generate the store back
       ///////////
@@ -547,7 +446,7 @@ StationaryBodyBuilderFn TileofWeightStationary(
       BlockStore.setId(std::to_string(BlockLoadStoreOpId++));     
 
       stores.push_back(BlockStore); 
-    }   
+    }  
     /////////////////////
     /// End of transfer C
     /////////////////////
@@ -558,9 +457,9 @@ StationaryBodyBuilderFn TileofWeightStationary(
     AffineForOp loop = GenerateOnDeviceNestedLoop(
       builder, loc, 
       /*level*/2, 
-      /*upper bounds*/{temporal_count_dim_k, temporal_count_dim_m}, //// K -> M
-      /*BodyBuilder*/BodyOfTiledWithWeightStationary(
-        A_in, B_in, C_in, C_out, tile_row_size, tile_col_size, temporal_count_dim_m
+      /*upper bounds*/{temporal_count_dim_m, temporal_count_dim_n}, //// K -> M
+      /*BodyBuilder*/BodyOfTiledWithInputStationary(
+        A_in, B_in, C_in, C_out, tile_row_size, tile_col_size, temporal_count_dim_n
       )
     );
 
@@ -568,14 +467,10 @@ StationaryBodyBuilderFn TileofWeightStationary(
 
     affine::AffineYieldOp yield = builder.create<affine::AffineYieldOp>(loc);
 
-
     for(auto store : stores){
       store.getOperation()->moveBefore(yield);
     }
-
-
   };
-
 }
 
 /// @brief Generate nested loop which is the outer loops out of a systolic tile
@@ -585,7 +480,7 @@ StationaryBodyBuilderFn TileofWeightStationary(
 /// @param C            MemRef value representing the output/accumulation tensor.
 /// @param tile_row_size Number of rows in the tile (micro-kernel row dimension).
 /// @param tile_col_size Number of columns in the tile (micro-kernel column dimension).
-affine::AffineForOp OffDeviceLoopOfWeightStationary(
+affine::AffineForOp OffDeviceLoopOfInputStationary(
     OpBuilder &builder, Location loc,
     int level = 1, 
     SmallVector<int> Upperbounds = {1}, 
@@ -614,7 +509,7 @@ affine::AffineForOp OffDeviceLoopOfWeightStationary(
     if(i == level - 1){
       auto inner = innerBuilder.create<affine::AffineForOp>(
         // loc, 0, Upperbounds[i], 1, /*iterArgs =*/ ValueRange({}), InnerMostBodyBuilder);
-        loc, (int64_t)0, (int64_t)Upperbounds[i], /*step*/(int64_t)Steps[i], /*iterArgs =*/ ValueRange(), 
+        loc, (int64_t)0, (int64_t)Upperbounds[i], (int64_t)Steps[i], /*iterArgs =*/ ValueRange(), 
         [&](OpBuilder &b, Location loc, Value v, ValueRange vs) {
           /// v here is useless
           allIvs.push_back(v);
@@ -629,7 +524,7 @@ affine::AffineForOp OffDeviceLoopOfWeightStationary(
     }
     else{
       auto inner = innerBuilder.create<affine::AffineForOp>(
-        loc, 0, Upperbounds[i], /*step*/(int64_t)Steps[i]);
+        loc, 0, Upperbounds[i], Steps[i]);
         
       current = inner;
       allIvs.push_back(current.getInductionVar());
@@ -641,14 +536,14 @@ affine::AffineForOp OffDeviceLoopOfWeightStationary(
 
 
 /////
-//// WS Order : N (j) -> K (k) -> M (i)
-////  N - col of B, col of C
+//// IS Order : K (k) -> M (i) -> N (j) 
 ////  K - reduction dim
 ////  M - row of A, row of C
-//// when tile size = 4, (K_temporal_tile, M_temporal_tile, K_spatial_tile, N_spatial_tile)
-//// when tile size = 3, (M_temporal_tile, K_spatial_tile, N_spatial_tile), K_temporal_tile == 1
-//// when tile size = 2, (K_spatial_tile, N_spatial_tile), K_temporal_tile == 1, M_temporal_tile = M
-AffineForOp TiledWeightStationaryGemm(
+////  N - col of B, col of C
+//// when tile size = 4, (M_temporal_tile, N_temporal_tile, M_spatial_tile, K_spatial_tile)
+//// when tile size = 3, (N_temporal_tile, M_spatial_tile, K_spatial_tile), M_temporal_tile == 1
+//// when tile size = 2, (M_spatial_tile, K_spatial_tile), M_temporal_tile == 1, N_temporal_tile = N
+AffineForOp TiledInputStationaryGemm(
   OpBuilder opbuilder,
   ADORATensor::GemmOp op, 
   ArrayRef<int64_t> tilesize //(K_temporal_tile, M_temporal_tile, K_spatial_tile, N_spatial_tile)
@@ -662,55 +557,55 @@ AffineForOp TiledWeightStationaryGemm(
   //////////////////////////////////////
   /// Get tiled matmul micro-kernel parameter, which is also the tile of B matrix 
   //////////////////////////////////////
-  int64_t tilerow, tilecol, K_temporal_tile, M_temporal_tile;
+  int64_t tilerow, tilecol, M_temporal_tile, N_temporal_tile;
   tilerow = tilesize[tilesize.size() - 2]; /// the tile of micro kernel row, also the tile of B's row
   tilecol = tilesize[tilesize.size() - 1]; /// the tile of micro kernel col, also the tile of B's col
 
   if(tilesize.size() == 3){
-    K_temporal_tile = 1;
-    M_temporal_tile = tilesize[0];
+    M_temporal_tile = 1;
+    N_temporal_tile = tilesize[0];
   }
   else if(tilesize.size() == 4){
-    K_temporal_tile = tilesize[0];
-    M_temporal_tile = tilesize[1];
+    M_temporal_tile = tilesize[0];
+    N_temporal_tile = tilesize[1];
   }
   else{
-    K_temporal_tile = 1;
-    M_temporal_tile = ShapeA[0];    
+    M_temporal_tile = 1;
+    N_temporal_tile = ShapeB[1];    
   }
 
   // make sure matmul is legal
   assert(ShapeA.size() == 2 && ShapeB.size() == 2 && ShapeC.size() == 2);
   assert(ShapeA[0] == ShapeC[0] && ShapeA[1] == ShapeB[0] && ShapeB[1] == ShapeC[1]);
-  assert(ShapeA[1] % (tilerow * K_temporal_tile) == 0 
-      && ShapeB[1] % tilecol == 0 
-      && ShapeA[0] % M_temporal_tile == 0);
+  assert(ShapeA[0] % (tilerow * M_temporal_tile) == 0 
+      && ShapeA[1] % tilecol == 0 
+      && ShapeB[1] % N_temporal_tile == 0);
   
-  if(ShapeA[0] != M_temporal_tile){
-    assert(K_temporal_tile == 1);
+  if(ShapeB[1] != N_temporal_tile){
+    assert(M_temporal_tile == 1);
   }
   
   int64_t M_step, N_step, K_step;
 
-  // M_aftertile = ShapeA[0] / M_temporal_tile;
-  // N_aftertile = ShapeB[1] / tilecol;
-  // K_aftertile = ShapeB[0] / (tilecol * K_temporal_tile);
+  // K_aftertile = ShapeB[0] / tilecol;
+  // M_aftertile = ShapeA[0] / (M_temporal_tile * tilerow);
+  // N_aftertile = ShapeB[1] / N_temporal_tile;
+  K_step = tilecol;
+  M_step = (M_temporal_tile * tilerow);
+  N_step = N_temporal_tile;
 
-  N_step = tilecol;
-  K_step = (tilecol * K_temporal_tile);
-  M_step = M_temporal_tile;
 
   //////////////////////////////////////
   /// Generate systolic gemm
   //////////////////////////////////////
   AffineForOp loop;
-  loop = OffDeviceLoopOfWeightStationary(
+  loop = OffDeviceLoopOfInputStationary(
       opbuilder, op.getLoc(), 
       /*level*/3, 
-      /*upper bounds*/{ShapeB[1], ShapeB[0], ShapeA[0]}, //// N -> K -> M
-      /*steps*/{N_step, K_step, M_step}, ////  N -> K -> M
-      /*InnerMostBodyBuilder*/TileofWeightStationary(
-        op.getA(), op.getB(), op.getC(), K_temporal_tile, M_temporal_tile, tilerow, tilecol
+      /*upper bounds*/{ShapeB[0], ShapeA[0], ShapeB[1]}, ////  K -> M -> N
+      /*steps*/{K_step, M_step, N_step}, ////  K -> M -> N
+      /*InnerMostBodyBuilder*/TileofInputStationary(
+        op.getA(), op.getB(), op.getC(), M_temporal_tile, N_temporal_tile, tilerow, tilecol
       )
     );
   

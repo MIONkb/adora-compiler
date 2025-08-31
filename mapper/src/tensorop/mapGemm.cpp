@@ -88,6 +88,9 @@ bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
   if(stragegy == getMethodStrRef(MatMulStrategy::WeightStationary)){
     newfor = TiledWeightStationaryGemm(opbuilder, op, tilesize); 
   }
+  else if(stragegy == getMethodStrRef(MatMulStrategy::InputStationary)){
+    newfor = TiledInputStationaryGemm(opbuilder, op, tilesize); 
+  }
 
   SimplifyBlockAccessOp(newfor.getRegion());
   
