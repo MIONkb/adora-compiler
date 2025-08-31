@@ -207,16 +207,16 @@ StationaryBodyBuilderFn BodyOfTiledWithInputStationary(
     for (int i = 0; i < tile_row_size; ++i) { 
       /// %3 = affine.load %arg2[0, %arg5] : memref<?x36xi32>
       /// C[i, j]
-      AffineExpr rowExpr_C = builder.getAffineConstantExpr(0);
-      AffineExpr colExpr_C = builder.getAffineDimExpr(0);
-      AffineMap map_C = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0,
+      AffineExpr rowExpr_C = builder.getAffineDimExpr(0);
+      AffineExpr colExpr_C = builder.getAffineDimExpr(1);
+      AffineMap map_C = AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
                                   {rowExpr_C, colExpr_C}, builder.getContext());
       AffineLoadOp LoadC = builder.create<affine::AffineLoadOp>(
-            loc, C_in[i], map_C, ValueRange{i_it});
+            loc, C_in[i], map_C, ValueRange{i_it, j_it});
       
       mlir::Value add = genArithAddOpAccordingToDataType(builder, loc, sum_results[i][tile_col_size-1], LoadC)->getResult(0);
       AffineStoreOp StoreC = builder.create<affine::AffineStoreOp>(
-            loc, add, C_out[i], map_C, ValueRange{i_it});      
+            loc, add, C_out[i], map_C, ValueRange{i_it, j_it});      
     } 
 
     builder.setInsertionPointAfter(inner);
@@ -316,7 +316,7 @@ StationaryBodyBuilderFn TileofInputStationary(
                     // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
           // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
           // BlockLoad.getOperation()->moveBefore(Kernel);
-          BlockLoad.setKernelName("GEMMWS");
+          BlockLoad.setKernelName("GEMMIS");
           BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
 
           /// has stride
@@ -347,7 +347,7 @@ StationaryBodyBuilderFn TileofInputStationary(
                   // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
         // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
         // BlockLoad.getOperation()->moveBefore(Kernel);
-        BlockLoad.setKernelName("GEMMWS");
+        BlockLoad.setKernelName("GEMMIS");
         BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
 
         /// has stride
@@ -384,7 +384,7 @@ StationaryBodyBuilderFn TileofInputStationary(
       // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
       // BlockLoad.getOperation()->moveBefore(Kernel);
       
-      BlockLoad.setKernelName("GEMMWS");
+      BlockLoad.setKernelName("GEMMIS");
       BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
 
       B_in.push_back(BlockLoad);
@@ -417,7 +417,7 @@ StationaryBodyBuilderFn TileofInputStationary(
                 // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
       // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
       // BlockLoad.getOperation()->moveBefore(Kernel);
-      BlockLoad.setKernelName("GEMMWS");
+      BlockLoad.setKernelName("GEMMIS");
       BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
       
       C_in.push_back(BlockLoad);
@@ -431,7 +431,7 @@ StationaryBodyBuilderFn TileofInputStationary(
       /// generate the store back
       ///////////
       ADORA::LocalMemAllocOp alloc = builder.create<ADORA::LocalMemAllocOp>(loc, newMemRef);
-      alloc.setKernelName("GEMMWS");
+      alloc.setKernelName("GEMMIS");
       alloc.setId(std::to_string(BlockLoadStoreOpId));
       C_out.push_back(alloc);
 
@@ -442,8 +442,13 @@ StationaryBodyBuilderFn TileofInputStationary(
       // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
       // BlockLoad.getOperation()->moveBefore(Kernel);
       
-      BlockStore.setKernelName("GEMMWS");
+      BlockStore.setKernelName("GEMMIS");
       BlockStore.setId(std::to_string(BlockLoadStoreOpId++));     
+
+      /// has stride
+      if(temporal_count_dim_m != 1){
+        BlockStore.setStrides(ArrayRef<int64_t>({tile_row_size, 1}));
+      }
 
       stores.push_back(BlockStore); 
     }  
@@ -463,7 +468,7 @@ StationaryBodyBuilderFn TileofInputStationary(
       )
     );
 
-    SpecifiedAffineFortoKernel(loop, "GEMMWS");
+    SpecifiedAffineFortoKernel(loop, "GEMMIS");
 
     affine::AffineYieldOp yield = builder.create<affine::AffineYieldOp>(loc);
 
@@ -515,9 +520,6 @@ affine::AffineForOp OffDeviceLoopOfInputStationary(
           allIvs.push_back(v);
           assert(allIvs.size() >= 3);
           SmallVector<Value> lastThreeIvs(allIvs.end() - 3, allIvs.end());
-          for(auto value : lastThreeIvs){
-            value.dump();
-          }
           InnerMostBodyBuilder(b, loc, lastThreeIvs);
         });
       current = inner;

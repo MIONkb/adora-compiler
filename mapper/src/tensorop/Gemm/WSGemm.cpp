@@ -247,13 +247,7 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
     Value i_it = inner.getInductionVar();
 
     SmallVector<SmallVector<Value>> sum_results;
-
-    // j_it.dump();
-    // k_it.dump();
-    // i_it.dump();
-
-    // auto i32Type = builder.getI32Type();
-
+    
     /**
      * Example: N K M (j k i)
         affine.for %arg4 = 0 to 2 {  /// K
@@ -620,9 +614,6 @@ affine::AffineForOp OffDeviceLoopOfWeightStationary(
           allIvs.push_back(v);
           assert(allIvs.size() >= 3);
           SmallVector<Value> lastThreeIvs(allIvs.end() - 3, allIvs.end());
-          for(auto value : lastThreeIvs){
-            value.dump();
-          }
           InnerMostBodyBuilder(b, loc, lastThreeIvs);
         });
       current = inner;
