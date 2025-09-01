@@ -62,6 +62,9 @@ public:
   raw_ostream& indent(){return _os.indent(_indent);}
   void setIndent(unsigned newindent){ _indent = newindent;}
 
+  /// pingpong indicator
+  bool _pingpong = false;
+
   /// @brief emit a new op to python, add this one to op_name_list. 
   /// @param mlirop the corresponding mlir operation
   /// @param type the C type of this operation
@@ -136,14 +139,23 @@ public:
       // }
       load_data << ")";
 
-      spm_ptr << "iptrs.append(DeviceData(" 
-              << "0x" << std::hex << spadbaddr
-              << ", " << std::dec<< DMA_Len  
-              << "))";
-      indent() << load_data.str() << "\n" ;
-      indent() << spm_ptr.str();
+      if(_pingpong == true){
+        spm_ptr << "iptrs.append(DeviceData(" 
+                << "0x" << std::hex << spadbaddr << "+" << std::dec <<DMA_Len
+                << " if pingpong else 0x"<< std::hex << spadbaddr
+                << ", " << std::dec << DMA_Len 
+                << "))";
+      }
+      else{
+        spm_ptr << "iptrs.append(DeviceData(" 
+                << "0x" << std::hex << spadbaddr
+                << ", " << std::dec<< DMA_Len  
+                << "))";
+      }     
 
-      _os << "\n\n";
+      indent() << load_data.str() << "\n" ;
+      indent() << spm_ptr.str() << "\n\n";
+
       return true;
     }
 
@@ -154,7 +166,7 @@ public:
     uint64_t DMA_Len = DataBytes;
 
     for(int r = ResultShape.size() - 1; r >= 0; r--){
-        DMA_Len = DMA_Len * ResultShape[r];
+      DMA_Len = DMA_Len * ResultShape[r];
     }
     
     /// Get DRAM_BaseAddr
@@ -241,10 +253,20 @@ public:
       }
       load_data << ")";
 
-      spm_ptr << "iptrs.append(DeviceData(" 
-              << "0x" << std::hex << spadbaddr
-              << ", " << std::dec<< DMA_Len 
-              << "))";
+      if(_pingpong == true){
+        spm_ptr << "iptrs.append(DeviceData(" 
+                << "0x" << std::hex << spadbaddr << "+" << std::dec <<DMA_Len
+                << " if pingpong else 0x"<< std::hex << spadbaddr
+                << ", " << std::dec << DMA_Len 
+                << "))";
+      }
+      else{
+        spm_ptr << "iptrs.append(DeviceData(" 
+                << "0x" << std::hex << spadbaddr 
+                << ", " << std::dec << DMA_Len 
+                << "))";
+      }
+
       indent() << load_data.str() << "\n" ;
       indent() << spm_ptr.str() << "\n\n" ;
 
@@ -284,11 +306,20 @@ public:
       store_data << "odata.append(" << Memref_BaseAddr;
       store_data << ")";
 
-      spm_ptr << "optrs.append(DeviceData(" 
-              << "0x" << std::hex << spadbaddr
-              << ", " << std::dec<< DMA_Len  
-              << "))";
-      
+
+      if(_pingpong == true){
+        spm_ptr << "optrs.append(DeviceData(" 
+                << "0x" << std::hex << spadbaddr << "+" << std::dec <<DMA_Len
+                << " if pingpong else 0x"<< std::hex << spadbaddr
+                << ", " << std::dec << DMA_Len 
+                << "))";
+      }
+      else{
+        spm_ptr << "optrs.append(DeviceData(" 
+                << "0x" << std::hex << spadbaddr
+                << ", " << std::dec<< DMA_Len  
+                << "))";
+      }      
       olen << "olen.append(" << std::dec<< DMA_Len   <<")";
 
       indent() << store_data.str() << "\n" ;
@@ -297,14 +328,28 @@ public:
 
 
       if(IsLastBlockStoreOp(op)){
-        indent() << "stream = runtime.create_stream()\n\n";
-        indent() << "await aux_stream(\n";
-        indent() << "\tstream=stream, config=configs,\n";
-        indent() << "\tiptrs=iptrs, idata=idata,\n";
-        indent() << "\toptrs=optrs, odata=odata, olen =olen\n";
-        indent() <<")\n\n";
-        indent() <<"iptrs.clear(), idata.clear()\n";
-        indent() <<"optrs.clear(), odata.clear(), olen.clear()\n\n";
+        if(_pingpong == true){
+          // indent() << "stream = runtime.create_stream()\n\n";
+          indent() << "await aux_stream_pingpong(\n";
+          indent() << "\tstream=stream, config=configs,\n";
+          indent() << "\tiptrs=iptrs, idata=idata,\n";
+          indent() << "\toptrs=optrs, odata=odata, olen =olen,\n";
+          indent() << "\tpingpong=pingpong\n";
+          indent() <<")\n\n";
+          indent() <<"iptrs.clear(), idata.clear()\n";
+          indent() <<"optrs.clear(), odata.clear(), olen.clear()\n\n";
+          indent() <<"pingpong = not pingpong\n";
+        }
+        else{
+          indent() << "stream = runtime.create_stream()\n\n";
+          indent() << "await aux_stream(\n";
+          indent() << "\tstream=stream, config=configs,\n";
+          indent() << "\tiptrs=iptrs, idata=idata,\n";
+          indent() << "\toptrs=optrs, odata=odata, olen =olen,\n";
+          indent() <<")\n\n";
+          indent() <<"iptrs.clear(), idata.clear()\n";
+          indent() <<"optrs.clear(), odata.clear(), olen.clear()\n\n";     
+        }
       }
 
       return true;
@@ -401,11 +446,19 @@ public:
         }
       }
       store_data << ")";
-
-      spm_ptr << "optrs.append(DeviceData(" 
-              << "0x" << std::hex << spadbaddr
-              << ", " << std::dec<< DMA_Len 
-              << "))";
+      if(_pingpong == true){
+        spm_ptr << "optrs.append(DeviceData(" 
+                << "0x" << std::hex << spadbaddr << "+" << std::dec <<DMA_Len
+                << " if pingpong else 0x"<< std::hex << spadbaddr
+                << ", " << std::dec << DMA_Len 
+                << "))";
+      }
+      else{
+        spm_ptr << "optrs.append(DeviceData(" 
+                << "0x" << std::hex << spadbaddr 
+                << ", " << std::dec << DMA_Len 
+                << "))";
+      }
       
       olen << "olen.append(" << DMA_Len <<")";
 
@@ -418,14 +471,28 @@ public:
     // indent() << "\n";
 
     if(IsLastBlockStoreOp(op)){
-      indent() << "stream = runtime.create_stream()\n\n";
-      indent() << "await aux_stream(\n";
-      indent() << "\tstream=stream, config=configs,\n";
-      indent() << "\tiptrs=iptrs, idata=idata,\n";
-      indent() << "\toptrs=optrs, odata=odata, olen =olen\n";
-      indent() <<")\n\n";
-      indent() <<"iptrs.clear(), idata.clear()\n";
-      indent() <<"optrs.clear(), odata.clear(), olen.clear()\n\n";
+      if(_pingpong == true){
+        // indent() << "stream = runtime.create_stream()\n\n";
+        indent() << "await aux_stream_pingpong(\n";
+        indent() << "\tstream=stream, config=configs,\n";
+        indent() << "\tiptrs=iptrs, idata=idata,\n";
+        indent() << "\toptrs=optrs, odata=odata, olen =olen,\n";
+        indent() << "\tpingpong=pingpong\n";
+        indent() <<")\n\n";
+        indent() <<"iptrs.clear(), idata.clear()\n";
+        indent() <<"optrs.clear(), odata.clear(), olen.clear()\n\n";
+        indent() <<"pingpong = not pingpong\n";
+      }
+      else{
+        indent() << "stream = runtime.create_stream()\n\n";
+        indent() << "await aux_stream(\n";
+        indent() << "\tstream=stream, config=configs,\n";
+        indent() << "\tiptrs=iptrs, idata=idata,\n";
+        indent() << "\toptrs=optrs, odata=odata, olen =olen,\n";
+        indent() <<")\n\n";
+        indent() <<"iptrs.clear(), idata.clear()\n";
+        indent() <<"optrs.clear(), odata.clear(), olen.clear()\n\n";     
+      }
     }
 
     return true;    
@@ -449,10 +516,20 @@ public:
     uint64_t SPAD_BaseAddr = DfgIoInfos.addr;
 
     std::stringstream alloc_ptr;
-    alloc_ptr << "data_ptr.append(DeviceData(" 
-             << "0x" << std::hex << SPAD_BaseAddr
-             << ", " << std::dec << Len
-             << "))";
+
+    if(_pingpong == true){
+      alloc_ptr << "data_ptr.append(DeviceData(" 
+                << "0x" << std::hex << SPAD_BaseAddr << "+" << std::dec <<Len
+                << " if pingpong else 0x"<< std::hex << SPAD_BaseAddr
+                << ", " << std::dec << Len
+                << "))";
+    }
+    else{
+      alloc_ptr << "data_ptr.append(DeviceData(" 
+              << "0x" << std::hex << SPAD_BaseAddr
+              << ", " << std::dec << Len
+              << "))";
+    }
     
     indent() << alloc_ptr.str() << "\n";
 
@@ -492,29 +569,19 @@ public:
     // if(isa<affine::AffineForOp>(op)){
     //   op->setAttr("ADORAGemm", mlir::UnitAttr::get(op->getContext()));
     // }
+    indent() << "### GemmOp: " << gemmop << "\n";
+    indent() << "pingpong = True" << "\n";
+    indent() << "stream = runtime.create_stream()" << "\n";
+
+    _pingpong = true;
     if(isa<mlir::affine::AffineForOp>(op) && op->hasAttr("ADORAGemm")){
       visitOp(dyn_cast<mlir::affine::AffineForOp>(op));
     }
 
-
+    _pingpong = false;
     setEmitSkipAttr(op);
-    // indent() << "\n";
-    // if(!MapHasKey(_pytestemitter->KnToCfgExe, op)){
-    //   // Configuration cfg = ;
-    //   ADG* adg = _pytestemitter->getADG();
-    //   _pytestemitter->GenerateCGRACFGAndEXE(op, _pytestemitter->KnToConfiguration[op], adg);
-    // }
-    // if(!op.getKernelName().empty()){
-    //   indent() << "### " << op.getKernelName() << "\n";
-    // }
 
-    // std::vector<std::string> strs = split_str_by_char(_pytestemitter->KnToCfgExe[op], '\n');
-    // for(std::string str: strs){
-    //   indent() << str << "\n";
-    // }
-    
-    // indent() << "\n\n";
-    // return true;
+    indent() << "### End of GemmOp: " << gemmop << "\n";
   }
 
   // bool visitOp(BufferOp op) {
@@ -1020,6 +1087,77 @@ async def aux_stream(
         await stream.memcpyDeviceToHost(d_data=optrs[i], h_data=odata[i], size=olen[i], dtype='i')
 
     ## await stream.release()
+    return
+
+  
+async def aux_stream_pingpong(
+    stream: DeviceStream, config: List[DeviceConfig], 
+    iptrs: List[DeviceData], idata: List[ndarray], 
+    optrs: List[DeviceData], odata: List, olen: List, 
+    pingpong: bool):
+    """
+    Execute a device stream workflow.
+
+    Parameters
+    ----------
+    stream : DeviceStream
+        The device stream instance to operate on.
+    config : List[DeviceConfig]
+        Configuration objects to apply before execution.
+    iptrs : List[DeviceData]
+        Device pointers for input buffers.
+    idata : List
+        Host-side input data corresponding to `iptrs`.
+    optrs : List[DeviceData]
+        Device pointers for output buffers.
+    odata : List
+        Host-side output data containers corresponding to `optrs`.
+    olen : List[int]
+        Expected output lengths for each output buffer.
+    pingpong : bool
+        Indicates the pingpong phase(ping-phase or pong-phase)
+    """
+    # ------------------------------
+    # 1. Apply stream configuration
+    # ------------------------------     
+    await stream.config(config_id=0)
+    # ------------------------------
+    # 2. Host -> Device transfer
+    # ------------------------------
+    for i in range(len(iptrs)):
+        if(pingpong == 0):
+            await stream.memcpyHostToDevice(d_data=iptrs[i], h_data=idata[i], size=len(idata[i]))
+        else:
+            await stream.memcpyHostToDevice(d_data=iptrs[i]+len(idata[i]), h_data=idata[i], size=len(idata[i]))
+
+    # ------------------------------
+    # 3. Execute on device
+    # ------------------------------
+    await stream.execution_start()
+    await stream.execution_finish()
+    # ------------------------------
+    # 4. Device → Host transfer
+    # ------------------------------
+    for i in range(len(optrs)):
+        if(pingpong == 0):
+            await stream.memcpyDeviceToHost(d_data=optrs[i], h_data=odata[i], size=olen[i])
+        else :
+            await stream.memcpyDeviceToHost(d_data=optrs[i]+olen[i], h_data=odata[i], size=olen[i])
+    
+    # await stream.synchronize()
+
+    await stream.release()
+    return
+
+async def aux_stream_pingpong_init(
+    stream: DeviceStream, config: List[DeviceConfig]
+    ):
+    """
+    Apply stream configuration
+    """
+    await stream.apply(config)  
+
+    await stream.release()
     return
 
 ## ===----------------------------------------------------------------------===//

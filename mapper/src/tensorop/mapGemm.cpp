@@ -31,7 +31,8 @@ void TensorDataflowGen::MapNestedForOrKernel(ADORA_TENSOR_MAPPER* mapper, mlir::
   else if(isa<affine::AffineForOp>(forOrKernel)){
     kernel = findTheOnlyKernelInNestedLoop(dyn_cast<affine::AffineForOp>(forOrKernel));
   }
-  
+  kernel.getOperation()->setAttr("Pingpong", mlir::UnitAttr::get(forOrKernel->getContext()));
+
   /// Generating DFG
   std::string kernelName = kernel.getKernelName();
 

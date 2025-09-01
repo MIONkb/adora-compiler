@@ -48,6 +48,13 @@ mlir::Value getConstantOpAccordingToDataType(OpBuilder &builder, Location loc, T
 mlir::Operation* genArithAddOpAccordingToDataType(OpBuilder &builder, Location loc, mlir::Value lhs, mlir::Value rhs);
 mlir::Operation* genArithMulOpAccordingToDataType(OpBuilder &builder, Location loc, mlir::Value lhs, mlir::Value rhs);
 
+template <typename T> inline void setPingpongAttr(T op){
+  op.getOperation()->setAttr("Pingpong", mlir::UnitAttr::get(op.getContext()));
+}
+inline void setPingpongAttr(mlir::Operation* op){
+  op->setAttr("Pingpong", mlir::UnitAttr::get(op->getContext()));
+}
+
 static inline llvm::SmallVector<int64_t, 2> getShape(mlir::Value v) {
   mlir::Type type = v.getType();
   if (auto shapedTy = type.dyn_cast<mlir::ShapedType>()) {

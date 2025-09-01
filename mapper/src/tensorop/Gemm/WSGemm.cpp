@@ -170,7 +170,7 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
           VectorType newVec = VectorType::get(shape, dtype);
 
           AffineVectorLoadOp vecLoadB = builder.create<affine::AffineVectorLoadOp>(
-              loc, newVec, B[row * (tile_col_size / 4 + 1) + col], ivs[0], memIVmap);
+              loc, newVec, B[row * ((tile_col_size + 3) / 4) + col], ivs[0], memIVmap);
           
           ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadB.getResult());
 
@@ -194,7 +194,7 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
         VectorType newVec = VectorType::get(shape, dtype);
 
         AffineVectorLoadOp vecLoadB = builder.create<affine::AffineVectorLoadOp>(
-            loc, newVec, B[row * (tile_col_size / 4 + 1) + col], ivs[0], memIVmap);
+            loc, newVec, B[row * ((tile_col_size + 3) / 4) + col], ivs[0], memIVmap);
         
         ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadB.getResult());
 
@@ -214,7 +214,7 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
         // VectorType newVec = VectorType::get(shape, dtype);
 
         AffineLoadOp LoadB = builder.create<affine::AffineLoadOp>(
-            loc, B[row * (tile_col_size / 4 + 1) + col], memIVmap, ivs[0]);   
+            loc, B[row * ((tile_col_size + 3) / 4) + col], memIVmap, ivs[0]);   
 
         B_stationaries.push_back(LoadB);     
       }  
@@ -247,7 +247,7 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
     Value i_it = inner.getInductionVar();
 
     SmallVector<SmallVector<Value>> sum_results;
-    
+
     /**
      * Example: N K M (j k i)
         affine.for %arg4 = 0 to 2 {  /// K
@@ -403,12 +403,10 @@ StationaryBodyBuilderFn TileofWeightStationary(
 
       ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
                 (loc, A, memIVmap, ValueRange({vi, vk}), newMemRef);
-      // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
-      // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
-      // BlockLoad.getOperation()->moveBefore(Kernel);
+
       BlockLoad.setKernelName("GEMMWS");
       BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
+      setPingpongAttr(BlockLoad); 
 
       /// has stride
       if(temporal_count_dim_m != 1){
@@ -424,9 +422,9 @@ StationaryBodyBuilderFn TileofWeightStationary(
     for(int row = 0; row < tile_row_size; row++){
       SmallVector<AffineExpr, 2> Exprs;
       Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
-      
+      int col = 0;
       if(tile_col_size >= 4){
-        for(int col = 0; col < tile_col_size / 4; col++){
+        for(; col < tile_col_size / 4; col++){
           SmallVector<AffineExpr, 2> Exprs;
           Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
           Exprs.push_back(builder.getAffineDimExpr(1) + col*4); // last dim's affine expr
@@ -441,12 +439,10 @@ StationaryBodyBuilderFn TileofWeightStationary(
 
           ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
                     (loc, B, memIVmap, ValueRange({vk, vj}), newMemRef);
-          // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                    // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
-          // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
-          // BlockLoad.getOperation()->moveBefore(Kernel);
+
           BlockLoad.setKernelName("GEMMWS");
           BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
+          setPingpongAttr(BlockLoad); 
 
           /// has stride
           if(temporal_count_dim_k != 1){
@@ -458,6 +454,7 @@ StationaryBodyBuilderFn TileofWeightStationary(
       }
 
       //// the remaining col%4 or col < 4
+      if(tile_col_size % 4 != 0)
       {
         SmallVector<AffineExpr, 2> Exprs;
         Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
@@ -472,12 +469,10 @@ StationaryBodyBuilderFn TileofWeightStationary(
 
         ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
                   (loc, B, memIVmap, ValueRange({vk, vj}), newMemRef);
-        // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                  // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
-        // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
-        // BlockLoad.getOperation()->moveBefore(Kernel);
+
         BlockLoad.setKernelName("GEMMWS");
         BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
+        setPingpongAttr(BlockLoad); 
 
         /// has stride
         if(temporal_count_dim_k != 1){
@@ -508,13 +503,10 @@ StationaryBodyBuilderFn TileofWeightStationary(
 
       ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
               (loc, C, memIVmap, ValueRange({vi, vj}), newMemRef);
-      // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                    // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
-      // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
-      // BlockLoad.getOperation()->moveBefore(Kernel);
       
       BlockLoad.setKernelName("GEMMWS");
       BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
+      setPingpongAttr(BlockLoad); 
 
       C_in.push_back(BlockLoad);
 
@@ -532,13 +524,10 @@ StationaryBodyBuilderFn TileofWeightStationary(
 
       ADORA::DataBlockStoreOp BlockStore = builder.create<ADORA::DataBlockStoreOp>\
               (loc, alloc, C, memIVmap, ValueRange({vi, vj}));
-      // ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                    // (Kernel.getLoc(), memref, memIVmap, IVs, memRefType);
-      // Kernel.getOperation()->getBlock()->push_back(BlockLoad);
-      // BlockLoad.getOperation()->moveBefore(Kernel);
       
       BlockStore.setKernelName("GEMMWS");
-      BlockStore.setId(std::to_string(BlockLoadStoreOpId++));     
+      BlockStore.setId(std::to_string(BlockLoadStoreOpId++));  
+      setPingpongAttr(BlockStore);    
 
       stores.push_back(BlockStore); 
     }   
