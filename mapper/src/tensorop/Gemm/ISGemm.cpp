@@ -82,7 +82,8 @@ StationaryBodyBuilderFn BodyOfTiledWithInputStationary(
 
           AffineVectorLoadOp vecLoadA = builder.create<affine::AffineVectorLoadOp>(
               loc, newVec, A[row * ((tile_col_size + 3) / 4) + col], ivs[0], memIVmap);
-          
+          setPingpongAttr(vecLoadA);
+
           ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadA.getResult());
 
           for(int idx = 0; idx < 4; idx++){
@@ -104,10 +105,11 @@ StationaryBodyBuilderFn BodyOfTiledWithInputStationary(
         AffineMap memIVmap = AffineMap::get(1, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
         VectorType newVec = VectorType::get(shape, dtype);
 
-        AffineVectorLoadOp vecLoadB = builder.create<affine::AffineVectorLoadOp>(
+        AffineVectorLoadOp vecLoadA = builder.create<affine::AffineVectorLoadOp>(
             loc, newVec, A[row * ((tile_col_size + 3) / 4) + col], ivs[0], memIVmap);
+        setPingpongAttr(vecLoadA);
         
-        ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadB.getResult());
+        ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadA.getResult());
 
         for(int idx = 0; idx < tile_col_size % 4; idx++){
           A_stationaries.push_back(deinterleaver.getResult(idx));
@@ -125,7 +127,8 @@ StationaryBodyBuilderFn BodyOfTiledWithInputStationary(
         // VectorType newVec = VectorType::get(shape, dtype);
 
         AffineLoadOp LoadA = builder.create<affine::AffineLoadOp>(
-            loc, A[row * ((tile_col_size + 3) / 4) + col], memIVmap, ivs[0]);   
+            loc, A[row * ((tile_col_size + 3) / 4) + col], memIVmap, ivs[0]); 
+        setPingpongAttr(LoadA);  
 
         A_stationaries.push_back(LoadA);     
       }  
@@ -184,6 +187,7 @@ StationaryBodyBuilderFn BodyOfTiledWithInputStationary(
                                     {rowExpr_B, colExpr_B}, builder.getContext());
         AffineLoadOp LoadB = builder.create<affine::AffineLoadOp>(
               loc, B[k], map_B, ValueRange{j_it});
+        setPingpongAttr(LoadB);  
 
         //// get data type of mul and add
         Value mul, add;
@@ -216,7 +220,10 @@ StationaryBodyBuilderFn BodyOfTiledWithInputStationary(
       
       mlir::Value add = genArithAddOpAccordingToDataType(builder, loc, sum_results[i][tile_col_size-1], LoadC)->getResult(0);
       AffineStoreOp StoreC = builder.create<affine::AffineStoreOp>(
-            loc, add, C_out[i], map_C, ValueRange{i_it, j_it});      
+            loc, add, C_out[i], map_C, ValueRange{i_it, j_it});
+
+      setPingpongAttr(LoadC);
+      setPingpongAttr(StoreC);
     } 
 
     builder.setInsertionPointAfter(inner);
@@ -427,6 +434,7 @@ StationaryBodyBuilderFn TileofInputStationary(
       alloc.setKernelName("GEMMIS");
       alloc.setId(std::to_string(BlockLoadStoreOpId));
       C_out.push_back(alloc);
+      setPingpongAttr(alloc); 
 
       ADORA::DataBlockStoreOp BlockStore = builder.create<ADORA::DataBlockStoreOp>\
               (loc, alloc, C, memIVmap, ValueRange({vi, vj}));

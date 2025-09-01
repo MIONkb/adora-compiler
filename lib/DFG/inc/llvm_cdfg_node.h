@@ -145,6 +145,9 @@ private:
     std::string _ACCcount = "";
     std::string _ACCinterval = "";
     std::string _ACCrepeat = "";
+
+    /// pingpong
+    bool _pingpong = false;
     
 public:
     LLVMCDFGNode(LLVMCDFG *parent) : _parent(parent){}
@@ -293,6 +296,12 @@ public:
     bool hasInitial(){return _hasinitial;}
     void setInitial(int ini){_hasinitial = true;_initial = ini;}
     int getInitial(){return _initial;}
+
+    /// @jhlou: pingpong
+    void setPingpong(){_pingpong = true;}
+    void setPingpong(bool _){_pingpong = _;}
+    void clearPingpong(){_pingpong = false;}
+    bool isPingpong(){return _pingpong;}    
 };
 
 

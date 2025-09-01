@@ -171,6 +171,7 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
 
           AffineVectorLoadOp vecLoadB = builder.create<affine::AffineVectorLoadOp>(
               loc, newVec, B[row * ((tile_col_size + 3) / 4) + col], ivs[0], memIVmap);
+          setPingpongAttr(vecLoadB);
           
           ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadB.getResult());
 
@@ -195,6 +196,7 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
 
         AffineVectorLoadOp vecLoadB = builder.create<affine::AffineVectorLoadOp>(
             loc, newVec, B[row * ((tile_col_size + 3) / 4) + col], ivs[0], memIVmap);
+        setPingpongAttr(vecLoadB);
         
         ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadB.getResult());
 
@@ -215,6 +217,7 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
 
         AffineLoadOp LoadB = builder.create<affine::AffineLoadOp>(
             loc, B[row * ((tile_col_size + 3) / 4) + col], memIVmap, ivs[0]);   
+        setPingpongAttr(LoadB);
 
         B_stationaries.push_back(LoadB);     
       }  
@@ -274,6 +277,7 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
                                   {rowExpr_A, colExpr_A}, builder.getContext());
         AffineLoadOp LoadA = builder.create<affine::AffineLoadOp>(
             loc, A[k], map_A, ValueRange{i_it, k_it});
+        setPingpongAttr(LoadA);
         // innermostBody->push_back(LoadA);
         
         /// get the rhs of add
@@ -310,7 +314,10 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
       
       mlir::Value add = genArithAddOpAccordingToDataType(builder, loc, sum_results[tile_row_size-1][n], LoadC)->getResult(0);
       AffineStoreOp StoreC = builder.create<affine::AffineStoreOp>(
-            loc, add, C_out[n], map_C, ValueRange{i_it});      
+            loc, add, C_out[n], map_C, ValueRange{i_it}); 
+
+      setPingpongAttr(LoadC);
+      setPingpongAttr(StoreC);     
     } 
 
     builder.setInsertionPointAfter(inner);
@@ -520,6 +527,8 @@ StationaryBodyBuilderFn TileofWeightStationary(
       ADORA::LocalMemAllocOp alloc = builder.create<ADORA::LocalMemAllocOp>(loc, newMemRef);
       alloc.setKernelName("GEMMWS");
       alloc.setId(std::to_string(BlockLoadStoreOpId));
+      setPingpongAttr(alloc); 
+
       C_out.push_back(alloc);
 
       ADORA::DataBlockStoreOp BlockStore = builder.create<ADORA::DataBlockStoreOp>\
@@ -551,14 +560,10 @@ StationaryBodyBuilderFn TileofWeightStationary(
 
     affine::AffineYieldOp yield = builder.create<affine::AffineYieldOp>(loc);
 
-
     for(auto store : stores){
       store.getOperation()->moveBefore(yield);
     }
-
-
   };
-
 }
 
 /// @brief Generate nested loop which is the outer loops out of a systolic tile

@@ -2363,6 +2363,9 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           node->setMemrefSize(memrefsize);
           node->setMemrefName(ref_name);
           node->setLSaffine(true);
+
+          if(op->hasAttr("Pingpong")) /// pingpong
+            node->setPingpong(true);
         }
         else if (op->getName().getStringRef() == "affine.vector_load" ){
           LLVMCDFGNode* node = CDFG->addNode(op); 
@@ -2391,6 +2394,9 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           node->setMemrefSize(memrefsize);
           node->setMemrefName(ref_name);
           node->setLSaffine(true);
+
+          if(op->hasAttr("Pingpong")) /// pingpong
+            node->setPingpong(true);
         }
         else if (op->getName().getStringRef() == "affine.load"){
           LLVMCDFGNode* node = CDFG->addNode(op); 
@@ -2420,6 +2426,9 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           node->setMemrefSize(memrefsize);
           node->setMemrefName(ref_name);
           node->setLSaffine(true);
+
+          if(op->hasAttr("Pingpong")) /// pingpong
+            node->setPingpong(true);
         }
         else if (op->getName().getStringRef() == "affine.store" ){
           LLVMCDFGNode* node = CDFG->addNode(op); 
@@ -2447,6 +2456,9 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           node->setMemrefSize(memrefsize);
           node->setMemrefName(ref_name);
           node->setLSaffine(true);
+
+          if(op->hasAttr("Pingpong")) /// pingpong
+            node->setPingpong(true);
         }
         else if(op->getName().getStringRef() == "arith.constant"){
           LLVMCDFGNode* node = CDFG->addNode(op); 

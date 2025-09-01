@@ -494,6 +494,10 @@ DFG* DFGIR::parseDFGJFromMLIRCDFG(LLVMCDFG * CDFG){
                 //     dfg_io_node->setReducedMemOffset(0);
                 // }
                 dfg_io_node->setMemSize(node->getMemrefSize());
+
+                /// set dfg io node
+                dfg_io_node->setPingpong(node->isPingpong());
+
                 // if(nodeJson.contains("size")){
                 //     int size = std::stoi(nodeJson["size"].get<std::string>());
                 //     dfg_io_node->setMemSize(size);

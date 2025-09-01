@@ -27,7 +27,9 @@ add_library(CGRAMapperLIB
   src/graph/graph_node.cpp
   src/graph/graph.cpp
 
-  src/mapper/configuration.cpp
+  src/mapper/configuration/configuration.cpp
+  src/mapper/configuration/pingpongCfg.cpp
+
   src/mapper/io_scheduler.cpp
   src/mapper/mapper_sa.cpp
   src/mapper/mapper.cpp

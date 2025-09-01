@@ -78,6 +78,9 @@ private:
     int _memSize;                // referred memory size in byte, e.g. size is (15+1-4)*4
     std::vector<std::pair<int, int>> _pattern; // memory access pattern, nested <stride, loop-cycles>
     std::vector<int> _groupNodes; // other I/O nodes in the same group where nodes access the same array
+
+    // @jhlou
+    bool _pingpong = false;
 public:
     DFGIONode(){}
     // virtual ~DFGIONode(){}
@@ -96,6 +99,12 @@ public:
     void addGroupNode(int id){ _groupNodes.push_back(id); }
     const std::vector<int>& groupNodes(){ return _groupNodes; }
     
+    // @jhlou: pingpong
+    void setPingpong(){_pingpong = true;}
+    void setPingpong(bool _){_pingpong = _;}
+    void clearPingpong(){_pingpong = false;}
+    bool isPingpong(){return _pingpong;}
+
     virtual void print();
 };
 

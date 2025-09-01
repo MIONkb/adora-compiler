@@ -27,6 +27,9 @@ struct CfgData{
         data = that.data;
         return *this;
     }
+
+    //// @jhlou: for pingpong
+    bool isRuntimeCfg = false;
 };
 
 
@@ -94,6 +97,8 @@ public:
 };
 typedef ConfigReplaceInfo16bit ConfigReplaceInfo;
 
+#define IsConstStrExpr(_str) (_str == "__const__" || _str == "-" || _str.empty())
+
 // CGRA Configuration
 class Configuration
 {
@@ -138,6 +143,18 @@ public:
     std::map<std::string, std::vector<ConfigReplaceInfo>> VarReplaceInfo;
     void printVarReplaceInfo();
 
+    /// pingpong support
+    void getNodePingpongCfgData(ADGNode* node, std::vector<CfgDataPacket>& cfg, int pingpong_phase);
+    void getPingpongCfgData(std::vector<CfgDataPacket>& cfg_ping, std::vector<CfgDataPacket>& cfg_pong);
+    std::map<int, CfgData> getIobPingpongCfgData(IOBNode* node, bool en_pingpong = 0, int pingpong_phase = 0);
+    
+    //// static tool functions
+    static void addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, uint32_t data);
+    static void addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, uint64_t data);
+    static void addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, const std::vector<uint32_t> &data);
+  
+    int findMask32(uint32_t value, int begin, int l);
+    int findMask16(uint16_t value, short begin, short l);
     // void Valid(){
     //     _mapping->getDFG()
     // }

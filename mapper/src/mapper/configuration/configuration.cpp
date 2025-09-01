@@ -1,14 +1,12 @@
 
 #include "mapper/configuration.h"
-#define IsConstStrExpr(_str) (_str == "__const__" || _str == "-" || _str.empty())
 
-
-void addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, uint32_t data){
+void Configuration::addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, uint32_t data){
     CfgData loc_data(loc.high - loc.low + 1, data);
     cfg[loc.low] = loc_data;
 }
 
-void addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, uint64_t data){
+void Configuration::addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, uint64_t data){
     int len = loc.high - loc.low + 1;
     CfgData loc_data(len);
     uint64_t val = data & (((uint64_t)1 << len) - 1);
@@ -20,23 +18,23 @@ void addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, uint64_t dat
     cfg[loc.low] = loc_data;
 }
 
-void addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, const std::vector<uint32_t> &data){
+void Configuration::addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, const std::vector<uint32_t> &data){
     CfgData loc_data(loc.high - loc.low + 1, data);
     cfg[loc.low] = loc_data;
 }
 
 
 std::map<int, int> Configuration::addAdditionalDelayForMERGEOp(DFGNode* dfgNode,std::map<int, int>& delayUsed){
-    if(dfgNode->operation() == "MERGE4"){
+    if(dfgNode->operation() == "MERGE4" || dfgNode->operation() == "INTLV4"){
         delayUsed[1] += 1;
         delayUsed[2] += 2;
         delayUsed[3] += 3;
     }
-    else if(dfgNode->operation() == "MERGE3"){
+    else if(dfgNode->operation() == "MERGE3" || dfgNode->operation() == "INTLV3"){
         delayUsed[1] += 1;
         delayUsed[2] += 2;
     }  
-    else if(dfgNode->operation() == "MERGE2"){
+    else if(dfgNode->operation() == "MERGE2" || dfgNode->operation() == "INTLV2"){
         delayUsed[1] += 1;
         delayUsed[2] += 2;
     }  
@@ -50,13 +48,13 @@ std::map<int, int> Configuration::addAdditionalDelayForMERGEOp(DFGNode* dfgNode,
 }
 
 int Configuration::addAdditionalLatencyForMERGEOp(DFGNode* dfgNode, int latency){
-    if(dfgNode->operation() == "MERGE4"){
+    if(dfgNode->operation() == "MERGE4" || dfgNode->operation() == "INTLV4"){
         return latency + 3;
     }
-    else if(dfgNode->operation() == "MERGE3"){
+    else if(dfgNode->operation() == "MERGE3" || dfgNode->operation() == "INTLV3"){
         return latency + 2;
     }  
-    else if(dfgNode->operation() == "MERGE2"){
+    else if(dfgNode->operation() == "MERGE2" || dfgNode->operation() == "INTLV2"){
         return latency + 1;
     }  
     // int totalDelay = 0;
@@ -549,7 +547,7 @@ bool Configuration::IsADGNodeConfigVariable(ADGNode* node){
 //     }
 //     assert(false && "Can't run to this position");
 // }
-static int findMask32(uint32_t value, int begin, int l) {
+int Configuration::findMask32(uint32_t value, int begin, int l) {
     if(value == 0 || l == 0 || begin >= 32) 
         return -1;
     uint32_t mask = (1U << l) - 1; 
@@ -561,7 +559,8 @@ static int findMask32(uint32_t value, int begin, int l) {
     }
     return -1; 
 }
-static int findMask16(uint16_t value, short begin, short l) {
+
+int Configuration::findMask16(uint16_t value, short begin, short l) {
     if(value == 0 || l == 0 || begin >= 16) 
         return -1;
     uint16_t mask = (1U << l) - 1; 
@@ -584,7 +583,8 @@ void Configuration::getNodeCfgData(ADGNode* node, std::vector<CfgDataPacket>& cf
     }else if(node->type() == "GIB"){
         cfgMap = getGibCfgData(dynamic_cast<GIBNode*>(node));
      }else if(node->type() == "IOB"){
-        cfgMap = getIobCfgData(dynamic_cast<IOBNode*>(node));
+        // cfgMap = getIobCfgData(dynamic_cast<IOBNode*>(node)); // jhlou
+        cfgMap = getIobPingpongCfgData(dynamic_cast<IOBNode*>(node)); // jhlou
     }
     if(cfgMap.empty()){
         return;

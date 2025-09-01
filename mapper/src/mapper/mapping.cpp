@@ -1097,18 +1097,18 @@ void Mapping::preAssignRdu(){
 
         if(isMapped(_adg->node(adgnodeId))){
             DFGNode* dfgnode = elem.second.dfgNode;
-            if(dfgnode->operation() == "MERGE4"){
+            if(dfgnode->operation() == "MERGE4" || dfgnode->operation() == "INTLV4"){
                 // _fuDelayAttr[adgnodeId].delayUsed[1] = 1;
                 // _fuDelayAttr[adgnodeId].delayUsed[2] = 2;
                 // _fuDelayAttr[adgnodeId].delayUsed[2] = 3;
                  _fuDelayAttr[adgnodeId].totalDelayUsed = 6;
             }
-            else if(dfgnode->operation() == "MERGE3"){
+            else if(dfgnode->operation() == "MERGE3" || dfgnode->operation() == "INTLV3"){
                 // _fuDelayAttr[adgnodeId].delayUsed[1] = 1;
                 // _fuDelayAttr[adgnodeId].delayUsed[2] = 2;
                 _fuDelayAttr[adgnodeId].totalDelayUsed = 3;
             }        
-            else if(dfgnode->operation() == "MERGE2"){
+            else if(dfgnode->operation() == "MERGE2" || dfgnode->operation() == "INTLV2"){
                 // _fuDelayAttr[adgnodeId].delayUsed[1] = 1;
                 _fuDelayAttr[adgnodeId].totalDelayUsed = 1;
             }
