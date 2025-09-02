@@ -17,6 +17,20 @@ affine::AffineForOp GenerateOnDeviceNestedLoop(
     int level = 2, SmallVector<int> Upperbounds = {1, 1}, 
     StationaryBodyBuilderFn BodyBuilder = nullptr);
 
+/// @brief Generate nested loop which is the outer loops out of a systolic tile
+///  Shared by three stationary dataflow.
+/// @param A            MemRef value representing the activation/input tensor.
+/// @param B            MemRef value representing the weight tensor (stationary).
+/// @param C            MemRef value representing the output/accumulation tensor.
+/// @param tile_row_size Number of rows in the tile (micro-kernel row dimension).
+/// @param tile_col_size Number of columns in the tile (micro-kernel column dimension).
+affine::AffineForOp OffDeviceNestedLoop(
+    OpBuilder &builder, Location loc,
+    int level = 1, 
+    SmallVector<int> Upperbounds = {1}, 
+    SmallVector<int> Steps = {1}, 
+    StationaryBodyBuilderFn InnerMostBodyBuilder = nullptr);
+
 /////
 //// WS Order : N (j) -> K (k) -> M (i)
 ////  M - row of A, row of C
@@ -38,6 +52,17 @@ mlir::affine::AffineForOp TiledInputStationaryGemm(
   OpBuilder opbuilder, ADORATensor::GemmOp op, ArrayRef<int64_t> tilesize //(K_temporal_tile, M_temporal_tile, K_spatial_tile, N_spatial_tile)
 );
 
+/////
+//// OS Order : M (i) -> N (j) -> K (k) 
+////  M - row of A, row of C
+////  N - col of B, col of C
+////  K - reduction dim
+//// when tile size = 4, (N_temporal_tile, K_temporal_tile, M_spatial_tile, N_spatial_tile)
+//// when tile size = 3, (K_temporal_tile, M_spatial_tile, N_spatial_tile), N_temporal_tile == 1
+//// when tile size = 2, (M_spatial_tile, N_spatial_tile), N_temporal_tile == 1, K_temporal_tile = N
+AffineForOp TiledOutputStationaryGemm(
+  OpBuilder opbuilder, ADORATensor::GemmOp op, ArrayRef<int64_t> tilesize //(K_temporal_tile, M_temporal_tile, K_spatial_tile, N_spatial_tile)
+);
 
 /////////////////////////
 /// Tool functions

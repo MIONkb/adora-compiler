@@ -1,4 +1,4 @@
-//===------------------ mapGemm.cpp - ADORATensor Lower process ----------------------===//
+//===------------------ ISGemm.cpp - ADORATensor Lower process ----------------------===//
 /// builtin dialect
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 
@@ -476,65 +476,6 @@ StationaryBodyBuilderFn TileofInputStationary(
   };
 }
 
-/// @brief Generate nested loop which is the outer loops out of a systolic tile
-///
-/// @param A            MemRef value representing the activation/input tensor.
-/// @param B            MemRef value representing the weight tensor (stationary).
-/// @param C            MemRef value representing the output/accumulation tensor.
-/// @param tile_row_size Number of rows in the tile (micro-kernel row dimension).
-/// @param tile_col_size Number of columns in the tile (micro-kernel column dimension).
-affine::AffineForOp OffDeviceLoopOfInputStationary(
-    OpBuilder &builder, Location loc,
-    int level = 1, 
-    SmallVector<int> Upperbounds = {1}, 
-    SmallVector<int> Steps = {1}, 
-    StationaryBodyBuilderFn InnerMostBodyBuilder = nullptr) 
-{
-
-  assert(level > 0 && "Loop nest level must be > 0");
-  assert((int)Upperbounds.size() == level && "Upperbounds size must == loop level");
-  assert((int)Steps.size() == level && "Steps size must == loop level");
-
-  // create outermost loop 
-  AffineForOp outer = builder.create<AffineForOp>(
-      loc, /*lb*/ 0, /*ub*/ Upperbounds[0], /*step*/ Steps[0]);
-  AffineForOp current = outer;
-
-  SmallVector<Value> allIvs; /// collect itervar from every level
-  allIvs.push_back(current.getInductionVar());
-
-  // create inner loop one by one
-  for (int i = 1; i < level; i++) {
-    OpBuilder innerBuilder(current.getBody(),
-                           std::prev(current.getBody()->end()));
-
-    //// 
-    if(i == level - 1){
-      auto inner = innerBuilder.create<affine::AffineForOp>(
-        // loc, 0, Upperbounds[i], 1, /*iterArgs =*/ ValueRange({}), InnerMostBodyBuilder);
-        loc, (int64_t)0, (int64_t)Upperbounds[i], (int64_t)Steps[i], /*iterArgs =*/ ValueRange(), 
-        [&](OpBuilder &b, Location loc, Value v, ValueRange vs) {
-          /// v here is useless
-          allIvs.push_back(v);
-          assert(allIvs.size() >= 3);
-          SmallVector<Value> lastThreeIvs(allIvs.end() - 3, allIvs.end());
-          InnerMostBodyBuilder(b, loc, lastThreeIvs);
-        });
-      current = inner;
-    }
-    else{
-      auto inner = innerBuilder.create<affine::AffineForOp>(
-        loc, 0, Upperbounds[i], Steps[i]);
-        
-      current = inner;
-      allIvs.push_back(current.getInductionVar());
-    }
-  }
-
-  return outer;
-}
-
-
 /////
 //// IS Order : K (k) -> M (i) -> N (j) 
 ////  K - reduction dim
@@ -558,8 +499,8 @@ AffineForOp TiledInputStationaryGemm(
   /// Get tiled matmul micro-kernel parameter, which is also the tile of B matrix 
   //////////////////////////////////////
   int64_t tilerow, tilecol, M_temporal_tile, N_temporal_tile;
-  tilerow = tilesize[tilesize.size() - 2]; /// the tile of micro kernel row, also the tile of B's row
-  tilecol = tilesize[tilesize.size() - 1]; /// the tile of micro kernel col, also the tile of B's col
+  tilerow = tilesize[tilesize.size() - 2]; /// the tile of micro kernel row, also the tile of A's row
+  tilecol = tilesize[tilesize.size() - 1]; /// the tile of micro kernel col, also the tile of A's col
 
   if(tilesize.size() == 3){
     M_temporal_tile = 1;
@@ -599,7 +540,7 @@ AffineForOp TiledInputStationaryGemm(
   /// Generate systolic gemm
   //////////////////////////////////////
   AffineForOp loop;
-  loop = OffDeviceLoopOfInputStationary(
+  loop = OffDeviceNestedLoop(
       opbuilder, op.getLoc(), 
       /*level*/3, 
       /*upper bounds*/{ShapeB[0], ShapeA[0], ShapeB[1]}, ////  K -> M -> N

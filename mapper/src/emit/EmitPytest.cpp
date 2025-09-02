@@ -1164,7 +1164,7 @@ async def aux_stream_pingpong(
     
     # await stream.synchronize()
 
-    await stream.release()
+    ## await stream.release()
     return
 
 async def aux_stream_pingpong_init(
@@ -1176,7 +1176,7 @@ async def aux_stream_pingpong_init(
     await stream.apply(config)  
     await stream.config(config_id=0)
     
-    await stream.release()
+    ## await stream.release()
     return
 
 ## ===----------------------------------------------------------------------===//
