@@ -203,6 +203,9 @@ std::map<int, CfgData> Configuration::getIobPingpongCfgData(IOBNode* node, bool 
 
 // get config data for ADG node
 void Configuration::getNodePingpongCfgData(ADGNode* node, std::vector<CfgDataPacket>& cfg, int pingpong_phase){
+    if(!_mapping->isMapped(node)){
+        return;
+    }
     std::map<int, CfgData> cfgMap;
 
     int adgNodeId = node->id();
@@ -433,17 +436,19 @@ void Configuration::getNodePingpongCfgData(ADGNode* node, std::vector<CfgDataPac
             int len = elem.second.len;
             auto& data = elem.second.data;
             bool isRuntimeCFG = elem.second.isRuntimeCfg;
-            if(!isRuntimeCFG){
-                continue;
-            }
+            // if(!isRuntimeCFG){
+            //     continue;
+            // }
 
             // cache valid address
             uint32_t targetAddr = lsb/cfgDataWidth;
             int addrNum = (len + (lsb%cfgDataWidth) + cfgDataWidth - 1)/cfgDataWidth;
-
-            for(int i = 0; i < addrNum; i++){
-                addrs.emplace(targetAddr+i);
-            } 
+            
+            if(isRuntimeCFG){
+                for(int i = 0; i < addrNum; i++){
+                    addrs.emplace(targetAddr+i);
+                } 
+            }
 
             // cache data from 0 to MSB   
             int targetIdx = lsb/32;

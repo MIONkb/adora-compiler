@@ -25,6 +25,7 @@ struct CfgData{
         if(this == &that) return *this;
         len = that.len;
         data = that.data;
+        isRuntimeCfg = that.isRuntimeCfg;
         return *this;
     }
 
@@ -43,9 +44,9 @@ struct CfgDataPacket{
         data.push_back(data_);
     }
     void print(){
-        std::cout << std::hex << "[CDP] addr "<< addr << ", data :";
+        std::cout << std::hex << "[CDP] addr 0x"<< addr << ", data :";
         for(uint32_t data_ : data){
-            std::cout << " " << data_;
+            std::cout << std::hex  << " 0x" << data_;
         }
         std::cout << std::dec << std::endl;
     }

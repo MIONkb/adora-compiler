@@ -36,13 +36,13 @@ public:
   // These functions are defined as pure virtual functions in the base class
   // to ensure each subclass provides implementations according to its specific needs.
   /////////////////////////////////
-  void emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os);
-  void emitBlock(mlir::Block &block, llvm::raw_ostream &os);
-  std::string GenerateCGRAConfig(ADORA::KernelOp& kernel, MapperSA* mapper);
-  std::string GenerateCGRAConfig(ADORA::KernelOp& kernel, Configuration configuration, ADG* adg);
-  void GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, MapperSA* mapper);
-  void GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, Configuration configuration, ADG* adg);
-  bool emitCGRACallFunction(llvm::raw_ostream &os);
+  void emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os) override;
+  void emitBlock(mlir::Block &block, llvm::raw_ostream &os) override;
+  std::string GenerateCGRAConfig(ADORA::KernelOp& kernel, MapperSA* mapper) override;
+  std::string GenerateCGRAConfig(ADORA::KernelOp& kernel, Configuration configuration, ADG* adg) override;
+  void GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, MapperSA* mapper) override;
+  void GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, Configuration configuration, ADG* adg) override;
+  bool emitCGRACallFunction(llvm::raw_ostream &os) override;
   /////////////////////////////////
 
   llvm::SmallDenseMap<mlir::Value, Op_Name_C> getValueNameList(){return _value_name_list;}

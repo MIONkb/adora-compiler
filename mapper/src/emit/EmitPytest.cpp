@@ -3,12 +3,15 @@
 // Copyright 2023-2024 The ADORA Authors.
 //
 //===----------------------------------------------------------------------===//
-#include "emit/Emit.h"
-#include "emit/EmitPytest.h"
-#include "emit/OpVisitor.h"
 #include "mlir/Dialect/Affine/Utils.h"
 
 #include <ctime>
+
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
+
+#include "emit/Emit.h"
+#include "emit/EmitPytest.h"
+#include "emit/OpVisitor.h"
 
 using namespace mlir;
 using namespace mlir::affine;
@@ -570,12 +573,27 @@ public:
     //   op->setAttr("ADORAGemm", mlir::UnitAttr::get(op->getContext()));
     // }
     indent() << "### GemmOp: " << gemmop << "\n";
-    indent() << "pingpong = True" << "\n";
-    indent() << "stream = runtime.create_stream()" << "\n";
 
     _pingpong = true;
     if(isa<mlir::affine::AffineForOp>(op) && op->hasAttr("ADORAGemm")){
-      visitOp(dyn_cast<mlir::affine::AffineForOp>(op));
+      mlir::affine::AffineForOp gemmFor = dyn_cast<mlir::affine::AffineForOp>(op);
+      ADORA::KernelOp kernel = findTheOnlyKernelInNestedLoop(gemmFor);;
+      std::string knName = "cfgbit_" + kernel.getKernelName();
+
+      /**
+       * Example: 
+       *  pingpong = True
+       *  stream = runtime.create_stream()
+       *  aux_stream_pingpong_init(stream, [cfgbit_GEMMIS,cfgbit_GEMMIS_ping,cfgbit_GEMMIS_pong])
+      */
+      indent() << "pingpong = True" << "\n";
+      indent() << "stream = runtime.create_stream()" << "\n";
+      indent() << "await aux_stream_pingpong_init(stream, ["
+               << knName << ", "
+               << knName << "_ping, "
+               << knName << "_pong])\n";
+    
+      visitOp(gemmFor);
     }
 
     _pingpong = false;
@@ -1120,7 +1138,7 @@ async def aux_stream_pingpong(
     # ------------------------------
     # 1. Apply stream configuration
     # ------------------------------     
-    await stream.config(config_id=0)
+    await stream.config(config_id=pingpong+1)
     # ------------------------------
     # 2. Host -> Device transfer
     # ------------------------------
@@ -1156,7 +1174,8 @@ async def aux_stream_pingpong_init(
     Apply stream configuration
     """
     await stream.apply(config)  
-
+    await stream.config(config_id=0)
+    
     await stream.release()
     return
 
@@ -1166,9 +1185,14 @@ async def aux_stream_pingpong_init(
 )XXX";  
 
   for(auto elem : KnToCfgData){
+    auto key = elem.first;
     os << elem.second << "\n";
+    if(KnToPingpongCfgData.count(key)){
+      os << KnToPingpongCfgData[key].first << "\n";
+      os << KnToPingpongCfgData[key].second << "\n";
+    }
   }
-
+  
   // _moduleop.walk([&](mlir::Operation* op) {
   //   op->dump();
   // });
@@ -1220,7 +1244,7 @@ std::string PytestEmitter::GenerateCGRAConfig(
   ADORA::KernelOp& kernel, Configuration cfg, ADG* adg){
   // adg->print();
   std::string CFGarrayName = "cfgbit_" + kernel.getKernelName();
-  std::stringstream CFGdata;
+  std::stringstream CFGdata, pingCFG, pongCFG;
 
    // cfg.dumpCfgData(std::cout);
   std::map<int, dfgIoInfo> dfg_io_infos = std::move(_kernel_to_dfg_io_infos[kernel]);
@@ -1229,6 +1253,11 @@ std::string PytestEmitter::GenerateCGRAConfig(
   }
   std::vector<CfgDataPacket> cfgData;
   cfg.getCfgData(cfgData);
+
+  std::vector<CfgDataPacket> cfgPingData;
+  std::vector<CfgDataPacket> cfgPongData;
+  cfg.getPingpongCfgData(cfgPingData, cfgPongData);
+
   // cfg.getCfgData(cfgData); /// debug
   int cfgSpadDataByte = adg->cfgSpadDataWidth() / 8;
   int cfgAddrWidth = adg->cfgAddrWidth();
@@ -1245,6 +1274,8 @@ std::string PytestEmitter::GenerateCGRAConfig(
   // }else{
   //   CFGdata << "volatile unsigned short ";
   // }
+
+  //// Get initial array config
   CFGdata << "\"\"\" kernel: " << kernel.getKernelName()
           << ",  cfgNum: " << cfgNum << "\"\"\"\n";
   CFGdata << CFGarrayName << " = [\n";
@@ -1264,6 +1295,54 @@ std::string PytestEmitter::GenerateCGRAConfig(
     CFGdata << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (cdp.addr) << ",\n";
   }
   CFGdata << std::dec << "\t]\n\n";
+
+  //// Get ping-phase config
+  //// Get initial array config
+  if(cfgPingData.size() != 0 && cfgPongData.size() != 0 ){
+    std::string pingCFGarrayName = CFGarrayName + "_ping";
+    pingCFG << "\"\"\" kernel: " << kernel.getKernelName()
+                << ", ping-phase" << "\"\"\"\n";
+    pingCFG << pingCFGarrayName << " = [\n";
+    pingCFG << std::hex;
+    for(auto& cdp : cfgPingData){
+      pingCFG << "\t\t";
+      for(auto data : cdp.data){      
+        if(alignWidth == 32){
+          pingCFG << "0x" << std::setw(alignWidthHex) << std::setfill('0') << data << ", ";
+        }else{
+          pingCFG << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (data & 0xffff) << ", ";
+          pingCFG << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (data >> 16) << ", ";
+        }
+              
+      }
+      pingCFG << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (cdp.addr) << ",\n";
+    }
+    pingCFG << std::dec << "\t]\n\n";    
+
+    //// Get pong-phase config
+    //// Get initial array config
+    std::string pongCFGarrayName = CFGarrayName + "_pong";
+    pingCFG << "\"\"\" kernel: " << kernel.getKernelName()
+                << ", pong-phase" << "\"\"\"\n";
+    pongCFG << pongCFGarrayName << " = [\n";
+    pongCFG << std::hex;
+    for(auto& cdp : cfgPongData){
+      pongCFG << "\t\t";
+      for(auto data : cdp.data){      
+        if(alignWidth == 32){
+          pongCFG << "0x" << std::setw(alignWidthHex) << std::setfill('0') << data << ", ";
+        }else{
+          pongCFG << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (data & 0xffff) << ", ";
+          pongCFG << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (data >> 16) << ", ";
+        }
+              
+      }
+      pongCFG << "0x" << std::setw(alignWidthHex) << std::setfill('0') << (cdp.addr) << ",\n";
+    }
+    pongCFG << std::dec << "\t]\n\n";
+
+    KnToPingpongCfgData[kernel] = std::make_pair(pingCFG.str(), pongCFG.str());
+  }
 
   KnToCfgData[kernel] = CFGdata.str();
   KnToCfgArrayInfo[kernel] = std::pair(CFGarrayName, cfgNum);
