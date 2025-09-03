@@ -61,14 +61,19 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
   mlir::Type dtype = dyn_cast<::mlir::MemRefType>(A[0].getType()).getElementType();
   return [=](OpBuilder &builder, Location loc, ValueRange ivs) {
     // ivs = {i j k}
-    
+
     mlir::Value zero = getConstantOpAccordingToDataType(builder, loc, dtype, 0);
+    SmallVector<mlir::Value> zeros;
+    for(int _ = 0; _ < tile_row_size * tile_col_size; _++){
+      zeros.push_back(zero);
+    }
+    // getRegionIterArgs
     ///////////////////////
     //// create innermost for loop: last level of temporal map
     ///////////////////////
     affine::AffineForOp inner = builder.create<affine::AffineForOp>(
       // loc, 0, Upperbounds[i], 1, /*iterArgs =*/ ValueRange({}), InnerMostBodyBuilder);
-      loc, (int64_t)0, (int64_t)innermostTripCount, /*Step*/(int64_t)1, /*iterArgs =*/ ValueRange());
+      loc, (int64_t)0, (int64_t)innermostTripCount, /*Step*/(int64_t)1, /*iterArgs =*/ ValueRange(zeros));
     mlir::Block* innermostBody = inner.getBody();
     builder.setInsertionPointToStart(innermostBody);
 
@@ -82,10 +87,7 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
     Value j_it = ivs[0];
     Value k_it = inner.getInductionVar();
 
-    SmallVector<SmallVector<Value>> acc_results;
-    ///////////////////
-    /// Generate A
-    ///////////////////
+    SmallVector<Value> acc_results;
     /**
      * Example: M N K (i j k)
         affine.for %arg4 = 0 to 2 {  /// N
@@ -100,9 +102,8 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
           }
         }
      */
-    for (int i = 0; i < tile_row_size; ++i) {
-      sum_results.push_back(SmallVector<Value>()); /// initial i-th row's sum
-      for (int j = 0; j < tile_col_size; ++j) {
+    for (int j = 0; j < tile_col_size; ++j) {
+      for (int i = 0; i < tile_row_size; ++i) {
         /// affine map of A : 
         /// %0 = affine.load %arg0[0, %arg4] : memref<1x36xi32>
         /// A[i, k]
@@ -122,122 +123,112 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
         AffineMap map_B = AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
                                     {rowExpr_B, colExpr_B}, builder.getContext());
         AffineLoadOp LoadB = builder.create<affine::AffineLoadOp>(
-              loc, B[j], map_B, ValueRange{j_it, k_it});
+              loc, B[j], map_B, ValueRange{k_it, j_it});
         setPingpongAttr(LoadB);  
 
         //// get data type of mul and add
         Value mul, add;
         mlir::Type dtype = dyn_cast<::mlir::MemRefType>(A[0].getType()).getElementType();
         mul = genArithMulOpAccordingToDataType(builder, loc, LoadA, LoadB)->getResult(0);
-        if(k != 0){
-          Value add_rhs = sum_results[i][k-1];
-          add = genArithAddOpAccordingToDataType(builder, loc, mul, add_rhs)->getResult(0);
-        }
-        else{
-          add = mul;
-        }
+        
+        Value add_rhs = inner.getRegionIterArgs()[j * tile_row_size + i];
+        add = genArithAddOpAccordingToDataType(builder, loc, mul, add_rhs)->getResult(0);
 
-        sum_results[i].push_back(add);
+        acc_results.push_back(add);
       }
     }
-
-    ///////////////////
-    /// Generate store back of C 
-    ///////////////////
-    for (int i = 0; i < tile_row_size; ++i) { 
-      /// %3 = affine.load %arg2[0, %arg5] : memref<?x36xi32>
-      /// C[i, j]
-      AffineExpr rowExpr_C = builder.getAffineDimExpr(0);
-      AffineExpr colExpr_C = builder.getAffineDimExpr(1);
-      AffineMap map_C = AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
-                                  {rowExpr_C, colExpr_C}, builder.getContext());
-      AffineLoadOp LoadC = builder.create<affine::AffineLoadOp>(
-            loc, C_in[i], map_C, ValueRange{i_it, j_it});
-      
-      mlir::Value add = genArithAddOpAccordingToDataType(builder, loc, sum_results[i][tile_col_size-1], LoadC)->getResult(0);
-      AffineStoreOp StoreC = builder.create<affine::AffineStoreOp>(
-            loc, add, C_out[i], map_C, ValueRange{i_it, j_it});
-
-      setPingpongAttr(LoadC);
-      setPingpongAttr(StoreC);
-    } 
+    builder.create<affine::AffineYieldOp>(loc, acc_results);
 
     builder.setInsertionPointAfter(inner);
-    builder.create<affine::AffineYieldOp>(loc);
 
-    ///////////////////////
-    //// create deinterleaver for A
-    //////////////////////    
+    ///////////////////
+    /// Generate interleaver for C 
+    ///////////////////
     SmallVector<mlir::Value> C_stationaries;
-    for(int row = 0; row < tile_row_size; row++){
-      int col = 0;
-      if(tile_col_size >= 4){
-        for(; 4*col + 4 <= tile_col_size; col++){
-          /// generate deinterleaver for B
-          SmallVector<AffineExpr, 2> Exprs;
-          Exprs.push_back(builder.getAffineDimExpr(0) + row); 
-          Exprs.push_back(builder.getAffineConstantExpr(4*col)); 
-
+    for(int col = 0; col < tile_col_size; col++){
+      int row = 0;
+      if(tile_row_size >= 4){
+        for(; 4*row + 4 <= tile_row_size; row++){
+          /// generate interleaver for C
           SmallVector<int64_t, 4> shape;
           shape.push_back(4);
+          
+          SmallVector<mlir::Value> ToInterleaver; 
+          for(int i = 0; i < 4;i++){
+            ToInterleaver.push_back(inner.getResult(col * tile_row_size + row * 4 + i));
+          }     
+          ADORA::InterleaverOp interleaver = builder.create<ADORA::InterleaverOp>(loc, ToInterleaver);
+          
+          /// generate vector input for C
+          SmallVector<AffineExpr, 2> Exprs;
+          Exprs.push_back(builder.getAffineConstantExpr(4*row)); 
+          Exprs.push_back(builder.getAffineDimExpr(0)); 
 
           AffineMap memIVmap = AffineMap::get(1, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
           VectorType newVec = VectorType::get(shape, dtype);
 
-          AffineVectorLoadOp vecLoadA = builder.create<affine::AffineVectorLoadOp>(
-              loc, newVec, A[row * ((tile_col_size + 3) / 4) + col], ivs[0], memIVmap);
-          setPingpongAttr(vecLoadA);
+          AffineVectorLoadOp vecLoadC = builder.create<affine::AffineVectorLoadOp>(
+              loc, newVec, C_in[col * ((tile_row_size + 3) / 4) + row], j_it, memIVmap);
+          setPingpongAttr(vecLoadC);
 
-          ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadA.getResult());
+          Value vecadd = genArithAddOpAccordingToDataType(builder, loc, interleaver, vecLoadC)->getResult(0);
 
-          for(int idx = 0; idx < 4; idx++){
-            A_stationaries.push_back(deinterleaver.getResult(idx));
-          }
+          AffineVectorStoreOp vecStoreC = builder.create<affine::AffineVectorStoreOp>(
+              loc, vecadd, C_out[col * ((tile_row_size + 3) / 4) + row], memIVmap, j_it);
+          setPingpongAttr(vecStoreC);
         }
       }
       // last several stationaries
-      // for(; col <= tile_col_size%4; col++){
-      /// generate deinterleaver for A
-      if(tile_col_size % 4 != 0 && tile_col_size % 4 > 1 ){
-        SmallVector<AffineExpr, 2> Exprs;
-        Exprs.push_back(builder.getAffineDimExpr(0)); // last dim's affine expr
-        Exprs.push_back(builder.getAffineConstantExpr(4*col)); // last dim's affine expr
-
+      if(tile_row_size % 4 != 0 && tile_row_size % 4 > 1 ){
+        /// generate interleaver for C
         SmallVector<int64_t, 4> shape;
-        shape.push_back(tile_col_size%4);
+        shape.push_back(tile_row_size % 4);
+        
+        SmallVector<mlir::Value> ToInterleaver; 
+        for(int i = 0; i < tile_row_size % 4; i++){
+          ToInterleaver.push_back(inner.getResult(col * tile_row_size + row * 4 + i));
+        }     
+        ADORA::InterleaverOp interleaver = builder.create<ADORA::InterleaverOp>(loc, ToInterleaver);
+        
+        /// generate vector input for C
+        SmallVector<AffineExpr, 2> Exprs;
+        Exprs.push_back(builder.getAffineConstantExpr(4*row)); 
+        Exprs.push_back(builder.getAffineDimExpr(0)); 
 
         AffineMap memIVmap = AffineMap::get(1, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
         VectorType newVec = VectorType::get(shape, dtype);
 
-        AffineVectorLoadOp vecLoadA = builder.create<affine::AffineVectorLoadOp>(
-            loc, newVec, A[row * ((tile_col_size + 3) / 4) + col], ivs[0], memIVmap);
-        setPingpongAttr(vecLoadA);
-        
-        ADORA::DeinterleaverOp deinterleaver = builder.create<ADORA::DeinterleaverOp>(loc, vecLoadA.getResult());
+        AffineVectorLoadOp vecLoadC = builder.create<affine::AffineVectorLoadOp>(
+            loc, newVec, C_in[col * ((tile_row_size + 3) / 4) + row], j_it, memIVmap);
+        setPingpongAttr(vecLoadC);
 
-        for(int idx = 0; idx < tile_col_size % 4; idx++){
-          A_stationaries.push_back(deinterleaver.getResult(idx));
-        }
+        Value vecadd = genArithAddOpAccordingToDataType(builder, loc, interleaver, vecLoadC)->getResult(0);
+
+        AffineVectorStoreOp vecStoreC = builder.create<affine::AffineVectorStoreOp>(
+            loc, vecadd, C_out[col * ((tile_row_size + 3) / 4) + row], memIVmap, j_it);
+        setPingpongAttr(vecStoreC);
       }   
-      else if(tile_col_size % 4 == 1) {
+      else if(tile_col_size % 4 == 1) {        
+        /// generate vector input for C
         SmallVector<AffineExpr, 2> Exprs;
-        Exprs.push_back(builder.getAffineDimExpr(0) + row); // last dim's affine expr
-        Exprs.push_back(builder.getAffineConstantExpr(4*col)); // last dim's affine expr
-
-        SmallVector<int64_t, 4> shape;
-        shape.push_back(tile_col_size%4);
+        Exprs.push_back(builder.getAffineConstantExpr(4*row)); // last dim's affine expr
+        Exprs.push_back(builder.getAffineDimExpr(0)); // last dim's affine expr 
 
         AffineMap memIVmap = AffineMap::get(1, /*symbolCount=*/0, Exprs, builder.getContext());   /// stores corresponding AffineMap of above memIVs
-        // VectorType newVec = VectorType::get(shape, dtype);
 
-        AffineLoadOp LoadA = builder.create<affine::AffineLoadOp>(
-            loc, A[row * ((tile_col_size + 3) / 4) + col], memIVmap, ivs[0]); 
-        setPingpongAttr(LoadA);  
+        AffineLoadOp LoadC = builder.create<affine::AffineLoadOp>(
+            loc, C_in[col * ((tile_row_size + 3) / 4) + row], memIVmap, j_it); 
+        setPingpongAttr(LoadC);  
 
-        A_stationaries.push_back(LoadA);     
+        Value add = genArithAddOpAccordingToDataType(builder, loc, inner.getResult(col * tile_row_size + row * 4), LoadC)->getResult(0);
+
+        AffineStoreOp StoreC = builder.create<affine::AffineStoreOp>(
+            loc, add, C_out[col * ((tile_row_size + 3) / 4) + row], memIVmap, j_it); 
+        setPingpongAttr(StoreC);
       }  
-
     }
+    
+    builder.create<affine::AffineYieldOp>(loc);
   };
 }
 

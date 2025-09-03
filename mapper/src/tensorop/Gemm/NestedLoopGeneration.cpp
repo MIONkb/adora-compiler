@@ -44,7 +44,14 @@ mlir::Value getConstantOpAccordingToDataType(OpBuilder &builder, Location loc, T
 /// Returns the created operation.
 mlir::Operation* genArithAddOpAccordingToDataType(OpBuilder &builder, Location loc, mlir::Value lhs, mlir::Value rhs) {
   assert(lhs.getType() == rhs.getType());
-  mlir::Type datatype = lhs.getType();
+  mlir::Type datatype;
+  if(isa<mlir::VectorType>(lhs.getType())){
+    datatype = dyn_cast <mlir::VectorType> (lhs.getType()).getElementType();
+  }
+  else{
+    datatype = lhs.getType();
+  }
+
   mlir::Operation* add;
   if(datatype.isBF16()|| datatype.isF32() || datatype.isF64()) {
     add = builder.create<arith::AddFOp>(loc, lhs, rhs);
@@ -57,7 +64,14 @@ mlir::Operation* genArithAddOpAccordingToDataType(OpBuilder &builder, Location l
 
 mlir::Operation* genArithMulOpAccordingToDataType(OpBuilder &builder, Location loc, mlir::Value lhs, mlir::Value rhs) {
   assert(lhs.getType() == rhs.getType());
-  mlir::Type datatype = lhs.getType();
+  mlir::Type datatype;
+  if(isa<mlir::VectorType>(lhs.getType())){
+    datatype = dyn_cast <mlir::VectorType> (lhs.getType()).getElementType();
+  }
+  else{
+    datatype = lhs.getType();
+  }
+  
   mlir::Operation* mul;
   if(datatype.isBF16()|| datatype.isF32() || datatype.isF64()) {
     mul = builder.create<arith::MulFOp>(loc, lhs, rhs);

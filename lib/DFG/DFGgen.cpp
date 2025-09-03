@@ -1817,21 +1817,21 @@ static void HandleSelfCycle(LLVMCDFG* CDFG, bool verbose = true){
             /// ACC
             accTypeName = "ACC";
           }
-          else if(ComputeNode->getTypeName() == "FADD32"
+          else if(ComputeNode->getTypeName() == "FADD"
             && checkAccumulationChain<arith::AddFOp>(forop, OperandIdx)){
             /// FACC32
-            accTypeName = "FACC32";
+            accTypeName = "FACC";
           }
-          else if(ComputeNode->getTypeName() == "MUL"
-            && checkAccumulationChain<arith::MulIOp>(forop, OperandIdx)){
-            /// MACC
-            accTypeName = "MACC";
-          }
-          else if(ComputeNode->getTypeName() == "FMUL32"
-            && checkAccumulationChain<arith::MulFOp>(forop, OperandIdx)){
-           /// FMACC32
-            accTypeName = "FMACC32";
-          }
+          // else if(ComputeNode->getTypeName() == "MUL"
+          //   && checkAccumulationChain<arith::MulIOp>(forop, OperandIdx)){
+          //   /// MACC
+          //   accTypeName = "MACC";
+          // }
+          // else if(ComputeNode->getTypeName() == "FMUL"
+          //   && checkAccumulationChain<arith::MulFOp>(forop, OperandIdx)){
+          //  /// FMACC32
+          //   accTypeName = "FMACC";
+          // }
           else if(ComputeNode->getTypeName() == "SEL"
             && checkAccumulationChain<arith::SelectOp>(forop, OperandIdx)){
             /// SEL can be extracted as accumulation mode as well.
@@ -2001,9 +2001,21 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
       mlir::Operation* vecop = vecstoreop.getValue().getDefiningOp();
       int ElementBytes = vecstoreop.getMemRefType().getElementTypeBitWidth()/8;
 
-      if(isa<ADORA::InterleaverOp>(vecop)){
-        /// get the input num of interleaver
-        int interleaverNum = dyn_cast<ADORA::InterleaverOp>(vecop).getInterleaveNumber();
+      if(isa<ADORA::InterleaverOp>(vecop) || 
+        isa<arith::AddIOp>(vecop) || isa<arith::AddFOp>(vecop)){
+        int vecnum;
+        if(isa<ADORA::InterleaverOp>(vecop)){
+          /// get the input num of interleaver
+          int interleaverNum = dyn_cast<ADORA::InterleaverOp>(vecop).getInterleaveNumber();
+          vecnum = interleaverNum;
+        }
+        else if(isa<arith::AddIOp>(vecop) || isa<arith::AddFOp>(vecop)){
+          assert(dyn_cast<mlir::VectorType>(vecop->getResult(0).getType()).getShape().size() == 1);
+          vecnum = dyn_cast<mlir::VectorType>(vecop->getResult(0).getType()).getShape()[0];
+        }
+        else{
+          assert(false && "Unsupported input of vector_store.");
+        }
 
         /// fix linear access of extractop
         assert(node->isLSaffine() && node->getTypeName() == "Output");
@@ -2013,7 +2025,7 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
         std::string step, count;
 
         SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
-        newLinearAccess.push_back(std::pair(ElementBytes, interleaverNum));
+        newLinearAccess.push_back(std::pair(ElementBytes, vecnum));
         // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
 
         int level = 0;
@@ -2021,7 +2033,7 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
           std::getline(ss, count, ',');
 
           if(level == 1){
-            int newstep = std::stoi(step) - ElementBytes * interleaverNum + ElementBytes;
+            int newstep = std::stoi(step) - ElementBytes * vecnum + ElementBytes;
             newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
           }
           else if(level != 0) {
@@ -2046,9 +2058,20 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
       // }
       int ElementBytes = vecloadop.getMemRefType().getElementTypeBitWidth()/8;
 
-      if(isa<ADORA::DeinterleaverOp>(userop)){
-        /// get the input num of interleaver
-        int interleaverNum = dyn_cast<ADORA::DeinterleaverOp>(userop).getDeinterleaveNumber();
+      if(isa<ADORA::DeinterleaverOp>(userop) || 
+        isa<arith::AddIOp>(userop) || isa<arith::AddFOp>(userop)){
+        int vecnum;
+        if(isa<ADORA::DeinterleaverOp>(userop)){
+          /// get the input num of interleaver
+          int vecnum = dyn_cast<ADORA::DeinterleaverOp>(userop).getDeinterleaveNumber();
+        }
+        else if(isa<arith::AddIOp>(userop) || isa<arith::AddFOp>(userop)){
+          assert(dyn_cast<mlir::VectorType>(userop->getResult(0).getType()).getShape().size() == 1);
+          vecnum = dyn_cast<mlir::VectorType>(userop->getResult(0).getType()).getShape()[0];
+        }
+        else{
+          assert(false && "Unsupported input of vector_store.");
+        }
 
         /// fix linear access of extractop
         assert(node->isLSaffine() && node->getTypeName() == "Input");
@@ -2058,7 +2081,7 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
         std::string step, count;
 
         SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
-        newLinearAccess.push_back(std::pair(ElementBytes, interleaverNum));
+        newLinearAccess.push_back(std::pair(ElementBytes, vecnum));
         // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
 
         int level = 0;
@@ -2066,7 +2089,7 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
           std::getline(ss, count, ',');
 
           if(level == 1){
-            int newstep = std::stoi(step) - ElementBytes * interleaverNum + ElementBytes;
+            int newstep = std::stoi(step) - ElementBytes * vecnum + ElementBytes;
             newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
           }
           else if(level != 0) {
@@ -2081,7 +2104,7 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
         node->setLinearAccess(LinearAccessToStr(newLinearAccess));
       }
       else{
-        assert(false && "vectorstore op could only support input as interleaver op right now.");
+        assert(false && "vector_load op could only support input as interleaver op right now.");
       }
     }
   }
@@ -2137,11 +2160,19 @@ static void SpecifyFPNodePrecision(LLVMCDFG* CDFG, bool verbose){
         resultTy = op->getResult(0).getType();
       else
         continue;
-
-      if (!resultTy.isa<mlir::FloatType>())
+      
+      mlir::FloatType floatTy;
+      if (resultTy.isa<mlir::VectorType>()
+        && dyn_cast<mlir::VectorType>(resultTy).getElementType().isa<mlir::FloatType>()){
+        floatTy = dyn_cast<mlir::VectorType>(resultTy).getElementType().cast<mlir::FloatType>();
+      }
+      else if (resultTy.isa<mlir::FloatType>()){
+        floatTy = resultTy.cast<mlir::FloatType>();
+      }
+      else {        
         continue;
+      }
 
-      auto floatTy = resultTy.cast<mlir::FloatType>();
       unsigned width = floatTy.getWidth();
       std::string precision;
 

@@ -60,7 +60,7 @@ mlir::affine::AffineForOp TiledInputStationaryGemm(
 //// when tile size = 4, (N_temporal_tile, K_temporal_tile, M_spatial_tile, N_spatial_tile)
 //// when tile size = 3, (K_temporal_tile, M_spatial_tile, N_spatial_tile), N_temporal_tile == 1
 //// when tile size = 2, (M_spatial_tile, N_spatial_tile), N_temporal_tile == 1, K_temporal_tile = N
-AffineForOp TiledOutputStationaryGemm(
+mlir::affine::AffineForOp TiledOutputStationaryGemm(
   OpBuilder opbuilder, ADORATensor::GemmOp op, ArrayRef<int64_t> tilesize //(K_temporal_tile, M_temporal_tile, K_spatial_tile, N_spatial_tile)
 );
 
