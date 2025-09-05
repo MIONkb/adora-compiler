@@ -7,6 +7,7 @@
 
 #include <ctime>
 
+#include "ADORA/Dialect/ADORA/IR/ADORA.h"
 #include "ADORA/Dialect/ADORA/Utility/Utility.h"
 
 #include "emit/Emit.h"
@@ -333,8 +334,8 @@ public:
       if(IsLastBlockStoreOp(op)){
         if(_pingpong == true){
           // indent() << "stream = runtime.create_stream()\n\n";
-          indent() << "await aux_stream_pingpong(\n";
-          indent() << "\tstream=stream, config=configs,\n";
+          indent() << "await aux_stream_pingpong(stream=stream,\n";
+          indent() << "\tconfig_id = 1 if pingpong==False else 2,\n";
           indent() << "\tiptrs=iptrs, idata=idata,\n";
           indent() << "\toptrs=optrs, odata=odata, olen =olen,\n";
           indent() << "\tpingpong=pingpong\n";
@@ -476,8 +477,8 @@ public:
     if(IsLastBlockStoreOp(op)){
       if(_pingpong == true){
         // indent() << "stream = runtime.create_stream()\n\n";
-        indent() << "await aux_stream_pingpong(\n";
-        indent() << "\tstream=stream, config=configs,\n";
+        indent() << "await aux_stream_pingpong(stream=stream,\n";
+        indent() << "\tconfig_id = 1 if pingpong==False else 2,\n";
         indent() << "\tiptrs=iptrs, idata=idata,\n";
         indent() << "\toptrs=optrs, odata=odata, olen =olen,\n";
         indent() << "\tpingpong=pingpong\n";
@@ -572,26 +573,114 @@ public:
     // if(isa<affine::AffineForOp>(op)){
     //   op->setAttr("ADORAGemm", mlir::UnitAttr::get(op->getContext()));
     // }
-    indent() << "### GemmOp: " << gemmop << "\n";
+    indent() << "#######################################\n";
+    indent() << "### Emit GemmOp: " << gemmop << "\n";
+    indent() << "#######################################\n";
 
     _pingpong = true;
+
     if(isa<mlir::affine::AffineForOp>(op) && op->hasAttr("ADORAGemm")){
       mlir::affine::AffineForOp gemmFor = dyn_cast<mlir::affine::AffineForOp>(op);
       ADORA::KernelOp kernel = findTheOnlyKernelInNestedLoop(gemmFor);;
-      std::string knName = "cfgbit_" + kernel.getKernelName();
+      std::string knName = kernel.getKernelName();
+      /// emit pingpong 
+      indent() << "ptrs_ping, ptrs_pong = [], []\n";
 
+      for(auto elem : _pytestemitter->getLoadToSPMInfosMap()){
+        ADORA::DataBlockLoadOp load = elem.first;
+        load.dump();
+        if( load.getOperation()->hasAttr("Pingpong")
+          && findElement(load.getKernelNameAsStrVector(), kernel.getKernelName()) != -1){
+          ///// belongs to this kernel
+          llvm::SmallVector< std::pair<int, dfgIoInfo> > SPMs = elem.second;
+          for(auto pair : SPMs){
+            int base_addr = pair.second.addr;
+            int len = getByteSizeFromMemref(load.getResultType());
+            std::stringstream ss_ping, ss_pong;
+            
+            indent() << "### Pingpong DataBlockLoadOp: " << load << "\n";
+            ss_ping << "ptrs_ping.append(DeviceData("                 
+                    << "0x" << std::hex << base_addr
+                    << ", " << std::dec << len 
+                    << "))";
+            indent() << ss_ping.str() << "\n";
+
+            ss_pong << "ptrs_pong.append(DeviceData("                 
+                    << "0x" << std::hex << base_addr
+                    << "+"  << std::dec << len
+                    << ", " << std::dec << len 
+                    << "))";
+            indent() << ss_pong.str() << "\n";
+          }
+        }
+      }
+
+      for(auto elem : _pytestemitter->getLocalAllocToSPMMap()){
+        ADORA::LocalMemAllocOp alloc = elem.first;
+        alloc.dump();
+        if( alloc.getOperation()->hasAttr("Pingpong")
+          && findElement(alloc.getKernelNameAsStrVector(), kernel.getKernelName()) != -1){
+          ///// belongs to this kernel
+          std::pair<int, dfgIoInfo> spm = elem.second;
+          int base_addr = spm.second.addr;
+          int len = getByteSizeFromMemref(alloc.getMemrefType());
+          std::stringstream ss_ping, ss_pong;
+          indent() << "### Pingpong LocalMemAllocOp: " << alloc << "\n";
+          
+          ss_ping << "ptrs_ping.append(DeviceData("                 
+                  << "0x" << std::hex << base_addr
+                  << ", " << std::dec << len 
+                  << "))";
+          indent() << ss_ping.str() << "\n";
+
+          ss_pong << "ptrs_pong.append(DeviceData("                 
+                  << "0x" << std::hex << base_addr
+                  << "+"  << std::dec << len
+                  << ", " << std::dec << len 
+                  << "))";
+          indent() << ss_pong.str() << "\n";
+        }
+      }
+
+      /// emit different config for gemm
       /**
        * Example: 
-       *  pingpong = True
+       *  pingpong = False
        *  stream = runtime.create_stream()
        *  aux_stream_pingpong_init(stream, [cfgbit_GEMMIS,cfgbit_GEMMIS_ping,cfgbit_GEMMIS_pong])
       */
-      indent() << "pingpong = True" << "\n";
+
+      ///// get iob_ens:
+      BYTES_LIST iob_ens = _pytestemitter->getIobens(kernel);
+      std::stringstream iobens_ss;
+      for(int _ = 0; _ < iob_ens.size(); _++){
+        iobens_ss << iob_ens.getByte(_);
+        if(_ != iob_ens.size() - 1)
+          iobens_ss << "," ;
+      }
+
+      indent() << "pingpong = False" << "\n";
       indent() << "stream = runtime.create_stream()" << "\n";
+
+      indent() << "config_" << knName << " = DeviceConfig("
+               << "config_values=" << "cfgbit_" << knName << ", "
+               << "iob_en=[" << iobens_ss.str() << "], "
+               << "data_ptr=data_ptr)\n";
+      
+      indent() << "config_" << knName << "_ping" << " = DeviceConfig("
+               << "config_values=" << "cfgbit_" << knName << "_ping" << ", "
+               << "iob_en=[" << iobens_ss.str() << "], "
+               << "data_ptr=ptrs_ping)\n";
+
+      indent() << "config_" << knName << "_pong" << " = DeviceConfig("
+               << "config_values=" << "cfgbit_" << knName << "_pong" << ", "
+               << "iob_en=[" << iobens_ss.str() << "], "
+               << "data_ptr=ptrs_pong)\n";
+
       indent() << "await aux_stream_pingpong_init(stream, ["
-               << knName << ", "
-               << knName << "_ping, "
-               << knName << "_pong])\n";
+               << "config_" << knName << ", "
+               << "config_" << knName << "_ping, "
+               << "config_" << knName << "_pong])\n\n";
     
       visitOp(gemmFor);
     }
@@ -599,7 +688,9 @@ public:
     _pingpong = false;
     setEmitSkipAttr(op);
 
-    indent() << "### End of GemmOp: " << gemmop << "\n";
+    indent() << "#######################################\n";
+    indent() << "### End of GemmOp:" << gemmop << "\n";
+    indent() << "#######################################\n";
   }
 
   // bool visitOp(BufferOp op) {
@@ -1107,9 +1198,14 @@ async def aux_stream(
     ## await stream.release()
     return
 
+def DeviceData_Pong(ptr : DeviceData) -> DeviceData:
+    new_ptr = DeviceData(ptr.address+ptr.size, ptr.size)
+    return new_ptr
   
 async def aux_stream_pingpong(
-    stream: DeviceStream, config: List[DeviceConfig], 
+    stream: DeviceStream, 
+    # config: List[DeviceConfig], 
+    config_id:int,
     iptrs: List[DeviceData], idata: List[ndarray], 
     optrs: List[DeviceData], odata: List, olen: List, 
     pingpong: bool):
@@ -1138,15 +1234,15 @@ async def aux_stream_pingpong(
     # ------------------------------
     # 1. Apply stream configuration
     # ------------------------------     
-    await stream.config(config_id=pingpong+1)
-    # ------------------------------
+    await stream.config(config_id=config_id)
+        # ------------------------------
     # 2. Host -> Device transfer
     # ------------------------------
     for i in range(len(iptrs)):
         if(pingpong == 0):
-            await stream.memcpyHostToDevice(d_data=iptrs[i], h_data=idata[i], size=len(idata[i]))
+            await stream.memcpyHostToDevice(d_data=iptrs[i], h_data=idata[i], size=len(idata[i]), depend_type=2))
         else:
-            await stream.memcpyHostToDevice(d_data=iptrs[i]+len(idata[i]), h_data=idata[i], size=len(idata[i]))
+            await stream.memcpyHostToDevice(DeviceData_Pong(iptrs[i]), h_data=idata[i], size=len(idata[i]), depend_type=2))
 
     # ------------------------------
     # 3. Execute on device
@@ -1160,11 +1256,11 @@ async def aux_stream_pingpong(
         if(pingpong == 0):
             await stream.memcpyDeviceToHost(d_data=optrs[i], h_data=odata[i], size=olen[i])
         else :
-            await stream.memcpyDeviceToHost(d_data=optrs[i]+olen[i], h_data=odata[i], size=olen[i])
+            await stream.memcpyDeviceToHost(DeviceData_Pong(optrs[i]), h_data=odata[i], size=olen[i])
     
     # await stream.synchronize()
 
-    ## await stream.release()
+    # await stream.release()
     return
 
 async def aux_stream_pingpong_init(
@@ -1173,10 +1269,11 @@ async def aux_stream_pingpong_init(
     """
     Apply stream configuration
     """
-    await stream.apply(config)  
+    cfg_copy = list(config)
+    await stream.apply(cfg_copy)  
     await stream.config(config_id=0)
     
-    ## await stream.release()
+    # await stream.release()
     return
 
 ## ===----------------------------------------------------------------------===//

@@ -78,7 +78,16 @@ void TensorDataflowGen::MapNestedForOrKernel(ADORA_TENSOR_MAPPER* mapper, mlir::
       // }
     }
     // kernel_cnt++;
+  forOrKernel->dump();
 
+  for(auto elem : pyEmitter->getLoadToSPMInfosMap()){
+    ADORA::DataBlockLoadOp load = elem.first;
+    load.dump();
+  }
+  for(auto elem : pyEmitter->getLocalAllocToSPMMap()){
+    ADORA::LocalMemAllocOp alloc = elem.first;
+    alloc.dump();
+  }
 }
 
 bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
@@ -98,6 +107,8 @@ bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
 
   SimplifyBlockAccessOp(newfor.getRegion());
   
+  newfor.dump();
+
   ADORA_TENSOR_MAPPER* mapper = new ADORA_TENSOR_MAPPER(_adg, _timeout_ms, _max_iters, _objOpt);
   mappers.push_back(mapper);
       

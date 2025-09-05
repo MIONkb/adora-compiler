@@ -59,6 +59,14 @@ std::string getEmitType(const mlir::Value v){
   return type_str;
 }
 
+static void CloneUnitAttr(Operation* from, Operation* to){
+ for (auto &namedAttr : from->getAttrs()) {
+    if (isa<UnitAttr>(namedAttr.getValue())) {
+      to->setAttr(namedAttr.getName(), namedAttr.getValue());
+    }
+  }
+}
+
 /// @brief A tool function to check whether a block access op is simplified
 /// @param op can be datablockload or datablockstore op
 /// @return
@@ -80,6 +88,35 @@ template <typename opT> bool IsSimplified(opT op){
     }
   }
   return true;
+}
+
+/// @brief A utility function to check if a block access operation can be simplified
+/// @param op The candidate operation, either a datablockload or datablockstore
+/// @return True if the operation is simplified, otherwise false
+int64_t getByteSizeFromMemref(mlir::MemRefType memref) {
+    mlir::Type elementType = memref.getElementType();
+
+    if (!elementType.isIntOrFloat()) {
+        llvm::errs() << "Unsupported element type in MemRef: " << elementType << "\n";
+        return -1;
+    }
+    unsigned elemBitWidth = elementType.getIntOrFloatBitWidth();
+
+    int64_t numElements = 1;
+    for (int64_t dim : memref.getShape()) {
+        if (dim == mlir::ShapedType::kDynamic) {
+            llvm::errs() << "Dynamic dimension found in MemRef: " << memref << "\n";
+            assert(false);
+        }
+        numElements *= dim;
+    }
+
+    int64_t totalBytes = (elemBitWidth / 8) * numElements;
+    return totalBytes;
+}
+
+int64_t getByteSizeFromMemref(mlir::TypedValue<mlir::MemRefType> memref) {
+  return getByteSizeFromMemref(memref.getType());
 }
 
 /// @brief A function to retrieve the IOB IDs that can access a specified SPAD bank.
@@ -133,8 +170,12 @@ void mlir::ADORA::SimplifyBlockAccessOp(mlir::Region& region){
     ADORA::DataBlockLoadOp newBlockLoad = b.create<ADORA::DataBlockLoadOp>\
                 (blockload.getLoc(), blockload.getOriginalMemref(), map, *resultOperands, blockload.getResultType());
 
+    // newBlockLoad.getOperation()->setAttrs(blockload.getOperation()->getAttrDictionary());
     newBlockLoad.setKernelName(blockload.getKernelName().str());
     newBlockLoad.setId(blockload.getId().str());
+    if(blockload.hasStrides())
+      newBlockLoad.setStrides(blockload.getStrides());
+    CloneUnitAttr(blockload.getOperation(), newBlockLoad.getOperation());
 
     blockload.getOperation()->replaceAllUsesWith(newBlockLoad);
     blockload.erase();
@@ -169,6 +210,9 @@ void mlir::ADORA::SimplifyBlockAccessOp(mlir::Region& region){
 
     newBlockStore.setKernelName(blockstore.getKernelName().str());
     newBlockStore.setId(blockstore.getId().str());
+    if(blockstore.hasStrides())
+      newBlockStore.setStrides(blockstore.getStrides());
+    CloneUnitAttr(blockstore.getOperation(), newBlockStore.getOperation());
 
     blockstore.getOperation()->replaceAllUsesWith(newBlockStore);
     blockstore.erase();

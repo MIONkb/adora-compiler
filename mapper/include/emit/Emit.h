@@ -44,7 +44,11 @@ std::string getEmitType(const mlir::Value v);
 /// @return A vector of IOB IDs that are connected to the specified SPAD bank.
 std::vector<int> spadBankToIobs(ADG* adg, int bankId);
 
-
+/// @brief A utility function to check if a block access operation can be simplified
+/// @param op The candidate operation, either a datablockload or datablockstore
+/// @return True if the operation is simplified, otherwise false
+int64_t getByteSizeFromMemref(mlir::MemRefType memref);
+int64_t getByteSizeFromMemref(mlir::TypedValue<mlir::MemRefType> memref);
 
 namespace mlir{
 namespace ADORA{
@@ -160,6 +164,15 @@ public:
   void setADG(ADG* _) {_adg = _;}
   ADG* getADG(){return _adg;}
 
+  BYTES_LIST getIobens(KernelOp& kernel){return _kernel_to_iob_ens[kernel];};
+  llvm::SmallDenseMap<ADORA::DataBlockLoadOp, llvm::SmallVector<dfgIoInfo>> 
+    getLoadToDfgIoInfosMap(){return _LoadToDfgIoInfos;};
+  llvm::SmallDenseMap<ADORA::DataBlockStoreOp, dfgIoInfo>
+    getStoreToDfgIoInfoMap(){return _StoreToDfgIoInfo;};  
+  llvm::SmallDenseMap<ADORA::DataBlockLoadOp, llvm::SmallVector< std::pair<int, dfgIoInfo> > >
+    getLoadToSPMInfosMap(){return _LoadToSPMInfos;};
+  llvm::SmallDenseMap<ADORA::LocalMemAllocOp, std::pair<int, dfgIoInfo>>
+    getLocalAllocToSPMMap(){return _LocalAllocToSPMInfo;};
 protected:
   mlir::ModuleOp _moduleop;
   std::stringstream _CFGandEXE;
