@@ -25,7 +25,8 @@ void MapAdoraTensorOp(MLIRContext* context, mlir::ModuleOp module,
                     std::vector<ADORA_TENSOR_MAPPER*> mappers,
                     CGRACallEmitter* CEmitter, PytestEmitter* PyEmitter,
                     ADG* adg, std::string& OpNameFile_str,
-                    int timeout_ms, int max_iters, bool objOpt);
+                    int timeout_ms, int max_iters, bool objOpt,
+                    bool verbose = false);
 
 
 class TensorDataflowGen : public ADORATensorOpVisitorBase<TensorDataflowGen, bool> {
@@ -34,6 +35,9 @@ public:
   OpBuilder opbuilder;
   CGRACallEmitter* cEmitter;
   PytestEmitter* pyEmitter;
+
+  bool _verbose = false;
+  void setVerbose(bool _) {_verbose = _;}
 
 
   // mapping args

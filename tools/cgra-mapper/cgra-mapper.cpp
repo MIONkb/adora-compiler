@@ -62,7 +62,6 @@ int main(int argc, char **argv) {
   // mlir::registerAllDialects();
   // mlir::registerAllPasses();
 
-  spdlog::cfg::helpers::load_levels("true");
   mlir::DialectRegistry registry;
 
   //===--------------------------------------------------------------------===//
@@ -165,13 +164,26 @@ int main(int argc, char **argv) {
     cl::desc("Output filename"),
     cl::value_desc("filename"),
     cl::init("-"));
-  
+
+  static cl::opt<bool> verbose(
+    "verbose", 
+    cl::Optional, 
+    cl::desc("Detail information"),
+    cl::value_desc("bool"),
+    cl::init(false));
   // static cl::opt<int> nthreads(
   //   "j", 
   //   cl::Optional, 
   //   cl::desc("Allow N mapping jobs at once(default to be 1)"),
   //   cl::value_desc("[N]"),
   //   cl::init(1));
+  // spdlog::cfg::helpers::load_levels("true");
+  if(verbose){
+    spdlog::set_level(spdlog::level::info);
+  }
+  else{
+    spdlog::set_level(spdlog::level::off);
+  }
 
   InitLLVM y(argc, argv);
 
@@ -280,7 +292,7 @@ int main(int argc, char **argv) {
   /// Map ADORA Tensor
   /////////////////////////
   MapAdoraTensorOp(&context, moduleop, tensor_mapper_Vec, &CEmitter, &PyEmitter,
-    adg, GeneralOpNameFile_str, timeout_ms, max_iters, objOpt);
+    adg, GeneralOpNameFile_str, timeout_ms, max_iters, objOpt, verbose);
   // if(emit_type == "pytest"){
   //   MapAdoraTensorOp(tensor_mapper_Vec)
   // }
@@ -324,7 +336,7 @@ int main(int argc, char **argv) {
       kernelName = "kernel_" + std::to_string(kernel_cnt);
     }
     LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile_str);
-    generateCDFGfromKernel(CDFG, kernel, /*verbose=*/true);
+    generateCDFGfromKernel(CDFG, kernel, /*verbose=*/verbose);
     // CDFG->CDFGtoDOT(CDFG->name_str()+"_CDFG.dot");
 
     /// DFG Mapping to CGRA architecture

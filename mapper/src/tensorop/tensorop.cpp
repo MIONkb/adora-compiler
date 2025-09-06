@@ -14,14 +14,16 @@ void MapAdoraTensorOp(MLIRContext* context, mlir::ModuleOp moduleop,
                     std::vector<ADORA_TENSOR_MAPPER*> mappers,
                     CGRACallEmitter* CEmitter, PytestEmitter* PyEmitter,
                     ADG* adg, std::string& OpNameFile_str,
-                    int timeout_ms, int max_iters, bool objOpt){
+                    int timeout_ms, int max_iters, bool objOpt,
+                    bool verbose){
   TensorDataflowGen engine(context);
   engine.setEmitter(CEmitter);
   engine.setEmitter(PyEmitter);
   engine.setMappingArgs(adg, OpNameFile_str, timeout_ms, max_iters, objOpt);
+  engine.setVerbose(verbose);
   moduleop.walk([&](mlir::Operation* op) {
     if(engine.dispatchVisitor(op)){
-      moduleop.dump();
+      if(verbose) {moduleop.dump();}
     }
     
  

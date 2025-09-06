@@ -23,7 +23,8 @@ namespace mlir{
 namespace ADORA{
 
 
-void TensorDataflowGen::MapNestedForOrKernel(ADORA_TENSOR_MAPPER* mapper, mlir::Operation* forOrKernel, std::string& OpNameFile_str){
+void TensorDataflowGen::MapNestedForOrKernel(
+  ADORA_TENSOR_MAPPER* mapper, mlir::Operation* forOrKernel, std::string& OpNameFile_str){
   ADORA::KernelOp kernel;
   if(isa<ADORA::KernelOp>(forOrKernel)){
     kernel = dyn_cast<ADORA::KernelOp>(forOrKernel);
@@ -41,7 +42,7 @@ void TensorDataflowGen::MapNestedForOrKernel(ADORA_TENSOR_MAPPER* mapper, mlir::
   }
   
   LLVMCDFG *CDFG = new LLVMCDFG(kernelName, OpNameFile_str);
-  generateCDFGfromKernel(CDFG, kernel, /*verbose=*/true);
+  generateCDFGfromKernel(CDFG, kernel, /*verbose=*/_verbose);
 
   /// DFG Mapping to CGRA architecture
   DFGIR* dfg_ir = new DFGIR(CDFG);
@@ -107,7 +108,7 @@ bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
 
   SimplifyBlockAccessOp(newfor.getRegion());
   
-  newfor.dump();
+  if(_verbose) newfor.dump();
 
   ADORA_TENSOR_MAPPER* mapper = new ADORA_TENSOR_MAPPER(_adg, _timeout_ms, _max_iters, _objOpt);
   mappers.push_back(mapper);
