@@ -178,12 +178,6 @@ int main(int argc, char **argv) {
   //   cl::value_desc("[N]"),
   //   cl::init(1));
   // spdlog::cfg::helpers::load_levels("true");
-  if(verbose){
-    spdlog::set_level(spdlog::level::info);
-  }
-  else{
-    spdlog::set_level(spdlog::level::off);
-  }
 
   InitLLVM y(argc, argv);
 
@@ -230,7 +224,14 @@ int main(int argc, char **argv) {
       t, /*IsText=*/false, /*RequiresNullTerminator=*/true,
        /*alignment=*/std::nullopt);
 
-  t.dump();
+  if(verbose){
+    spdlog::set_level(spdlog::level::info);
+  }
+  else{
+    spdlog::set_level(spdlog::level::off);
+  }
+
+  if(verbose) {t.dump();}
 
 
   /////////////////////////
@@ -386,7 +387,7 @@ int main(int argc, char **argv) {
   });
 
   /// Emit module to a C source file
-  moduleop.dump();
+  if(verbose) {moduleop.dump();}
 
   if(emit_type == "pytest"){
     if(outputFilename == "-")

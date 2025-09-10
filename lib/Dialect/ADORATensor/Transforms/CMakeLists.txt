@@ -4,6 +4,7 @@ set(SPDLOG_NO_EXCEPTIONS ON)
 add_mlir_dialect_library(ADORATensorTransforms
   LinalgToSystolicGEMM.cpp
   TensorCDFGGenPass.cpp
+  GemmOpStrategyDecision.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${PROJ_INCLUDE_DIR}/ADORA/Dialect/ADORATensor/IR

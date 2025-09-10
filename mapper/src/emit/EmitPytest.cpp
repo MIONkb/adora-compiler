@@ -1240,9 +1240,9 @@ async def aux_stream_pingpong(
     # ------------------------------
     for i in range(len(iptrs)):
         if(pingpong == 0):
-            await stream.memcpyHostToDevice(d_data=iptrs[i], h_data=idata[i], size=len(idata[i]), depend_type=2))
+            await stream.memcpyHostToDevice(d_data=iptrs[i], h_data=idata[i], size=len(idata[i]), depend_type=2)
         else:
-            await stream.memcpyHostToDevice(DeviceData_Pong(iptrs[i]), h_data=idata[i], size=len(idata[i]), depend_type=2))
+            await stream.memcpyHostToDevice(DeviceData_Pong(iptrs[i]), h_data=idata[i], size=len(idata[i]), depend_type=2)
 
     # ------------------------------
     # 3. Execute on device

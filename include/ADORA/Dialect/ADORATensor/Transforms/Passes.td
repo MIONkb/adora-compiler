@@ -23,6 +23,41 @@ def LinalgToSystolicGEMMPass : Pass<"adora-convert-linalg-to-systolic-gemm", "Mo
     "affine::AffineDialect", "linalg::LinalgDialect", "memref::MemRefDialect", "ADORA::ADORADialect", "ADORA::ADORATensor::ADORATensorDialect"];
 }
 
+def ADORAGemmOpStrategyDecisionPass
+    : Pass<"adora-gemm-op-strategy-decision", "mlir::ModuleOp"> {
+  let summary = "Decide dataflow strategy for ADORA GEMM ops and annotate / rewrite CDFG";
+  let description = [{
+    This pass analyzes ADORA GEMM-like tensor ops, selects a dataflow strategy
+    (e.g., IS/WS/OS), and materializes the decision by annotating ops or
+    rewriting into a Control-Data Flow Graph (CDFG) form.
+  }];
+  let constructor = "createADORAGemmOpStrategyDecisionPass()";
+
+  let dependentDialects = [
+    "mlir::ADORA::ADORADialect",
+    "mlir::ADORA::ADORATensor::ADORATensorDialect",
+  ];
+
+let options = [
+    Option<"_adg_fn", "adg-fn", "std::string",
+           /*default=*/"\"-\"",
+           "ADG filename (or directly set PE numbers)">,
+
+    Option<"_n_pes", "pe-num", "int",
+           /*default=*/"160",
+           "Number of PEs (Processing Elements)">,
+
+    Option<"_n_iobs", "iob-num", "int",
+           /*default=*/"32",
+           "Number of IOBs (Input/Output Blocks)">,
+
+    Option<"_stationary_kind", "stationary-tensor", "std::string",
+           /*default=*/"\"-\"",
+           "Manually set stationary kind (default: automatic exploration)">,
+];
+
+}
+
 def ADORATensorOpCdfgGenPass : Pass<"adora-gen-tensor-op-cdfg", "ModuleOp"> {
   let summary = "Generate cdfg of ADORA from a ADORA tensor op";
   let constructor = "createADORATensorOpCdfgGenPass()";
