@@ -5,7 +5,7 @@
 /// ADORA dialect
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
 #include "ADORA/Dialect/ADORA/Utility/Utility.h"
-
+#include "ADORA/Dialect/ADORA/Transforms/SimplifyLoadStore.h"
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 #include "ADORA/Dialect/ADORATensor/Interface/SystolicImplInterface.h"
 
@@ -22,6 +22,33 @@ using namespace ::mlir::affine;
 namespace mlir{
 namespace ADORA{
 
+void tryToMoveOutBlockAccessOp(affine::AffineForOp forop){
+  ////////// Only consider datablockload right now
+  bool NoChange = false;
+  while(!NoChange){ // Keep walking the func until no change occurs in this func
+    NoChange = true;
+    auto toHoists = GetAllHoistOp<DataBlockLoadOp>(forop);
+    for(DataBlockLoadOp load : toHoists){
+      load.dump();
+      Operation* ParentOp = load.getOperation()->getParentOp();
+      if(!isa<affine::AffineForOp>(ParentOp))
+        continue;
+      /// write here in the morning
+      simplifyAffineMapAndOperand(load);
+      
+      load.getOperation()->moveBefore(ParentOp);
+      ParentOp->getBlock()->dump();
+      NoChange = false;
+      break;
+    }
+    // forop.walk([&](ADORA::DataBlockLoadOp load) {
+    //   if(load.hasAttr("ADORAGemm")){
+    //     affine::AffineForOp parentFor = load.getParent
+    //   }
+    // });
+   
+  }
+}
 
 void TensorDataflowGen::MapNestedForOrKernel(
   ADORA_TENSOR_MAPPER* mapper, mlir::Operation* forOrKernel, std::string& OpNameFile_str){
@@ -105,9 +132,12 @@ bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
   else if(stragegy == getMethodStrRef(MatMulStrategy::OutputStationary)){
     newfor = TiledOutputStationaryGemm(opbuilder, op, tilesize); 
   }
-
-  SimplifyBlockAccessOp(newfor.getRegion());
   
+  simplifyLoopLevelsInRegion(newfor.getRegion());
+  if(_verbose) newfor.dump();
+  tryToMoveOutBlockAccessOp(newfor);
+  if(_verbose) newfor.dump();
+  SimplifyBlockAccessOp(newfor.getRegion());
   if(_verbose) newfor.dump();
 
   ADORA_TENSOR_MAPPER* mapper = new ADORA_TENSOR_MAPPER(_adg, _timeout_ms, _max_iters, _objOpt);
@@ -115,7 +145,6 @@ bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
       
   mlir::Operation* loweredIR = op->getNextNode();
   MapNestedForOrKernel(mapper, loweredIR, _OpNameFile_str);
-
 
   return true;
 }

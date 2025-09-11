@@ -36,7 +36,7 @@ std::optional<int64_t> getSingleMemrefAccessSpace(::mlir::affine::AffineForOp fo
 ///////////////
 /// AffineLoopSimplify.cpp
 ///////////////
-LogicalResult simplifyLoopLevelsInModuleOp(mlir::ModuleOp& m);
+LogicalResult simplifyLoopLevelsInRegion(mlir::Region& region);
 
 ///////////////
 /// SimplifyLoadStore.cpp
@@ -96,6 +96,7 @@ bool IsIterationSpaceSupported(mlir::affine::AffineForOp &forOp);
 bool LoadStoreSameMemAddr(::mlir::affine::AffineLoadOp loadop, ::mlir::affine::AffineStoreOp storeop);
 SmallVector<int> getOperandDimensionsInMap(const int dim, const ::mlir::AffineMap map);
 unsigned  getInstanceNumFromADG  (const std::string& CGRAadg, const std::string& instype_to_count);
+int64_t getIntegerAttrFromADG(const std::string &CGRAadg, const std::string &key);
 
 ADORA::IselOp ReplaceValueWithNewIselOp(OpBuilder b, Location loc, mlir::Value value);
 ADORA::IselOp ReplaceLoopCarryValueWithNewIselOp(affine::AffineForOp& forop, int IterRegionOperandIdx);

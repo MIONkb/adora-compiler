@@ -51,9 +51,17 @@ let options = [
            /*default=*/"32",
            "Number of IOBs (Input/Output Blocks)">,
 
+    Option<"_sram_bank_kb_size", "bank-size", "int",
+           /*default=*/"8",
+           "single bank's size(KB)">,
+           
+    Option<"_bus_byte_band_width", "bus-bandwidth", "int",
+           /*default=*/"8",
+           "Bandwidth of bus (bytes)">,
+
     Option<"_stationary_kind", "stationary-tensor", "std::string",
            /*default=*/"\"-\"",
-           "Manually set stationary kind (default: automatic exploration)">,
+           "Manually set stationary kind (inputstationary/weightstationary/outputstationary, default: automatic exploration)">,
 ];
 
 }

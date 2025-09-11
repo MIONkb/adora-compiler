@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
        /*alignment=*/std::nullopt);
 
   if(verbose){
-    spdlog::set_level(spdlog::level::info);
+    spdlog::set_level(spdlog::level::debug);
   }
   else{
     spdlog::set_level(spdlog::level::off);

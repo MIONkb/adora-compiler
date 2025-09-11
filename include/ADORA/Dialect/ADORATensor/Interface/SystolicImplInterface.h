@@ -27,7 +27,8 @@ namespace ADORATensor{
 enum class MatMulStrategy {
   WeightStationary,
   InputStationary,
-  OutputStationary
+  OutputStationary,
+  Undefine
 };
 StringRef getMethodStrRef(MatMulStrategy method);
 
