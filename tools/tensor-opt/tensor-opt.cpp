@@ -17,7 +17,7 @@
 #include "ADORA/Dialect/ADORATensor/Transforms/Passes.h"
 #include "ADORA/Misc/Passes.h"
 
-
+#include "src/Dialect/ONNX/ONNXOps.hpp"
 
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
@@ -73,6 +73,8 @@ int main(int argc, char **argv) {
   // Dialects
   registry.insert<mlir::ADORA::ADORADialect,
                   mlir::ADORA::ADORATensor::ADORATensorDialect>();
+
+  registry.insert<mlir::ONNX::ONNXDialect>();
 
   // ----- My Dialect -----
   // mlir::ADORA::registerADORALoopCdfgGenPass();

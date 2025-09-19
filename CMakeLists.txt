@@ -46,6 +46,7 @@ add_definitions(${LLVM_DEFINITIONS})
 #     CACHE PATH "Path to onnx-mlir project (source/build root)")
 option(THIRDPARTY_ONNX_PRJ_DIR "onnx-mlir project path" third_party/onnx-mlir)
 include_directories(${THIRDPARTY_ONNX_PRJ_DIR}/build)
+include_directories(${THIRDPARTY_ONNX_PRJ_DIR})
 
 add_subdirectory(include/ADORA)
 add_subdirectory(lib)
