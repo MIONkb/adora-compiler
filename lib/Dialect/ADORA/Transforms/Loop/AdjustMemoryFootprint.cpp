@@ -288,8 +288,8 @@ void AdjustMemoryFootprintPass::simplifyAffileLoopLevel(func::FuncOp topFunc){
           }
           // errs()<<"  Expr for upper bound :"<< Expr << "\n";       
           /// Step 3: Set new step for simplified loop
-          assert(for_outer.getStep() % for_inner.getStep() == 0 && "Step of inner loop should be a divisor of step of outer!");
-          step = for_inner.getStep();
+          assert(for_outer.getStep().getSExtValue() % for_inner.getStep().getSExtValue() == 0 && "Step of inner loop should be a divisor of step of outer!");
+          step = for_inner.getStep().getSExtValue();
           simpleLoop.setStep(step);
           
           for_outer.erase();
@@ -484,7 +484,7 @@ void AdjustMemoryFootprintPass::
       ///  Upper bound of original loop 
       ///  = Isolation_count * Step + lower bound;
       ///  other 2 bounds remains.
-      step = forOp.getStep();
+      step = forOp.getStep().getSExtValue();
       if (forOp.hasConstantLowerBound())
       {
         Expr = b.getAffineConstantExpr(forOp.getConstantLowerBound())+step*Isolation_count;

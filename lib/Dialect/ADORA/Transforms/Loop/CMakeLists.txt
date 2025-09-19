@@ -15,7 +15,6 @@ add_mlir_dialect_library(MLIRADORALoopTransforms
 
   DEPENDS
   ADORAPassIncGen
-  GeneralCDFGGen
 
   LINK_LIBS PUBLIC
   MLIRIR

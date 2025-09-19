@@ -58,9 +58,11 @@ ADORA includes two compilers designed for the FDRA CGRA SoC:
 
 ### 1 LLVM-18
 
-LLVM Commit: `26eb4285b56edd8c897642078d91f16ff0fd3472` (Same as [Polygeist GitHub Repository](https://github.com/llvm/Polygeist))
+~~LLVM Commit: `26eb4285b56edd8c897642078d91f16ff0fd3472` (Same as [Polygeist GitHub Repository](https://github.com/llvm/Polygeist))~~
 
-You can download the specified version from the following link:  [LLVM GitHub Repository](https://github.com/llvm/llvm-project/tree/26eb4285b56edd8c897642078d91f16ff0fd3472)
+LLVM Commit: `b270525f730be6e7196667925f5a9bfa153262e9` (Same as [ONNX-MLIR v5.0.0](https://github.com/onnx/onnx-mlir/tree/v0.5.0.0))
+
+You can download the specified version from the following link:  [LLVM GitHub Repository](https://github.com/llvm/llvm-project/tree/b270525f730be6e7196667925f5a9bfa153262e9)
 
 To install LLVM, follow script:  
 ```bash
@@ -80,6 +82,9 @@ After making the changes, run `build_cgraopt.sh`.
 
 You can download and install the Rocket+CGRA SoC from the appropriate repository:  
 [FDRA Repository](https://github.com/MIONkb/FDRA)
+
+or you wanna run with a light-weighted python api(cocotb):
+[MatrixMeld](https://github.com/FDU-ME-ARC/MatrixMeld)
 
 ### 4 Other Dependencies You May Need
 

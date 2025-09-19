@@ -17,9 +17,6 @@ target_include_directories(GeneralCDFGGen
 
 target_link_libraries(GeneralCDFGGen
   PUBLIC MLIRIR
-  PUBLIC MLIRPass
-  PUBLIC MLIRTransforms
-  PUBLIC MLIRSCFDialect
   PRIVATE ${LLVM_LIBRARY_DIRS}
 )
 

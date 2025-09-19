@@ -162,8 +162,8 @@ public:
     LLVMCDFG* parent(){ return _parent; }
     BasicBlock* BB(){ return _BB; }
     void setBB(BasicBlock *BB){ _BB = BB; }
-    Instruction* instruction(){ return _instruction; }
-    void setInstruction(Instruction *ins);
+    // Instruction* instruction(){ return _instruction; }
+    // void setInstruction(Instruction *ins);
     
     /** Add by LJH***/
     mlir::Operation* operation(){ return _operation; } 

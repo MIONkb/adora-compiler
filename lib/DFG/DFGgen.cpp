@@ -1329,7 +1329,7 @@ template <typename LoadOrStoreOp>
       }
       else{
         assert(RM_flag == false && "This for loop should only be corresponding to one rank.");
-        elements_each_step = forop.getStep() * RankMultiplicators[r];
+        elements_each_step = forop.getStep().getSExtValue() * RankMultiplicators[r];
         ArrayRef<int64_t>  Shape = memRefType.getShape();
         for (unsigned i = r + 1; i < Shape.size(); i++){
           elements_each_step *= Shape[i];
@@ -1369,7 +1369,7 @@ template <typename LoadOrStoreOp>
         }
         else{
           assert(innerRM_flag == false && "This for loop should only be corresponding to one rank.");
-          elements_each_step_inner = innerforop.getStep() * innerRMs[r];
+          elements_each_step_inner = innerforop.getStep().getSExtValue() * innerRMs[r];
           ArrayRef<int64_t>  Shape = memRefType.getShape();
           for (unsigned i = r + 1; i < Shape.size(); i++){
             // llvm::errs()<<"Shape[i]: " << Shape[i] << "\n";

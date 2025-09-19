@@ -434,6 +434,13 @@ ArrayRef<int64_t> DataBlockLoadOp::getStridesAsArrayRef(){
   return arrayattr.asArrayRef();
 }
 
+void DataBlockLoadOp::setMapOperands(mlir::ValueRange newMapOperands){
+  operand_range oldOperands = getOperation()->getOperands();
+  SmallVector<mlir::Value> newOperands;
+  newOperands.push_back(oldOperands[0]); /// memref
+  newOperands.append(newMapOperands.begin(), newMapOperands.end());
+  getOperation()->setOperands(newOperands);
+}
 
 //===----------------------------------------------------------------------===//
 // DataBlockStoreOp
@@ -639,6 +646,14 @@ ArrayRef<int64_t> DataBlockStoreOp::getStridesAsArrayRef(){
 
   DenseI64ArrayAttr arrayattr = cast<DenseI64ArrayAttr>(this->getOperation()->getAttr("strides"));
   return arrayattr.asArrayRef();
+}
+
+void DataBlockStoreOp::setMapOperands(mlir::ValueRange newMapOperands){
+  operand_range oldOperands = getOperation()->getOperands();
+  SmallVector<mlir::Value> newOperands;
+  newOperands.push_back(oldOperands[0]); /// memref
+  newOperands.append(newMapOperands.begin(), newMapOperands.end());
+  getOperation()->setOperands(newOperands);
 }
 
 //===----------------------------------------------------------------------===//

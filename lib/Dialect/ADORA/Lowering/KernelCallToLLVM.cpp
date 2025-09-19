@@ -27,7 +27,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/MathExtras.h"
+// #include "mlir/Support/MathExtras.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
@@ -247,7 +247,7 @@ namespace
           attributes);
       // If the memory attribute was created, add it to the function.
       if (memoryAttr)
-        newFuncOp.setMemoryAttr(memoryAttr);
+        newFuncOp.setMemoryEffectsAttr(memoryAttr);
       llvm::errs() << "[debug] newFuncOp before inlineRegionBefore" << newFuncOp <<"\n";
       llvm::errs() << "[debug] funcOp before inlineRegionBefore" << funcOp <<"\n";
       // This function is not a kernel

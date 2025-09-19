@@ -17,6 +17,7 @@
 #include <iostream>
 #include <string>
 #include <bit>
+#include <math.h>
 
 // #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/MLIRContext.h"
@@ -107,7 +108,7 @@ bool legalRowCol(MatMulStrategy stationarykind, std::pair <int, int> sa, int num
   switch (stationarykind)
   {
   case MatMulStrategy::InputStationary :
-    io_cost = row*col / 4 + col * 3;
+    io_cost = row*col / 4 + col + 2 * row;
     if(row * (2 + col) <= num_pe 
       && io_cost <= num_io){
       legal = true;
@@ -219,7 +220,7 @@ static ArrayRef<int64_t> getShape(mlir::Type t){
 // pipeline fill estimate for a rowxcol systolic array
 inline int64_t pipeFill(int64_t row, int64_t col) {
 
-  return std::max<int64_t>(0, row + col - 1); 
+  return std::max<int64_t>(0, (int)lround(2.0 * sqrt((double)row * col))); 
 }
 
 // EC cycles with reconfig amortization
@@ -329,7 +330,7 @@ getAllDivisor(int64_t n) {
 
 void AutoSetDataflowStrategy(
     mlir::ADORA::ADORATensor::GemmOp gemmop, 
-    int num_pe, int num_iob, int bank_byte, int BandWidth, 
+    int num_pe, int num_iob, int bank_byte, int BandByteWidth, 
     MatMulStrategy _strategy = MatMulStrategy::Undefine
   ){
   // Get the input tensors
@@ -371,7 +372,7 @@ void AutoSetDataflowStrategy(
 
   // Map rule for strategy (which dims correspond to row/col; which is innermost non-stationary)
 
-  auto pairs = findFeasibleSpatialMap(num_pe, num_iob, /*limit=*/80);
+  auto pairs = findFeasibleSpatialMap(num_pe, num_iob, /*limit=*/300);
 
   std::vector<MatMulStrategy> strategies;
   if(_strategy == MatMulStrategy::Undefine){
@@ -408,15 +409,18 @@ void AutoSetDataflowStrategy(
           int64_t EC = execCycles(stationarykind, M, N, K, row, col, T0, T1, num_pe, num_iob);
 
           // Transfer volume (bytes) and time (cycles)
-          int64_t TV = transferVolumn(stationarykind, M, N, K, row, col);
+          int64_t TV = transferVolumn(stationarykind, M, N, K, row, col) * dByte;
           
-          int64_t TX = ceilDiv(TV, std::max(1, BandWidth));  
+          int64_t TX = ceilDiv(TV, std::max(1, BandByteWidth));  
           int64_t LAT = std::max<int64_t>(EC, TX);
 
           Cand cand{stationarykind, T0, T1, row, col, EC, TX, LAT};
 
           // Tie-break: smaller LAT; then smaller TV; then better alignment (higher util)
           auto better = [&](const Cand& a, const Cand& b){
+            if ((double)abs(b.LAT - a.LAT)/(double)b.LAT <= (double)0.04) {
+              return a.T1 >= b.T1;
+            }
             if (a.LAT != b.LAT) return a.LAT < b.LAT;
             if (a.TX  != b.TX) return a.TX  < b.TX;
             return a.EC < b.EC;

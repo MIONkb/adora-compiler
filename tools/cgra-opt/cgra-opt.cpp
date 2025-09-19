@@ -70,7 +70,8 @@ int main(int argc, char **argv) {
 
   mlir::registerConvertLinalgToStandardPass();
   // mlir::registerConvertLinalgToLLVMPass(); // This pass maps linalg to blas
-  mlir::registerLinalgLowerToAffineLoopsPass();
+  // mlir::registerLinalgLowerToAffineLoopsPass();
+  mlir::registerConvertLinalgToAffineLoopsPass();
   mlir::registerConvertFuncToLLVMPass();
 
   mlir::registerFinalizeMemRefToLLVMConversionPass();

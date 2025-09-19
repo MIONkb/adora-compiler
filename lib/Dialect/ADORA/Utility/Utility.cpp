@@ -679,11 +679,11 @@ static int64_t getLargestKnownDivisor(AffineExpr e, ArrayRef<mlir::Value> operan
   // LoopLikeOpInterface.
   if (AffineForOp forOp = getForInductionVarOwner(operand)) {
     if (forOp.hasConstantLowerBound() && forOp.getConstantLowerBound() == 0) {
-      operandDivisor = forOp.getStep();
+      operandDivisor = forOp.getStep().getSExtValue();
     } else {
       uint64_t lbLargestKnownDivisor =
           forOp.getLowerBoundMap().getLargestKnownDivisorOfMapExprs();
-      operandDivisor = std::gcd(lbLargestKnownDivisor, forOp.getStep());
+      operandDivisor = std::gcd(lbLargestKnownDivisor, forOp.getStep().getSExtValue());
     }
   }
   return operandDivisor;
@@ -733,7 +733,7 @@ static std::optional<int64_t> getUpperBound(mlir::Value iv) {
   if (forOp.hasConstantLowerBound()) {
     return forOp.getConstantUpperBound() - 1 -
            (forOp.getConstantUpperBound() - forOp.getConstantLowerBound() - 1) %
-               forOp.getStep();
+               forOp.getStep().getSExtValue();
   }
   return forOp.getConstantUpperBound() - 1;
 }
@@ -763,7 +763,7 @@ getBoundForExpr(AffineExpr expr, unsigned numDims, unsigned numSymbols,
                                    constLowerBounds, constUpperBounds, isUpper);
       if (!bound)
         return std::nullopt;
-      return mlir::floorDiv(*bound, rhsConst.getValue());
+      return divideFloorSigned(*bound, rhsConst.getValue());
     }
     if (binOpExpr.getKind() == AffineExprKind::CeilDiv) {
       auto rhsConst = binOpExpr.getRHS().dyn_cast<AffineConstantExpr>();
@@ -773,7 +773,7 @@ getBoundForExpr(AffineExpr expr, unsigned numDims, unsigned numSymbols,
                             constLowerBounds, constUpperBounds, isUpper);
         if (!bound)
           return std::nullopt;
-        return mlir::ceilDiv(*bound, rhsConst.getValue());
+        return divideCeilSigned(*bound, rhsConst.getValue());
       }
       return std::nullopt;
     }
@@ -790,7 +790,7 @@ getBoundForExpr(AffineExpr expr, unsigned numDims, unsigned numSymbols,
         auto ub = getBoundForExpr(binOpExpr.getLHS(), numDims, numSymbols,
                                   constLowerBounds, constUpperBounds, isUpper);
         if (ub && lb &&
-            floorDiv(*lb, rhsConstVal) == floorDiv(*ub, rhsConstVal))
+            divideFloorSigned(*lb, rhsConstVal) == divideFloorSigned(*ub, rhsConstVal))
           return isUpper ? mod(*ub, rhsConstVal) : mod(*lb, rhsConstVal);
         return isUpper ? rhsConstVal - 1 : 0;
       }
@@ -1003,7 +1003,7 @@ static void simplifyExprAndOperands(AffineExpr &expr, unsigned numDims,
                                     unsigned numSymbols,
                                     ArrayRef<mlir::Value> operands) {
   // We do this only for certain floordiv/mod expressions.
-  auto binExpr = expr.dyn_cast<AffineBinaryOpExpr>();
+  auto binExpr = dyn_cast<AffineBinaryOpExpr>(expr);
   if (!binExpr)
     return;
 
@@ -1014,7 +1014,7 @@ static void simplifyExprAndOperands(AffineExpr &expr, unsigned numDims,
   simplifyExprAndOperands(rhs, numDims, numSymbols, operands);
   expr = getAffineBinaryOpExpr(binExpr.getKind(), lhs, rhs);
 
-  binExpr = expr.dyn_cast<AffineBinaryOpExpr>();
+  binExpr = dyn_cast<AffineBinaryOpExpr>(expr);
   if (!binExpr || (expr.getKind() != AffineExprKind::FloorDiv &&
                    expr.getKind() != AffineExprKind::CeilDiv &&
                    expr.getKind() != AffineExprKind::Mod)) {
@@ -1024,7 +1024,7 @@ static void simplifyExprAndOperands(AffineExpr &expr, unsigned numDims,
   // The `lhs` and `rhs` may be different post construction of simplified expr.
   lhs = binExpr.getLHS();
   rhs = binExpr.getRHS();
-  auto rhsConst = rhs.dyn_cast<AffineConstantExpr>();
+  auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
   if (!rhsConst)
     return;
 
@@ -1045,19 +1045,19 @@ static void simplifyExprAndOperands(AffineExpr &expr, unsigned numDims,
     // lhs floordiv c is a single value lhs is bounded in a range `c` that has
     // the same quotient.
     if (binExpr.getKind() == AffineExprKind::FloorDiv &&
-        floorDiv(lhsLbConstVal, rhsConstVal) ==
-            floorDiv(lhsUbConstVal, rhsConstVal)) {
-      expr =
-          getAffineConstantExpr(floorDiv(lhsLbConstVal, rhsConstVal), context);
+        divideFloorSigned(lhsLbConstVal, rhsConstVal) ==
+            divideFloorSigned(lhsUbConstVal, rhsConstVal)) {
+      expr = getAffineConstantExpr(
+          divideFloorSigned(lhsLbConstVal, rhsConstVal), context);
       return;
     }
     // lhs ceildiv c is a single value if the entire range has the same ceil
     // quotient.
     if (binExpr.getKind() == AffineExprKind::CeilDiv &&
-        ceilDiv(lhsLbConstVal, rhsConstVal) ==
-            ceilDiv(lhsUbConstVal, rhsConstVal)) {
-      expr =
-          getAffineConstantExpr(ceilDiv(lhsLbConstVal, rhsConstVal), context);
+        divideCeilSigned(lhsLbConstVal, rhsConstVal) ==
+            divideCeilSigned(lhsUbConstVal, rhsConstVal)) {
+      expr = getAffineConstantExpr(divideCeilSigned(lhsLbConstVal, rhsConstVal),
+                                   context);
       return;
     }
     // lhs mod c is lhs if the entire range has quotient 0 w.r.t the rhs.
@@ -1432,9 +1432,12 @@ void ADORA::simplifyLoadAndStoreOpsInRegion(mlir::Region& region){
 /////////////////////////////////////////////
 ///// simplifyLoopLevelsInRegion functions
 /////////////////////////////////////////////
-LogicalResult mlir::ADORA::simplifyLoopLevelsInRegion(mlir::Region& region){
+LogicalResult mlir::ADORA::simplifyLoopLevelsInRegion(mlir::Region& region, bool donttouchkernel){
   mlir::SmallVector<AffineForOp> to_erase;
-  region.walk([&](AffineForOp forop) {
+  region.walk([&](AffineForOp forop) -> WalkResult  {
+    if(donttouchkernel && isa<ADORA::KernelOp>(forop.getOperation()->getParentOp())){
+      return WalkResult::advance();
+    }
     mlir::OpBuilder b(forop.getOperation());
     Location loc = forop.getLoc();
     int tc = getConstantTripCount(forop).value_or(0);
@@ -1480,6 +1483,7 @@ LogicalResult mlir::ADORA::simplifyLoopLevelsInRegion(mlir::Region& region){
 
       }
     }
+    return WalkResult::advance();
   });
 
   for(AffineForOp& op : to_erase)
@@ -1966,7 +1970,7 @@ SmallVector<SmallVector<unsigned>> mlir::ADORA::ConstructUnrollSpace(SmallVector
 bool mlir::ADORA::IsIterationSpaceSupported(mlir::affine::AffineForOp &forOp){
   OpBuilder b(forOp);
   /// Check step
-  int64_t step = forOp.getStep();
+  int64_t step = forOp.getStep().getSExtValue();
   if( (!forOp.hasConstantLowerBound() 
     || !forOp.hasConstantUpperBound())
     && step != 1) 

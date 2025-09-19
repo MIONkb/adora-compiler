@@ -1,7 +1,7 @@
 #!/bin/bash
 ### set LLVM_BUILD_DIR to your own llvm path
-LLVM_BUILD_DIR=/home/jhlou/CGRVOPT/llvm-project-Polygeist/build
-LLVM_INSTALL_DIR=/home/jhlou/CGRVOPT/llvm-project-Polygeist/build
+LLVM_BUILD_DIR=/home/share/llvm-project-Polygeist/build
+LLVM_INSTALL_DIR=/home/share/llvm-project-Polygeist/build
 
 # ......................................................................
 cmake -GNinja \
@@ -13,5 +13,8 @@ cmake -GNinja \
   -DLLVM_INSTALL_DIR=$LLVM_INSTALL_DIR \
   -DMLIR_ENABLE_BINDINGS_PYTHON=ON
 
+
+  # -DADORA_ENABLE_ONNX_TENSOR_OPT=ON
+
 # cmake --build . --target cgra-opt cgra-mapper
-ninja -j 8 
+ninja -j 32

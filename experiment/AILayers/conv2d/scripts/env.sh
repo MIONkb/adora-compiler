@@ -18,7 +18,7 @@ export ADORA_DIR=$CHIPYARD_DIR"/generators/fdra"
 export CGRA_OP_FILE_PATH=$CGRA_ADG_PATH
 export GeneralOpNameFile="$CGRVOPT_PROJECT_PATH/lib/DFG/Documents/GeneralOpName.txt"
 
-export PATH=/home/jhlou/CGRVOPT/cgra-opt/build/bin:$PATH
+export PATH=${CGRVOPT_PROJECT_PATH}/build/bin:$PATH
 
 ####### CONDA IN CHIPYARD
 export CHIPYARD_SOURCE_ENV="$CHIPYARD_DIR/env.sh"

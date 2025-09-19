@@ -233,11 +233,15 @@ def ADORA_DataBlockLoadOp: ADORA_Op<"BlockLoad", []>{
     operand_range getMapOperands() {
       return {operand_begin() + 1, operand_end()};
     }
+    void setMapOperands(mlir::ValueRange newoperands);
 
     /// Returns the affine map used to index the memref for this operation.
     AffineMap getAffineMap() { return getAffineMapAttr().getValue(); }
     AffineMapAttr getAffineMapAttr() {
       return (*this)->getAttr(getMapAttrStr()).cast<AffineMapAttr>();
+    }
+    void setAffineMap(AffineMap map){
+      getOperation()->setAttr(getMapAttrStr(), AffineMapAttr::get(map));
     }
 
     /// stride
@@ -359,14 +363,19 @@ def ADORA_DataBlockStoreOp: ADORA_Op<"BlockStore", []>{
     MemRefType getMemRefType() {
       return getSourceMemrefType();
     }
+
     operand_range getMapOperands() {
       return {operand_begin() + 2, operand_end()}; // + 2 or + 1?
     }
+    void setMapOperands(mlir::ValueRange newoperands);
 
     /// Returns the affine map used to index the memref for this operation.
     AffineMap getAffineMap() { return getAffineMapAttr().getValue(); }
     AffineMapAttr getAffineMapAttr() {
       return (*this)->getAttr(getMapAttrStr()).cast<AffineMapAttr>();
+    }
+    void setAffineMap(AffineMap map){
+      getOperation()->setAttr(getMapAttrStr(), AffineMapAttr::get(map));
     }
 
     /// stride

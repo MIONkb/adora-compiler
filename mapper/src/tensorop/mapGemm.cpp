@@ -22,6 +22,23 @@ using namespace ::mlir::affine;
 namespace mlir{
 namespace ADORA{
 
+template <typename opT>
+void simplifyAffineMapAndOperand(opT op){
+  AffineMap origin_map = op.getAffineMap(); 
+  SmallVector<Value> oprands = op.getMapOperands();
+  origin_map.dump();
+  op.dump();
+  // origin_oprands.dump();
+  // simplifyMapWithOperands(origin_map, origin_oprands);
+  canonicalizeMapAndOperands(&origin_map, &oprands);
+
+  origin_map.dump();
+  op.setAffineMap(origin_map);
+  op.setMapOperands(oprands);
+  op.dump();
+  // origin_oprands.dump();  
+}
+
 void tryToMoveOutBlockAccessOp(affine::AffineForOp forop){
   ////////// Only consider datablockload right now
   bool NoChange = false;
@@ -35,7 +52,7 @@ void tryToMoveOutBlockAccessOp(affine::AffineForOp forop){
         continue;
       /// write here in the morning
       simplifyAffineMapAndOperand(load);
-      
+
       load.getOperation()->moveBefore(ParentOp);
       ParentOp->getBlock()->dump();
       NoChange = false;
@@ -108,14 +125,14 @@ void TensorDataflowGen::MapNestedForOrKernel(
     // kernel_cnt++;
   forOrKernel->dump();
 
-  for(auto elem : pyEmitter->getLoadToSPMInfosMap()){
-    ADORA::DataBlockLoadOp load = elem.first;
-    load.dump();
-  }
-  for(auto elem : pyEmitter->getLocalAllocToSPMMap()){
-    ADORA::LocalMemAllocOp alloc = elem.first;
-    alloc.dump();
-  }
+  // for(auto elem : pyEmitter->getLoadToSPMInfosMap()){
+  //   ADORA::DataBlockLoadOp load = elem.first;
+  //   load.dump();
+  // }
+  // for(auto elem : pyEmitter->getLocalAllocToSPMMap()){
+  //   ADORA::LocalMemAllocOp alloc = elem.first;
+  //   alloc.dump();
+  // }
 }
 
 bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
@@ -133,7 +150,7 @@ bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
     newfor = TiledOutputStationaryGemm(opbuilder, op, tilesize); 
   }
   
-  simplifyLoopLevelsInRegion(newfor.getRegion());
+  simplifyLoopLevelsInRegion(newfor.getRegion(), /*donttouchkernel=*/true);
   if(_verbose) newfor.dump();
   tryToMoveOutBlockAccessOp(newfor);
   if(_verbose) newfor.dump();
@@ -143,8 +160,8 @@ bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
   ADORA_TENSOR_MAPPER* mapper = new ADORA_TENSOR_MAPPER(_adg, _timeout_ms, _max_iters, _objOpt);
   mappers.push_back(mapper);
       
-  mlir::Operation* loweredIR = op->getNextNode();
-  MapNestedForOrKernel(mapper, loweredIR, _OpNameFile_str);
+  // mlir::Operation* loweredIR = op->getNextNode();
+  MapNestedForOrKernel(mapper, newfor, _OpNameFile_str);
 
   return true;
 }

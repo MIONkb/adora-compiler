@@ -86,6 +86,9 @@ public:
 
   template <typename opT>
     bool EmitBinary(opT op ,std::string op_symbol){
+      if(op.getOperation()->hasAttr("EmitSkip")){
+        return true;
+      }
       std::string type = getEmitType(op.getResult());
       std::string Lhs = _pytestemitter->lookupName(op.getLhs());
       if(Lhs == "")
@@ -115,6 +118,9 @@ public:
     /// DMA_Request_Offset: keep changing. For this one, DMA_Request_Offset = 230 * i + 230 * 230 * j, i = [0, 7), j = [0, 3)
     /// SPAD_BaseAddr: the base address of Scratchpad memory of the destinated transfer
     /// SPAD_Offset: keep increasing by DMA_Len.
+    if(op.getOperation()->hasAttr("EmitSkip")){
+      return true;
+    }
     indent() << "\n";
     indent() << "## " << op << "\n";
 
@@ -288,6 +294,9 @@ public:
     /// DMA_Request_Offset: keep changing. For this one, DMA_Request_Offset = 230 * i + 230 * 230 * j, i = [0, 7), j = [0, 3)
     /// SPAD_BaseAddr: the base address of Scratchpad memory of the destinated transfer
     /// SPAD_Offset: keep increasing by DMA_Len.
+    if(op.getOperation()->hasAttr("EmitSkip")){
+      return true;
+    }
     indent() << "\n";
     indent() << "## " << op << "\n";
 
@@ -503,6 +512,9 @@ public:
   }
 
   bool visitOp(ADORA::LocalMemAllocOp op) {
+    if(op.getOperation()->hasAttr("EmitSkip")){
+      return true;
+    }
     /// %2 = ADORA.LocalMemAlloc memref<20x20xi32>  {Id = "2", KernelName = "IntVecAdd"}
     indent() << "\n";
     indent() << "## " << op << "\n";
@@ -569,36 +581,67 @@ public:
   /// ADORA Tensor dialect operations.
   ///////////////////////////////
   bool visitOp(ADORA::ADORATensor::GemmOp gemmop) {
-    mlir::Operation* op = gemmop.getOperation()->getNextNode();
+
     // if(isa<affine::AffineForOp>(op)){
     //   op->setAttr("ADORAGemm", mlir::UnitAttr::get(op->getContext()));
     // }
     indent() << "#######################################\n";
     indent() << "### Emit GemmOp: " << gemmop << "\n";
     indent() << "#######################################\n";
-
+    indent() << "pingpong = False" << "\n";
     _pingpong = true;
+    mlir::Operation* op = gemmop.getOperation()->getNextNode();
+    
+    while (1)
+    {
+      if(isa<mlir::affine::AffineForOp>(op) && op->hasAttr("ADORAGemm")){
+        mlir::affine::AffineForOp gemmFor = dyn_cast<mlir::affine::AffineForOp>(op);
+        ADORA::KernelOp kernel = findTheOnlyKernelInNestedLoop(gemmFor);;
+        std::string knName = kernel.getKernelName();
+        /// emit pingpong 
+        indent() << "ptrs_ping, ptrs_pong = [], []\n";
 
-    if(isa<mlir::affine::AffineForOp>(op) && op->hasAttr("ADORAGemm")){
-      mlir::affine::AffineForOp gemmFor = dyn_cast<mlir::affine::AffineForOp>(op);
-      ADORA::KernelOp kernel = findTheOnlyKernelInNestedLoop(gemmFor);;
-      std::string knName = kernel.getKernelName();
-      /// emit pingpong 
-      indent() << "ptrs_ping, ptrs_pong = [], []\n";
+        for(auto elem : _pytestemitter->getLoadToSPMInfosMap()){
+          ADORA::DataBlockLoadOp load = elem.first;
+          load.dump();
+          if( load.getOperation()->hasAttr("Pingpong")
+            && findElement(load.getKernelNameAsStrVector(), kernel.getKernelName()) != -1){
+            ///// belongs to this kernel
+            llvm::SmallVector< std::pair<int, dfgIoInfo> > SPMs = elem.second;
+            for(auto pair : SPMs){
+              int base_addr = pair.second.addr;
+              int len = getByteSizeFromMemref(load.getResultType());
+              std::stringstream ss_ping, ss_pong;
+              
+              indent() << "### Pingpong DataBlockLoadOp: " << load << "\n";
+              ss_ping << "ptrs_ping.append(DeviceData("                 
+                      << "0x" << std::hex << base_addr
+                      << ", " << std::dec << len 
+                      << "))";
+              indent() << ss_ping.str() << "\n";
 
-      for(auto elem : _pytestemitter->getLoadToSPMInfosMap()){
-        ADORA::DataBlockLoadOp load = elem.first;
-        load.dump();
-        if( load.getOperation()->hasAttr("Pingpong")
-          && findElement(load.getKernelNameAsStrVector(), kernel.getKernelName()) != -1){
-          ///// belongs to this kernel
-          llvm::SmallVector< std::pair<int, dfgIoInfo> > SPMs = elem.second;
-          for(auto pair : SPMs){
-            int base_addr = pair.second.addr;
-            int len = getByteSizeFromMemref(load.getResultType());
+              ss_pong << "ptrs_pong.append(DeviceData("                 
+                      << "0x" << std::hex << base_addr
+                      << "+"  << std::dec << len
+                      << ", " << std::dec << len 
+                      << "))";
+              indent() << ss_pong.str() << "\n";
+            }
+          }
+        }
+
+        for(auto elem : _pytestemitter->getLocalAllocToSPMMap()){
+          ADORA::LocalMemAllocOp alloc = elem.first;
+          alloc.dump();
+          if( alloc.getOperation()->hasAttr("Pingpong")
+            && findElement(alloc.getKernelNameAsStrVector(), kernel.getKernelName()) != -1){
+            ///// belongs to this kernel
+            std::pair<int, dfgIoInfo> spm = elem.second;
+            int base_addr = spm.second.addr;
+            int len = getByteSizeFromMemref(alloc.getMemrefType());
             std::stringstream ss_ping, ss_pong;
+            indent() << "### Pingpong LocalMemAllocOp: " << alloc << "\n";
             
-            indent() << "### Pingpong DataBlockLoadOp: " << load << "\n";
             ss_ping << "ptrs_ping.append(DeviceData("                 
                     << "0x" << std::hex << base_addr
                     << ", " << std::dec << len 
@@ -613,84 +656,72 @@ public:
             indent() << ss_pong.str() << "\n";
           }
         }
-      }
 
-      for(auto elem : _pytestemitter->getLocalAllocToSPMMap()){
-        ADORA::LocalMemAllocOp alloc = elem.first;
-        alloc.dump();
-        if( alloc.getOperation()->hasAttr("Pingpong")
-          && findElement(alloc.getKernelNameAsStrVector(), kernel.getKernelName()) != -1){
-          ///// belongs to this kernel
-          std::pair<int, dfgIoInfo> spm = elem.second;
-          int base_addr = spm.second.addr;
-          int len = getByteSizeFromMemref(alloc.getMemrefType());
-          std::stringstream ss_ping, ss_pong;
-          indent() << "### Pingpong LocalMemAllocOp: " << alloc << "\n";
-          
-          ss_ping << "ptrs_ping.append(DeviceData("                 
-                  << "0x" << std::hex << base_addr
-                  << ", " << std::dec << len 
-                  << "))";
-          indent() << ss_ping.str() << "\n";
+        /// emit different config for gemm
+        /**
+         * Example: 
+         *  pingpong = False
+         *  stream = runtime.create_stream()
+         *  aux_stream_pingpong_init(stream, [cfgbit_GEMMIS,cfgbit_GEMMIS_ping,cfgbit_GEMMIS_pong])
+        */
 
-          ss_pong << "ptrs_pong.append(DeviceData("                 
-                  << "0x" << std::hex << base_addr
-                  << "+"  << std::dec << len
-                  << ", " << std::dec << len 
-                  << "))";
-          indent() << ss_pong.str() << "\n";
+        ///// get iob_ens:
+        BYTES_LIST iob_ens = _pytestemitter->getIobens(kernel);
+        std::stringstream iobens_ss;
+        for(int _ = 0; _ < iob_ens.size(); _++){
+          iobens_ss << iob_ens.getByte(_);
+          if(_ != iob_ens.size() - 1)
+            iobens_ss << "," ;
         }
-      }
 
-      /// emit different config for gemm
-      /**
-       * Example: 
-       *  pingpong = False
-       *  stream = runtime.create_stream()
-       *  aux_stream_pingpong_init(stream, [cfgbit_GEMMIS,cfgbit_GEMMIS_ping,cfgbit_GEMMIS_pong])
-      */
+        indent() << "pingpong = False" << "\n";
+        indent() << "stream = runtime.create_stream()" << "\n";
 
-      ///// get iob_ens:
-      BYTES_LIST iob_ens = _pytestemitter->getIobens(kernel);
-      std::stringstream iobens_ss;
-      for(int _ = 0; _ < iob_ens.size(); _++){
-        iobens_ss << iob_ens.getByte(_);
-        if(_ != iob_ens.size() - 1)
-          iobens_ss << "," ;
-      }
+        indent() << "config_" << knName << " = DeviceConfig("
+                << "config_values=" << "cfgbit_" << knName << ", "
+                << "iob_en=[" << iobens_ss.str() << "], "
+                << "data_ptr=data_ptr)\n";
+        
+        indent() << "config_" << knName << "_ping" << " = DeviceConfig("
+                << "config_values=" << "cfgbit_" << knName << "_ping" << ", "
+                << "iob_en=[" << iobens_ss.str() << "], "
+                << "data_ptr=ptrs_ping)\n";
 
-      indent() << "pingpong = False" << "\n";
-      indent() << "stream = runtime.create_stream()" << "\n";
+        indent() << "config_" << knName << "_pong" << " = DeviceConfig("
+                << "config_values=" << "cfgbit_" << knName << "_pong" << ", "
+                << "iob_en=[" << iobens_ss.str() << "], "
+                << "data_ptr=ptrs_pong)\n";
 
-      indent() << "config_" << knName << " = DeviceConfig("
-               << "config_values=" << "cfgbit_" << knName << ", "
-               << "iob_en=[" << iobens_ss.str() << "], "
-               << "data_ptr=data_ptr)\n";
+        indent() << "await aux_stream_pingpong_init(stream, ["
+                << "config_" << knName << ", "
+                << "config_" << knName << "_ping, "
+                << "config_" << knName << "_pong])\n\n";
       
-      indent() << "config_" << knName << "_ping" << " = DeviceConfig("
-               << "config_values=" << "cfgbit_" << knName << "_ping" << ", "
-               << "iob_en=[" << iobens_ss.str() << "], "
-               << "data_ptr=ptrs_ping)\n";
-
-      indent() << "config_" << knName << "_pong" << " = DeviceConfig("
-               << "config_values=" << "cfgbit_" << knName << "_pong" << ", "
-               << "iob_en=[" << iobens_ss.str() << "], "
-               << "data_ptr=ptrs_pong)\n";
-
-      indent() << "await aux_stream_pingpong_init(stream, ["
-               << "config_" << knName << ", "
-               << "config_" << knName << "_ping, "
-               << "config_" << knName << "_pong])\n\n";
-    
-      visitOp(gemmFor);
+        visitOp(gemmFor);
+      }
+      else if(isa<mlir::ADORA::DataBlockLoadOp>(op)
+            && op->hasAttr("ADORAGemm")){
+        visitOp(dyn_cast<mlir::ADORA::DataBlockLoadOp>(op));
+      }
+      else if(isa<mlir::ADORA::DataBlockStoreOp>(op)
+            && op->hasAttr("ADORAGemm")){
+        visitOp(dyn_cast<mlir::ADORA::DataBlockStoreOp>(op));
+      }
+      else if(isa<mlir::ADORA::LocalMemAllocOp>(op)
+            && op->hasAttr("ADORAGemm")){
+        visitOp(dyn_cast<mlir::ADORA::LocalMemAllocOp>(op));
+      }
+      else{
+        break;
+      }
+      setEmitSkipAttr(op);
+      op = op->getNextNode();
     }
-
-    _pingpong = false;
-    setEmitSkipAttr(op);
 
     indent() << "#######################################\n";
     indent() << "### End of GemmOp:" << gemmop << "\n";
     indent() << "#######################################\n";
+    _pingpong = false;
   }
 
   // bool visitOp(BufferOp op) {
@@ -756,7 +787,7 @@ public:
     _os << op.getUpperBoundMap().getResult(0) << ", ";
 
     // Emit loop step
-    _os  << op.getStep() << "):\n";
+    _os  << op.getStep().getSExtValue() << "):\n";
 
     if(op.getOperation()->hasAttr("ADORAGemm")){
       _pytestemitter->emitGemmBlock(*(op.getBody()), _os);
@@ -1193,7 +1224,7 @@ async def aux_stream(
     # 4. Device → Host transfer
     # ------------------------------
     for i in range(len(optrs)):
-        await stream.memcpyDeviceToHost(d_data=optrs[i], h_data=odata[i], size=olen[i], dtype='i')
+        await stream.memcpyDeviceToHost(d_data=optrs[i], h_data=odata[i], size=olen[i])
 
     ## await stream.release()
     return

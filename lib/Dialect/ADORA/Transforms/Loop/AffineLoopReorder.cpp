@@ -55,7 +55,7 @@ struct AffineLoopReorder : public AffineLoopReorderBase<AffineLoopReorder> {
         loops.insert(loops.begin(), forOp);
         // llvm::outs() << "For loop\n";
         // for(auto it=loops.begin();it!=loops.end();it++) { (*it).dump(); }
-        ArrayRef<AffineForOp> loops_arrayRef = llvm::makeArrayRef(loops);
+        ArrayRef<AffineForOp> loops_arrayRef = llvm::ArrayRef(loops);
         if (isPerfectlyNested(loops_arrayRef)) {
           ReorderOnAffineForOp(forOp);
         }
@@ -131,8 +131,8 @@ LogicalResult AffineLoopReorder::ReorderOnAffineForOp(AffineForOp forOp) {
       /***
        * Step1: check whether two loop can be interchanged
       */
-      ArrayRef<AffineForOp> loops_arrayRef = llvm::makeArrayRef(loops);
-      ArrayRef<unsigned> loopPermMap_arrayRef = llvm::makeArrayRef(loopPermMap);
+      ArrayRef<AffineForOp> loops_arrayRef = llvm::ArrayRef(loops);
+      ArrayRef<unsigned> loopPermMap_arrayRef = llvm::ArrayRef(loopPermMap);
       if ( isValidLoopInterchangePermutation(loops_arrayRef,loopPermMap_arrayRef) ) {
         // llvm::errs() << "Valid interchange\n"; 
         /***
@@ -378,8 +378,8 @@ SmallVector<SmallVector<unsigned>> AffineLoopReorder::findValidLoopPermutations(
       loopPermMap[arr[i]] = i; // inverted, referred sinkSequentialLoops func
       loopPerm[i] = arr[i];    // not inverted
     }
-    ArrayRef<AffineForOp> loops_arrayRef = llvm::makeArrayRef(loops);
-    ArrayRef<unsigned> loopPermMap_arrayRef = llvm::makeArrayRef(loopPermMap);
+    ArrayRef<AffineForOp> loops_arrayRef = llvm::ArrayRef(loops);
+    ArrayRef<unsigned> loopPermMap_arrayRef = llvm::ArrayRef(loopPermMap);
     if ( isValidLoopInterchangePermutation(loops_arrayRef,loopPermMap_arrayRef) ) {
       // display(arr,maxLoopDepth);
       validLoopPerm.push_back(loopPerm); // not loopPermMap

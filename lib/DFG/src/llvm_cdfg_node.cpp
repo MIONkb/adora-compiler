@@ -3,55 +3,55 @@
 
 
 
-LLVMCDFGNode::LLVMCDFGNode(Instruction *ins, LLVMCDFG *parent)
-{
-    _parent = parent;
-    setInstruction(ins);
-}
+// LLVMCDFGNode::LLVMCDFGNode(Instruction *ins, LLVMCDFG *parent)
+// {
+//     _parent = parent;
+//     setInstruction(ins);
+// }
 
-void LLVMCDFGNode::setInstruction(Instruction *ins)
-{ 
-    _instruction = ins; 
-    if(dyn_cast<PHINode>(ins)){
-        return;
-    }
-    // may have multiple constant operand, create CONST node separately
-    // for(int i = 0; i < ins->getNumOperands(); i++){ 
-    //     if(ConstantInt *CI = dyn_cast<ConstantInt>(ins->getOperand(i))){
-    //         setConstVal(CI->getSExtValue());
-    //         break; // only one constant
-    //     }
-    // }
-    if(dyn_cast<LoadInst>(ins)){
-        setDataBits(ins->getType()->getPrimitiveSizeInBits());
-        llvm::Value *address_of_load;
-        if(auto GEP = dyn_cast<GetElementPtrInst>(ins->getOperand(0))){
-            address_of_load = GEP->getOperand(0);
-        }else if(auto GEP = dyn_cast<ConstantExpr>(ins->getOperand(0))){
-            address_of_load = GEP->getOperand(0);                            
-        }else{
-            address_of_load = ins->getOperand(0);
-        }
-        setLSaddress(address_of_load);
-    }else if(StoreInst *SI = dyn_cast<StoreInst>(ins)){
-        setDataBits(SI->getValueOperand()->getType()->getPrimitiveSizeInBits());
-        llvm::Value *address_of_store;
-        if(auto GEP = dyn_cast<GetElementPtrInst>(ins->getOperand(1))){
-            address_of_store = GEP->getOperand(0);
-        }else if(auto GEP = dyn_cast<ConstantExpr>(ins->getOperand(1))){
-            address_of_store = GEP->getOperand(0);                            
-        }else{
-            address_of_store = ins->getOperand(1);
-        }
-        setLSaddress(address_of_store);
-    }else if(dyn_cast<GetElementPtrInst>(ins)){
-        setDataBits(32);
-    }else if(dyn_cast<AllocaInst>(ins)){
-        setDataBits(32);
-    }else if(dyn_cast<PointerType>(ins->getType())){
-        setDataBits(32);
-    }
-}
+// void LLVMCDFGNode::setInstruction(Instruction *ins)
+// { 
+//     _instruction = ins; 
+//     if(dyn_cast<PHINode>(ins)){
+//         return;
+//     }
+//     // may have multiple constant operand, create CONST node separately
+//     // for(int i = 0; i < ins->getNumOperands(); i++){ 
+//     //     if(ConstantInt *CI = dyn_cast<ConstantInt>(ins->getOperand(i))){
+//     //         setConstVal(CI->getSExtValue());
+//     //         break; // only one constant
+//     //     }
+//     // }
+//     if(dyn_cast<LoadInst>(ins)){
+//         setDataBits(ins->getType()->getPrimitiveSizeInBits());
+//         llvm::Value *address_of_load;
+//         if(auto GEP = dyn_cast<GetElementPtrInst>(ins->getOperand(0))){
+//             address_of_load = GEP->getOperand(0);
+//         }else if(auto GEP = dyn_cast<ConstantExpr>(ins->getOperand(0))){
+//             address_of_load = GEP->getOperand(0);                            
+//         }else{
+//             address_of_load = ins->getOperand(0);
+//         }
+//         setLSaddress(address_of_load);
+//     }else if(StoreInst *SI = dyn_cast<StoreInst>(ins)){
+//         setDataBits(SI->getValueOperand()->getType()->getPrimitiveSizeInBits());
+//         llvm::Value *address_of_store;
+//         if(auto GEP = dyn_cast<GetElementPtrInst>(ins->getOperand(1))){
+//             address_of_store = GEP->getOperand(0);
+//         }else if(auto GEP = dyn_cast<ConstantExpr>(ins->getOperand(1))){
+//             address_of_store = GEP->getOperand(0);                            
+//         }else{
+//             address_of_store = ins->getOperand(1);
+//         }
+//         setLSaddress(address_of_store);
+//     }else if(dyn_cast<GetElementPtrInst>(ins)){
+//         setDataBits(32);
+//     }else if(dyn_cast<AllocaInst>(ins)){
+//         setDataBits(32);
+//     }else if(dyn_cast<PointerType>(ins->getType())){
+//         setDataBits(32);
+//     }
+// }
 
 
 std::string LLVMCDFGNode::getName()
@@ -314,12 +314,12 @@ void LLVMCDFGNode::delDstDep(LLVMCDFGNode *node)
 }
 
 
-bool LLVMCDFGNode::isConditional() {
-	if(_instruction != NULL){
-		if(_instruction->getOpcode() == Instruction::Br){
-			return true;
-		}
-	}
-	return false;
-}
+// bool LLVMCDFGNode::isConditional() {
+// 	if(_instruction != NULL){
+// 		if(_instruction->getOpcode() == Instruction::Br){
+// 			return true;
+// 		}
+// 	}
+// 	return false;
+// }
 

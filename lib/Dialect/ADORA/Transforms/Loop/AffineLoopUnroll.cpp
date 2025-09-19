@@ -184,7 +184,7 @@ static AffineForOp removeIdxthIterArgOfAffineForOp(AffineForOp& forOp, unsigned 
   }
   AffineForOp newLoop = rewriter.create<AffineForOp>(
     forOp.getLoc(), forOp.getLowerBoundOperands(), forOp.getLowerBoundMap(),
-    forOp.getUpperBoundOperands(), forOp.getUpperBoundMap(), forOp.getStep(), newIterInits);
+    forOp.getUpperBoundOperands(), forOp.getUpperBoundMap(), forOp.getStep().getSExtValue(), newIterInits);
   
   // llvm::errs() <<" block: \n";
   // newLoop.getOperation()->getBlock()->dump();

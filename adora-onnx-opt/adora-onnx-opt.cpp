@@ -11,22 +11,15 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 
-#include "ADORA/Dialect/ADORA/IR/ADORA.h"
-#include "ADORA/Dialect/ADORA/Transforms/Passes.h"
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 #include "ADORA/Dialect/ADORATensor/Transforms/Passes.h"
 #include "ADORA/Misc/Passes.h"
 
 
-
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 
-
-// Register important affine passes
-inline void registerAffinePassesForADORA() {
-
-}
+#include "src/Dialect/ONNX/ONNXOps.hpp"
 
 int main(int argc, char **argv) {
   // mlir::registerAllDialects();
@@ -36,21 +29,20 @@ int main(int argc, char **argv) {
   //===--------------------------------------------------------------------===//
   // Register mlir dialects and passes
   //===--------------------------------------------------------------------===//
-  mlir::registerCanonicalizerPass();
-  mlir::registerCSEPass();
-  mlir::registerLinalgPasses();
-  mlir::memref::registerMemRefPasses();
+  // mlir::registerCanonicalizerPass();
+  // mlir::registerCSEPass();
+  // mlir::registerLinalgPasses();
+  // mlir::memref::registerMemRefPasses();
 
   // registerAffinePassesForADORA();
-  mlir::bufferization::registerPromoteBuffersToStackPass();
+  // mlir::bufferization::registerPromoteBuffersToStackPass();
 
-  mlir::registerConvertLinalgToStandardPass();
+  // mlir::registerConvertLinalgToStandardPass();
   // mlir::registerConvertLinalgToLLVMPass(); // This pass maps linalg to blas
   // mlir::registerLinalgLowerToAffineLoopsPass();
-  mlir::registerConvertLinalgToAffineLoopsPass();
   // mlir::registerConvertFuncToLLVMPass();
 
-  mlir::registerReconcileUnrealizedCastsPass();
+  // mlir::registerReconcileUnrealizedCastsPass();
 
   // Add the following to selectively include the necessary dialects. You only
   // need to register dialects that will be *parsed* by the tool, not the one
@@ -71,14 +63,14 @@ int main(int argc, char **argv) {
                   mlir::bufferization::BufferizationDialect>();
 
   // Dialects
-  registry.insert<mlir::ADORA::ADORADialect,
-                  mlir::ADORA::ADORATensor::ADORATensorDialect>();
+  registry.insert<mlir::ADORA::ADORATensor::ADORATensorDialect>();
+  // registry.insert<mlir::ADORA::ADORATensor::ADORATensorDialect>();
 
   // ----- My Dialect -----
   // mlir::ADORA::registerADORALoopCdfgGenPass();
-  mlir::ADORA::registerExtractAffineForToKernelPass();
+  // mlir::ADORA::registerExtractAffineForToKernelPass();
   // mlir::ADORA::registerAdjustKernelMemoryFootprintPass();
-  mlir::ADORA::registerExtractKernelToFuncPass();
+  // mlir::ADORA::registerExtractKernelToFuncPass();
   // mlir::ADORA::registerAutoDesignSpaceExplorePass();
   // mlir::ADORA::registerSimplifyAffineLoopLevelsPass();
   // mlir::ADORA::registerTestPrintOpNestingPass();
@@ -94,11 +86,11 @@ int main(int argc, char **argv) {
   // mlir::ADORA::registerMathRewrite();
 
   /// ADORATensor
-  mlir::ADORA::ADORATensor::registerLinalgToSystolicGEMMPass();
-  mlir::ADORA::ADORATensor::registerADORATensorOpCdfgGenPassPass();
-  mlir::ADORA::ADORATensor::registerADORAGemmOpStrategyDecisionPass();
+  // mlir::ADORA::ADORATensor::registerLinalgToSystolicGEMMPass();
+  // mlir::ADORA::ADORATensor::registerADORATensorOpCdfgGenPassPass();
+  // mlir::ADORA::ADORATensor::registerADORAGemmOpStrategyDecisionPass();
 
-  mlir::registerSCFForLoopCanonicalizationPass();
+  // mlir::registerSCFForLoopCanonicalizationPass();
   
 
   return failed(

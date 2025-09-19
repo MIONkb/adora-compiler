@@ -47,24 +47,24 @@ private:
     // function annotation: size attribute
     std::map<std::string, int> _sizeAttrMap;
     // basic block pairs that there is a back edge in between, <srcBB, dstBB>
-    SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 1> _backEdgeBBPs;    
+    // SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 1> _backEdgeBBPs;    
     // the recursively successive basic blocks except the back-edge BBs    
-    std::map<const BasicBlock *, std::set<const BasicBlock *>> _succBBsMap;
+    // std::map<const BasicBlock *, std::set<const BasicBlock *>> _succBBsMap;
     //record each BB is dependent by which CTRLNODE
-    std::map<BasicBlock*, std::set<std::pair<LLVMCDFGNode*, CondVal>>> _BBctrlDependentNode;
+    // std::map<BasicBlock*, std::set<std::pair<LLVMCDFGNode*, CondVal>>> _BBctrlDependentNode;
     std::map<int, Loop*> _nestloops;
     bool _nestLoopisAffine;
     std::map<int, int> _loopsAffineStrides;
     std::map<int, std::pair<int, int>> _loopsAffineBounds;
     std::map<int, int> _loopsAffineCounts;
-	std::set<BasicBlock*> _loopBBs;
-	std::set<std::pair<BasicBlock*,BasicBlock*>> _loopentryBBs;
-	std::set<std::pair<BasicBlock*,BasicBlock*>> _loopexitBBs;
+	// std::set<BasicBlock*> _loopBBs;
+	// std::set<std::pair<BasicBlock*,BasicBlock*>> _loopentryBBs;
+	// std::set<std::pair<BasicBlock*,BasicBlock*>> _loopexitBBs;
     // Out of loop control and data node
     // control node : LOOPSTART, LOOPEXIT
     // data node : INPUT, OUTPUT
-    std::map<BasicBlock*, LLVMCDFGNode*> _loopStartNodeMap;
-    std::map<BasicBlock*, LLVMCDFGNode*> _loopExitNodeMap;
+    // std::map<BasicBlock*, LLVMCDFGNode*> _loopStartNodeMap;
+    // std::map<BasicBlock*, LLVMCDFGNode*> _loopExitNodeMap;
     std::map<llvm::Value*, LLVMCDFGNode*> _ioNodeMap;
 	// std::map<LLVMCDFGNode*, llvm::Value*> _ioNodeMapReverse;
     // GEP node info map including pointer name
@@ -75,13 +75,13 @@ private:
 
     std::string _OpNameFilePath;
 public:
-    ScalarEvolution *SE;
-    DominatorTree *DT;
-    DependenceInfo *DI;
-    const llvm::DataLayout *DL;
+    // ScalarEvolution *SE;
+    // DominatorTree *DT;
+    // DependenceInfo *DI;
+    // const llvm::DataLayout *DL;
 
 ///TODO:somtimes may have more than one PHINode in a level
-    std::map<llvm::PHINode *, int> PHItoLevel;
+    // std::map<llvm::PHINode *, int> PHItoLevel;
 
     LLVMCDFG(llvm::StringRef name) : _name(name){}
     LLVMCDFG(llvm::StringRef name, std::string OpNameFile);
@@ -95,7 +95,7 @@ public:
 
 	const std::map<int, LLVMCDFGNode*>& nodes(){ return _nodes; }
     LLVMCDFGNode* node(int id);
-    LLVMCDFGNode* node(Instruction *ins);
+    // LLVMCDFGNode* node(Instruction *ins);
     LLVMCDFGNode* node(mlir::Operation *op);
     LLVMCDFGNode* node_lpidx(int level);
     LLVMCDFGNode* node_lparg(int level);
@@ -103,26 +103,26 @@ public:
     LLVMCDFGNode* addNode(mlir::Operation *op);
     LLVMCDFGNode* addNode(mlir::Operation *op, std::string typeName);
     LLVMCDFGNode* addNode(mlir::Block* block, int level);
-    LLVMCDFGNode* addNode(Instruction *ins); // create node according to instruction and add node
-    LLVMCDFGNode* addNode(std::string customIns, BasicBlock *BB); // create node according to the custom instruction and add node
+    // LLVMCDFGNode* addNode(Instruction *ins); // create node according to instruction and add node
+    // LLVMCDFGNode* addNode(std::string customIns, BasicBlock *BB); // create node according to the custom instruction and add node
     LLVMCDFGNode* addNode(std::string customIns); // create node according to the custom instruction for pattern which is not with BB: TODO ?
     // delete node and corresponding edges
     void delNode(LLVMCDFGNode *node);
-    void delNode(Instruction *ins); 
+    // void delNode(Instruction *ins); 
 
     // delete node tree(node & all prenodes)
     void delNodeTree(LLVMCDFGNode *node);
     // delete node tree(node & all prenodes)
-    void delNodeTree(Instruction *ins);
+    // void delNodeTree(Instruction *ins);
     // add node tree according to Instruction(node & all prenodes)
-    LLVMCDFGNode* addNodeTree(llvm::Value* opnode);
+    // LLVMCDFGNode* addNodeTree(llvm::Value* opnode);
 
-    std::set<std::pair<LLVMCDFGNode*, int>> addOutputTree(llvm::Value* opnode);
+    // std::set<std::pair<LLVMCDFGNode*, int>> addOutputTree(llvm::Value* opnode);
 
     ///handle phi of outer nest loops
-    LLVMCDFGNode* addIdxCycle(PHINode* Phi);
+    // LLVMCDFGNode* addIdxCycle(PHINode* Phi);
     ///check & handle instructions with INPUT
-    void checkInsInputs(Instruction* temins);
+    // void checkInsInputs(Instruction* temins);
 
 	const std::map<int, LLVMCDFGEdge*>& edges(){ return _edges; }
     LLVMCDFGEdge* edge(int id);
@@ -136,22 +136,22 @@ public:
     void delEdge(int eid);
 
     // Loop info
-    void setLoops(std::map<int, Loop*> nestloops){ _nestloops = nestloops;}
-    std::map<int, Loop*> nestloops(){return _nestloops;}
-	void setLoopBBs(std::set<BasicBlock*> BBs){_loopBBs = BBs;}
-	void setLoopBBs(std::set<BasicBlock*> BBs, std::set<std::pair<BasicBlock*,BasicBlock*>> entryBBs, std::set<std::pair<BasicBlock*,BasicBlock*>> exitBBs){
-        _loopBBs = BBs; 
-        _loopentryBBs = entryBBs; 
-        _loopexitBBs = exitBBs;
-    }
-	const std::set<BasicBlock*>& loopBBs(){return _loopBBs;}
+    // void setLoops(std::map<int, Loop*> nestloops){ _nestloops = nestloops;}
+    // std::map<int, Loop*> nestloops(){return _nestloops;}
+	// void setLoopBBs(std::set<BasicBlock*> BBs){_loopBBs = BBs;}
+	// void setLoopBBs(std::set<BasicBlock*> BBs, std::set<std::pair<BasicBlock*,BasicBlock*>> entryBBs, std::set<std::pair<BasicBlock*,BasicBlock*>> exitBBs){
+    //     _loopBBs = BBs; 
+    //     _loopentryBBs = entryBBs; 
+    //     _loopexitBBs = exitBBs;
+    // }
+	// const std::set<BasicBlock*>& loopBBs(){return _loopBBs;}
 
     // Basic block relation
-    void setSuccBBMap(std::map<const BasicBlock*,std::set<const BasicBlock*>> succBBsMap){_succBBsMap = succBBsMap;}
-	const std::map<const BasicBlock*,std::set<const BasicBlock*>>& succBBMap(){return _succBBsMap;}
+    // void setSuccBBMap(std::map<const BasicBlock*,std::set<const BasicBlock*>> succBBsMap){_succBBsMap = succBBsMap;}
+	// const std::map<const BasicBlock*,std::set<const BasicBlock*>>& succBBMap(){return _succBBsMap;}
 
-    const SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 1>& backEdgeBBPs(){ return _backEdgeBBPs; } 
-    void setBackEdgeBBPs(SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 1> backEdgeBBPs){ _backEdgeBBPs = backEdgeBBPs; }
+    // const SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 1>& backEdgeBBPs(){ return _backEdgeBBPs; } 
+    // void setBackEdgeBBPs(SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 1> backEdgeBBPs){ _backEdgeBBPs = backEdgeBBPs; }
 	
     // GEP node info map including pointer name
     const std::map<LLVMCDFGNode*, llvm::StringRef>& GEPInfoMap(){ return _GEPInfoMap; }
@@ -164,12 +164,12 @@ public:
     void setIOInfo(LLVMCDFGNode* node, llvm::StringRef name);
 
     // initialize CDFG according to loopBBs
-    void initialize();
+    // void initialize();
     // analyze loop index
-    void LoopIdxAnalyze();
+    // void LoopIdxAnalyze();
 
     //affineAnalyze & transform GEP to affine Input
-    void affineAnalyze();
+    // void affineAnalyze();
     // Set Nestloop Affine Strides
     void setLoopsAffineStrides(int level, int stride){ _loopsAffineStrides[level] = stride;}
     void setLoopsAffineStrides(std::map<int, int> AffineStrides){_loopsAffineStrides = AffineStrides;}
@@ -186,81 +186,81 @@ public:
     int getLoopsAffineCounts(int level){return _loopsAffineCounts[level];}
     
     // add edge between two nodes that have memory dependence (loop-carried)
-    void addMemDepEdges();
+    // void addMemDepEdges();
 
     // root: output node, no children
 	std::vector<LLVMCDFGNode*> getRoots();
     // leaf: node with no parents
-    std::vector<LLVMCDFGNode*> getLeafs();
-	std::vector<LLVMCDFGNode*> getLeafs(BasicBlock* BB);
+    // std::vector<LLVMCDFGNode*> getLeafs();
+	// std::vector<LLVMCDFGNode*> getLeafs(BasicBlock* BB);
 
     
     // get a map of basicblocks to their control dependent (recursive) predecessors with the respective control value
-    std::map<BasicBlock*, std::set<std::pair<BasicBlock*, CondVal>>> getCtrlDepPredBBs();
+    // std::map<BasicBlock*, std::set<std::pair<BasicBlock*, CondVal>>> getCtrlDepPredBBs();
     // get the control dependent nodes in a BB, including unconditional BranchInst, StoreInst, OutLoopSTORE
     // only TRUE_COND, STORE can be performed
-    std::vector<LLVMCDFGNode*> getCtrlDepNodes(BasicBlock *BB);
+    // std::vector<LLVMCDFGNode*> getCtrlDepNodes(BasicBlock *BB);
     // Connect control dependent node pairs among BBs
     // Conditional Branch predecessor -> control dependent nodes
-	void connectCtrlDepBBs();
+	// void connectCtrlDepBBs();
 
     // insert Control NOT node behind the condition node of the Branch node
-    void insertCtrlNotNodes();
+    // void insertCtrlNotNodes();
 
     // transfer the multiple control predecessors (input nodes) into a inverted OR tree 
     // with the root connected to a node and leaves connected to control predecessors
-    void createCtrlOrTree();
+    // void createCtrlOrTree();
 
-    // get loop start node. If not exist, create one.
-    LLVMCDFGNode* getLoopStartNode(BasicBlock *BB);
-    // get loop exit node. If not exist, create one.
-    LLVMCDFGNode* getLoopExitNode(BasicBlock *BB);
-    // get input node. If not exist, create one.
-    LLVMCDFGNode* getInputNode(llvm::Value *ins, BasicBlock *BB);
-    // get output node. If not exist, create one.
-    LLVMCDFGNode* getOutputNode(llvm::Value *ins, BasicBlock *BB);
+    // // get loop start node. If not exist, create one.
+    // LLVMCDFGNode* getLoopStartNode(BasicBlock *BB);
+    // // get loop exit node. If not exist, create one.
+    // LLVMCDFGNode* getLoopExitNode(BasicBlock *BB);
+    // // get input node. If not exist, create one.
+    // LLVMCDFGNode* getInputNode(llvm::Value *ins, BasicBlock *BB);
+    // // get output node. If not exist, create one.
+    // LLVMCDFGNode* getOutputNode(llvm::Value *ins, BasicBlock *BB);
 
     ///recursively find array assess stride & bound
-    std::vector<PHINode*> arrayStride(llvm::Value* opnode, std::map<int, std::pair<double, std::pair<double,double>>>* factortable);
+    // std::vector<PHINode*> arrayStride(llvm::Value* opnode, std::map<int, std::pair<double, std::pair<double,double>>>* factortable);
 
 	// Transfer PHI nodes to SELECT nodes
-	void handlePHINodes();
+	// void handlePHINodes();
 
     // add mask AND node behind the Shl node with bytewidth less than MAX_DATA_BYTE
-    void addMaskAndNodes();
+    // void addMaskAndNodes();
 
     // get the offset of each element in the struct
-    std::map<int, int> getStructElemOffsetMap(StructType *ST);
+    // std::map<int, int> getStructElemOffsetMap(StructType *ST);
 
     // transfer GetElementPtr(GEP) node to MUL/ADD/Const tree
-    void handleGEPNodes();
+    // void handleGEPNodes();
 
     // add loop exit nodes
-    void addLoopExitNodes();
+    // void addLoopExitNodes();
 
     // remove redundant nodes, e.g. Branch
-    void removeRedundantNodes();
+    // void removeRedundantNodes();
 
-    // assign final node name
-    void assignFinalNodeName();
+    // // assign final node name
+    // void assignFinalNodeName();
 
 	// print DOT file of CDFG
-    void printDOT(std::string fileName);
+    // void printDOT(std::string fileName);
 
-	// print DOT file of affine DFG
-    void printAffineDOT(std::string fileName);
+	// // print DOT file of affine DFG
+    // void printAffineDOT(std::string fileName);
 
     // generate CDFG
-    void generateCDFG();
+    // void generateCDFG();
 
     // remove affine address calculation & generate INPUT/OUTPUT pattern
-    void handleAffineLSNodes();
+    // void handleAffineLSNodes();
 
     // handle SELECT nodes
-    void handleSelectNodes();
+    // void handleSelectNodes();
 	
-    void debug_printnodes();// LJHdebug 
-    void debug_printBBs();// LJHdebug 
+    // void debug_printnodes();// LJHdebug 
+    // void debug_printBBs();// LJHdebug 
 
     /// LJH Define
     std::set<std::string> getFusableOperatorTypes(){return _fusableOp;};

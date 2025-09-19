@@ -615,7 +615,7 @@ public:
 
     // Emit loop step
     _os << _cgracallemitter->lookupName(iterVar) << " = " ;
-    _os << _cgracallemitter->lookupName(iterVar) << " + "  << op.getStep() << "){\n";
+    _os << _cgracallemitter->lookupName(iterVar) << " + "  << op.getStep().getSExtValue() << "){\n";
 
     _cgracallemitter->emitBlock(*(op.getBody()), _os);
     // reduce

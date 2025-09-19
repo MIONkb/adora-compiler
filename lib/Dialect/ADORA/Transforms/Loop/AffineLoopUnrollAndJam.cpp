@@ -95,10 +95,10 @@ static SmallVector<unsigned> FindUnrollingFactors(affine::AffineForOp& affinefor
 // Gathers all maximal sub-blocks of operations that do not themselves
 // include a for op (a operation could have a descendant for op though
 // in its tree).  Ignore the block terminators.
-struct JamBlockGatherer {
+struct ADORAJamBlockGatherer {
   // Store iterators to the first and last op of each sub-block found.
   std::vector<std::pair<Block::iterator, Block::iterator>> subBlocks;
-
+  ADORAJamBlockGatherer(){}
   // This is a linear time walk.
   void walk(Operation *op) {
     for (auto &region : op->getRegions())
@@ -152,7 +152,7 @@ struct JamBlockGatherer {
 //   // copy from LoopUtils.cpp
 //   SmallVector<AffineExpr, 4> bumpExprs(tripCountMap.getNumResults());
 //   SmallVector<mlir::Value, 4> bumpValues(tripCountMap.getNumResults());
-//   int64_t step = forOp.getStep();
+//   int64_t step = forOp.getStep().getSExtValue();
 //   for (unsigned i = 0, e = tripCountMap.getNumResults(); i < e; i++) {
 //     auto tripCountExpr = tripCountMap.getResult(i);
 //     bumpExprs[i] = (tripCountExpr - tripCountExpr % unrollFactor) * step;
@@ -225,7 +225,7 @@ LogicalResult mlir::ADORA::loopUnrollAndJamByFactor(affine::AffineForOp& forop, 
   /************************************
     * Unroll outer loop
     ************************************/
-  JamBlockGatherer jbg;
+  ADORAJamBlockGatherer jbg;
   jbg.walk(forop);
   auto &subBlocks = jbg.subBlocks;
   // kernel.dump();
@@ -292,7 +292,7 @@ LogicalResult mlir::ADORA::loopUnrollAndJamByFactor(affine::AffineForOp& forop, 
   }
 
   // Scale the step of loop being unroll-jammed by the unroll-jam factor.
-  int64_t step = forop.getStep();
+  int64_t step = forop.getStep().getSExtValue();
   forop.setStep(step * ur_factor);
 
   auto forOpIV = forop.getInductionVar();

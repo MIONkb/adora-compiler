@@ -36,8 +36,7 @@ std::optional<int64_t> getSingleMemrefAccessSpace(::mlir::affine::AffineForOp fo
 ///////////////
 /// AffineLoopSimplify.cpp
 ///////////////
-LogicalResult simplifyLoopLevelsInRegion(mlir::Region& region);
-
+LogicalResult simplifyLoopLevelsInRegion(mlir::Region& region, bool donttouchkernel = false);
 ///////////////
 /// SimplifyLoadStore.cpp
 ///////////////
