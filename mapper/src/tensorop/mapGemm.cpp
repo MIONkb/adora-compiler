@@ -10,7 +10,7 @@
 #include "ADORA/Dialect/ADORATensor/Interface/SystolicImplInterface.h"
 
 #include "tensorop/TensorOp.h"
-#include "tensorop/MapGemm.h"
+#include "ADORA/Dialect/ADORATensor/Lowering/TensorOps/LowerGemm.h"
 
 #include "ir/adg_ir.h"
 #include "ir/dfg_ir.h"

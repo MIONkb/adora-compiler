@@ -5,10 +5,10 @@
 set -e
 
 ### set LLVM_SRC_DIR to your own path
-LLVM_SRC_DIR=/home/share/llvm-project-Polygeist
+LLVM_SRC_DIR=~/CGRVOPT/onnx-mlir/third_party/llvm-project-onnx/
 
-build_dir=$LLVM_SRC_DIR/build
-install_dir=$LLVM_SRC_DIR/build
+build_dir=$LLVM_SRC_DIR/dynamicbuild
+install_dir=$LLVM_SRC_DIR/dynamicbuild
 
 echo "Using LLVM source dir: $LLVM_SRC_DIR"
 
@@ -38,14 +38,15 @@ cmake -GNinja \
   -DLLVM_BUILD_TOOLS=ON   \
   -DLLVM_INCLUDE_TESTS=ON   \
   -DMLIR_INCLUDE_TESTS=ON   \
-  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_BUILD_TYPE=DEBUG \
   -DLLVM_ENABLE_ASSERTIONS=On \
   -DLLVM_BUILD_EXAMPLES=OFF \
   -DCMAKE_C_COMPILER=gcc \
   -DCMAKE_CXX_COMPILER=g++ \
   -DLLVM_ENABLE_RTTI=ON    \
  -DENABLE_LIBOMPTARGET=OFF \
-  -DLLVM_ENABLE_LLD=OFF
+  -DLLVM_ENABLE_LLD=OFF \
+    -DBUILD_SHARED_LIBS=OFF 
 
  # TODO check what these options do :
   # -DMLIR_ENABLE_BINDINGS_PYTHON=ON \

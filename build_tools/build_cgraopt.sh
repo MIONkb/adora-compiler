@@ -1,12 +1,13 @@
 #!/bin/bash
 ### set LLVM_BUILD_DIR to your own llvm path
-LLVM_BUILD_DIR=/home/jhlou/CGRVOPT/onnx-mlir/third_party/llvm-project-onnx/build
-LLVM_INSTALL_DIR=/home/jhlou/CGRVOPT/onnx-mlir/third_party/llvm-project-onnx/build
+LLVM_BUILD_DIR=/home/jhlou/CGRVOPT/onnx-mlir/third_party/llvm-project-onnx/dynamicbuild
+LLVM_INSTALL_DIR=/home/jhlou/CGRVOPT/onnx-mlir/third_party/llvm-project-onnx/dynamicbuild
 THIRDPARTY_ONNX_PRJ_DIR=/home/jhlou/CGRVOPT/onnx-mlir
 
 # ......................................................................
 cmake -GNinja \
   ..\
+  "-B." \
   -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_EXTERNAL_LIT=$LLVM_BUILD_DIR/bin/llvm-lit \
   -DMLIR_DIR=$LLVM_INSTALL_DIR/lib/cmake/mlir \
@@ -19,4 +20,4 @@ cmake -GNinja \
   # -DADORA_ENABLE_ONNX_TENSOR_OPT=ON
 
 # cmake --build . --target cgra-opt cgra-mapper
-ninja -j 32
+ninja -j 32 install

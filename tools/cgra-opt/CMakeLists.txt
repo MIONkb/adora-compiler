@@ -14,6 +14,7 @@ set(LIBS
   MLIRIR
   MLIRTransforms
   MLIROptLib
+  MLIRParser
   
   # Dialects
   MLIRLLVMDialect

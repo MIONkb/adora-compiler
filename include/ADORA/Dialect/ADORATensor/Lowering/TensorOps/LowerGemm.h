@@ -1,11 +1,13 @@
-#ifndef ADORA_TENSOR_GEMM_OP_MAP_H
-#define ADORA_TENSOR_GEMM_OP_MAP_H
+#ifndef ADORA_TENSOR_GEMM_OP_LOWER_H
+#define ADORA_TENSOR_GEMM_OP_LOWER_H
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Builders.h"
 
 /// ADORA dialect
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 
-using StationaryBodyBuilderFn = std::function<void(OpBuilder &, Location, ValueRange)>;
+using StationaryBodyBuilderFn = std::function<void(mlir::OpBuilder &, mlir::Location, mlir::ValueRange)>;
 
 namespace mlir{
 namespace ADORA{
@@ -94,4 +96,4 @@ static inline llvm::SmallVector<int64_t, 2> getShape(mlir::Value v) {
 }
 }
 
-#endif // ADORA_TENSOR_GEMM_OP_MAP_H
+#endif // ADORA_TENSOR_GEMM_OP_LOWER_H

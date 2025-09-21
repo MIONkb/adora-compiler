@@ -12,4 +12,4 @@ target_link_libraries(ADORAMapTensorOp
   ADORATensorInterface
   ADORATensorOpGemmLower
 )
-add_subdirectory(Gemm)
+# add_subdirectory(Gemm)

@@ -34,3 +34,4 @@ set(LIBS
   ADORATensorTransforms
 )
 
+add_subdirectory(Gemm)

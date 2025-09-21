@@ -16,7 +16,7 @@
 
 // lower tensor op
 #include "../../../../mapper/include/tensorop/TensorOp.h"
-#include "../../../../mapper/include/tensorop/MapGemm.h"
+#include "ADORA/Dialect/ADORATensor/Lowering/TensorOps/LowerGemm.h"
 
 // // DFG
 // ADORA::KernelOp* _kernel_toDFG;

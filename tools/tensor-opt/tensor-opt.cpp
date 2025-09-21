@@ -17,7 +17,7 @@
 #include "ADORA/Dialect/ADORATensor/Transforms/Passes.h"
 #include "ADORA/Misc/Passes.h"
 
-#include "src/Dialect/ONNX/ONNXOps.hpp"
+// #include "src/Dialect/ONNX/ONNXOps.hpp"
 
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
                   mlir::memref::MemRefDialect,
                   mlir::tosa::TosaDialect,
                   mlir::linalg::LinalgDialect,
-                  mlir::math::MathDialect,
+                  mlir::math::MathDialect, 
                   mlir::scf::SCFDialect,
                   mlir::vector::VectorDialect,
                   mlir::arith::ArithDialect,
@@ -71,10 +71,10 @@ int main(int argc, char **argv) {
                   mlir::bufferization::BufferizationDialect>();
 
   // Dialects
-  registry.insert<mlir::ADORA::ADORADialect,
+  registry.insert<mlir::ADORA::ADORADialect, 
                   mlir::ADORA::ADORATensor::ADORATensorDialect>();
 
-  registry.insert<mlir::ONNX::ONNXDialect>();
+  // registry.insert<mlir::ONNXDialect>();
 
   // ----- My Dialect -----
   // mlir::ADORA::registerADORALoopCdfgGenPass();
@@ -100,9 +100,8 @@ int main(int argc, char **argv) {
   mlir::ADORA::ADORATensor::registerADORATensorOpCdfgGenPassPass();
   mlir::ADORA::ADORATensor::registerADORAGemmOpStrategyDecisionPass();
 
-  mlir::registerSCFForLoopCanonicalizationPass();
+  mlir::registerSCFForLoopCanonicalizationPass(); 
   
-
-  return failed(
-      mlir::MlirOptMain(argc, argv, "Fail\n", registry));
+  auto mainresult = mlir::MlirOptMain(argc, argv, "Fail\n", registry);
+  return failed(mainresult);
 }

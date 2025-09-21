@@ -7,12 +7,13 @@
 
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 #include "ADORA/Dialect/ADORATensor/Interface/SystolicImplInterface.h"
+#include "ADORA/Dialect/ADORATensor/Lowering/TensorOps/LowerGemm.h"
 
-#include "tensorop/TensorOp.h"
-#include "tensorop/MapGemm.h"
+// #include "tensorop/TensorOp.h"
 
 using namespace ::mlir::ADORA::ADORATensor;
 using namespace ::mlir::affine;
+using namespace ::mlir;
 
 namespace mlir{
 namespace ADORA{
