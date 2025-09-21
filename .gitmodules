@@ -1,4 +1,4 @@
 [submodule "third_party/onnx-mlir"]
 	path = third_party/onnx-mlir
 	url = https://github.com/MIONkb/adora-onnx-mlir
-    branch = 0.5.0.0
+	branch = main
