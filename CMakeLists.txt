@@ -22,6 +22,7 @@ include(AddMLIR)
 include(HandleLLVMOptions)
 include(MLIRDetectPythonEnv)
 include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
 
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)
@@ -43,26 +44,6 @@ include_directories(${PROJECT_BINARY_DIR}/lib/DFG/inc)
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
 add_definitions(${LLVM_DEFINITIONS})
 
-# set(THIRDPARTY_ONNX_PRJ_DIR "/home/jhlou/CGRVOPT/onnx-mlir"
-#     CACHE PATH "Path to onnx-mlir project (source/build root)")
-
-
-option(THIRDPARTY_ONNX_PRJ_DIR "onnx-mlir project path" third_party/onnx-mlir)
-list(APPEND CMAKE_PREFIX_PATH "${THIRDPARTY_ONNX_PRJ_DIR}/build")
-message(THIRDPARTY_ONNX_PRJ_DIR: ${THIRDPARTY_ONNX_PRJ_DIR})
-# find_package(onnx-mlir CONFIG QUIET)
-# if(NOT onnx-mlir_FOUND)
-#   find_package(ONNX CONFIG REQUIRED)
-# endif()
-
-include_directories(${THIRDPARTY_ONNX_PRJ_DIR}/build)
-include_directories(${THIRDPARTY_ONNX_PRJ_DIR})
-# link_directories(${THIRDPARTY_ONNX_PRJ_DIR}/build/release/lib)
-# find_package(onnx-mlir CONFIG QUIET)
-# if(NOT onnx-mlir_FOUND)
-#   find_package(ONNX_MLIR CONFIG REQUIRED)
-# endif()
-
 add_subdirectory(include/ADORA)
 add_subdirectory(lib)
 add_subdirectory(mapper)
@@ -70,48 +51,70 @@ add_subdirectory(mapper)
 add_subdirectory(tools)
 # add_subdirectory(cmake)
 
-### install .a libs
+##############################
+### following is for install libs and cmakeconfig
+##############################
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}"
+      CACHE PATH "Install prefix" FORCE)
+endif()
+
 install(
-  TARGETS MLIRADORAOps MLIRADORALowerings MLIRADORATransforms MLIRADORATransformsUtility MLIRADORALoopTransforms MLIRADORAKernelExtract  GeneralCDFGGen
-  TARGETS ADORATensorInterface ADORATensorOps ADORATensorLower ADORATensorTransforms ADORATensorUtility ADORATensorOpGemmLower
+  TARGETS
+    MLIRADORAOps MLIRADORALowerings MLIRADORATransforms
+    MLIRADORATransformsUtility MLIRADORALoopTransforms
+    MLIRADORAKernelExtract GeneralCDFGGen
+    ADORATensorInterface ADORATensorOps ADORATensorLower
+    ADORATensorTransforms ADORATensorUtility ADORATensorOpGemmLower
   EXPORT ADORATargets
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  # RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  # INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}       
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}      
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}       
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}  
+)
+
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING
+    PATTERN "*.h"  PATTERN "*.hh"  PATTERN "*.hpp"  PATTERN "*.h.inc"
+    PATTERN "CMakeLists.txt" EXCLUDE
+    PATTERN "*.td"           EXCLUDE
+    PATTERN "*.td.inc"       EXCLUDE
+    PATTERN "*.cmake"        EXCLUDE
+    PATTERN "*.in"           EXCLUDE
+)
+
+install(DIRECTORY ${PROJECT_BINARY_DIR}/include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING PATTERN "*.inc"
 )
 
 ### generate ADORATargets.cmake
+set(ADORA_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/ADORA)
+
 install(EXPORT ADORATargets
-  NAMESPACE ADORA::
   FILE ADORATargets.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ADORA
+  DESTINATION ${ADORA_INSTALL_CMAKEDIR}
 )
 
 # ADORAConfig.cmake / ADORAConfigVersion.cmake
-set(ADORA_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/ADORA)
 configure_package_config_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/ADORAConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ADORAConfig.cmake
-  INSTALL_DESTINATION ${ADORA_INSTALL_CMAKEDIR}
+  "${CMAKE_CURRENT_SOURCE_DIR}/lib/cmake/ADORA/ADORAConfig.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/lib/cmake/ADORA/ADORAConfig.cmake"
+  INSTALL_DESTINATION "${ADORA_INSTALL_CMAKEDIR}"
   NO_SET_AND_CHECK_MACRO
   NO_CHECK_REQUIRED_COMPONENTS_MACRO
 )
-# write_basic_package_version_file(
-#   ${CMAKE_CURRENT_BINARY_DIR}/ADORAConfigVersion.cmake
-#   VERSION ${PROJECT_VERSION}
-#   COMPATIBILITY SameMajorVersion
-# )
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/ADORAConfig.cmake
-  # ${CMAKE_CURRENT_BINARY_DIR}/ADORAConfigVersion.cmake
-  DESTINATION ${ADORA_INSTALL_CMAKEDIR}
+
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/lib/cmake/ADORA/ADORAConfigVersion.cmake"
+  VERSION "${PROJECT_VERSION}"
+  COMPATIBILITY SameMajorVersion
 )
-## third party
-## onnx
-# option(ADORA_ENABLE_ONNX_TENSOR_OPT "Enable ONNX→ADORA tensor pipeline" OFF)
-# if(ADORA_ENABLE_ONNX_TENSOR_OPT)
-#   set(THIRDPARTY_ONNX_PRJ_DIR "/home/jhlou/CGRVOPT/onnx-mlir"
-#     CACHE PATH "Path to onnx-mlir project (source/build root)")
-#   add_subdirectory(adora-onnx-opt)
-# endif()
+
+# 3) 安装 Config/Version 到与 Targets 相同的目录
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/lib/cmake/ADORA/ADORAConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/lib/cmake/ADORA/ADORAConfigVersion.cmake"
+  DESTINATION "${ADORA_INSTALL_CMAKEDIR}"
+)

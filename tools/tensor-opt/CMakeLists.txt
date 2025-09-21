@@ -107,9 +107,6 @@ set(SOURCES
 
 add_llvm_executable(tensor-opt ${SOURCES})
 
-# set_target_properties(tensor-opt PROPERTIES
-#   BUILD_RPATH   "${OONNX_MLIR_LIB_DIR}"
-#   INSTALL_RPATH "${OONNX_MLIR_LIB_DIR}")
 
 target_link_libraries(tensor-opt PRIVATE ${LIBS})
 llvm_update_compile_flags(tensor-opt)

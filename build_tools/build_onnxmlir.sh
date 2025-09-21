@@ -1,4 +1,5 @@
 
+
 ONNX_PROJ_DIR=/home/jhlou/CGRVOPT/onnx-mlir
 MLIR_DIR=$ONNX_PROJ_DIR/third_party/llvm-project-onnx/build/lib/cmake/mlir
 MLIR_DIR=$ONNX_PROJ_DIR/third_party/llvm-project-onnx/dynamicbuild/lib/cmake/mlir
@@ -14,4 +15,4 @@ cmake -G Ninja \
         ..
 
                 # -DBUILD_SHARED_LIBS=ON \
-
+ninja -j 16 install 

@@ -72,7 +72,7 @@ To install LLVM, follow script:
 
 Update the LLVM installation path in the following files to your own path:
 - `build_cgraopt.sh`
-- `CMakeLists.txt`
+<!-- - `CMakeLists.txt` -->
 
 After making the changes, run `build_cgraopt.sh`.  
 **Tip:** It is recommended to execute the script line-by-line (copy-paste using `Ctrl+C`/`Ctrl+V`) for better control.
