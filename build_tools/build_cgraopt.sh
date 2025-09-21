@@ -8,6 +8,7 @@ THIRDPARTY_ONNX_PRJ_DIR=/home/jhlou/CGRVOPT/onnx-mlir
 cmake -GNinja \
   ..\
   "-B." \
+  -DCMAKE_INSTALL_PREFIX=. \
   -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_EXTERNAL_LIT=$LLVM_BUILD_DIR/bin/llvm-lit \
   -DMLIR_DIR=$LLVM_INSTALL_DIR/lib/cmake/mlir \

@@ -4,9 +4,9 @@ get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 # To solve error: exception handling disabled, use '-fexceptions' to enable
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSPDLOG_NO_EXCEPTIONS ")
 
-set(ONNX_MLIR_LIB_DIR
-    "${THIRDPARTY_ONNX_PRJ_DIR}/build/Debug/lib"
-    CACHE PATH "Path to onnx-mlir libs (.a/.so)")
+# set(ONNX_MLIR_LIB_DIR
+#     "${THIRDPARTY_ONNX_PRJ_DIR}/build/Debug/lib"
+#     CACHE PATH "Path to onnx-mlir libs (.a/.so)")
 # set(ONNX_MLIR_INCLUDE_DIR
 #     "${THIRDPARTY_ONNX_PRJ_DIR}/build/Release/include"
 #     CACHE PATH "Path to onnx-mlir generated headers")
@@ -107,12 +107,11 @@ set(SOURCES
 
 add_llvm_executable(tensor-opt ${SOURCES})
 
-set_target_properties(tensor-opt PROPERTIES
-  BUILD_RPATH   "${OONNX_MLIR_LIB_DIR}"
-  INSTALL_RPATH "${OONNX_MLIR_LIB_DIR}")
+# set_target_properties(tensor-opt PROPERTIES
+#   BUILD_RPATH   "${OONNX_MLIR_LIB_DIR}"
+#   INSTALL_RPATH "${OONNX_MLIR_LIB_DIR}")
 
 target_link_libraries(tensor-opt PRIVATE ${LIBS})
-
 llvm_update_compile_flags(tensor-opt)
 
 mlir_check_link_libraries(tensor-opt)
