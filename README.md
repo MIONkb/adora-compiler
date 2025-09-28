@@ -143,3 +143,15 @@ bash scripts/5_compile_and_link.sh
 
 ### The final linked RISC-V executable file can now be simulated using tools such as VCS or Verilator.
 ```
+
+
+# Related Publications
+```latex
+@inproceedings{
+  title={Adora Compiler: End-to-End Optimization for High-Efficiency Dataflow Acceleration and Task Pipelining on CGRAs},
+  author={Lou, Jiahang and Zhu, Qilong and Dai, Yuan and Zhong, Zewei and Yin, Wenbo and Wang, Lingli},
+  booktitle={2025 62nd ACM/IEEE Design Automation Conference (DAC)},
+  year={2025},
+  organization={IEEE}
+}
+```
