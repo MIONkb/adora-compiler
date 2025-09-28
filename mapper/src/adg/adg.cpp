@@ -111,7 +111,10 @@ ADG& ADG::operator=(const ADG& that){
     return *this;
 }
 
-
+ADG* ADG::getSubADGForSpecificTileNums(int subadg_tilenum){
+    ADG* subadg = new ADG();
+    
+}
 
 void ADG::print(){
     printGraph();
