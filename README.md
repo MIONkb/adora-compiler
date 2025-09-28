@@ -145,7 +145,7 @@ bash scripts/5_compile_and_link.sh
 ```
 
 
-# Related Publications
+## \# Related Publications
 ```latex
 @inproceedings{
   title={Adora Compiler: End-to-End Optimization for High-Efficiency Dataflow Acceleration and Task Pipelining on CGRAs},
