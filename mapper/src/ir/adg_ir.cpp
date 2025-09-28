@@ -28,7 +28,10 @@ ADG* ADGIR::parseADG(json& adgJson){
     ADG* adg = new ADG();
     adg->setBitWidth(adgJson["data_width"].get<int>());    
     // adg->setNumInputs(adgJson["num_input"].get<int>());
-    // adg->setNumOutputs(adgJson["num_output"].get<int>());  
+    // adg->setNumOutputs(adgJson["num_output"].get<int>()); 
+    if(adgJson.contains("cgra_tile_num")){
+        adg->setTileNum(adgJson["cgra_tile_num"].get<int>());
+    } 
     if(adgJson.contains("cfg_spad_data_width")){
         adg->setCfgSpadDataWidth(adgJson["cfg_spad_data_width"].get<int>());
     }
@@ -233,7 +236,9 @@ ADGNode* ADGIR::parseADGNode(json& nodeJson, std::map<int, std::pair<ADGNode*, b
         }
         adg_node->setCfgBlkIdx(nodeJson["cfg_blk_index"].get<int>());  
         adg_node->setX(nodeJson["x"].get<int>());     
-        adg_node->setY(nodeJson["y"].get<int>());          
+        adg_node->setY(nodeJson["y"].get<int>());  
+        if(nodeJson.contains("tile"))
+            adg_node->setTile(nodeJson["tile"].get<int>());     
     }else{ // common components: ALU, Muxn, DMR, RDU, Const
         if(renewNode){ // re-new ADGNode
             adg_node = new ADGNode(nodeId);

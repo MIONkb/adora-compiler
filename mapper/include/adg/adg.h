@@ -24,6 +24,10 @@ private:
     std::map<int, std::vector<int>> _iobToSpadBanks; // the scratchpad banks connected to each IOB, <iob-index, <banks>>
     std::vector<uint64_t> _cfgBits;
 
+
+    /// multiple tiles
+    int _tileNum = 1;
+
     std::map<int, ADGNode*> _nodes;   // <node-id, node>
     std::map<int, ADGEdge*> _edges;   // <edge-id, edge>
 
@@ -58,6 +62,12 @@ public:
     const std::vector<int>& iobToSpadBanks(int iobId){ return _iobToSpadBanks[iobId]; }
     void setIobToSpadBanks(int iobId, std::vector<int> banks){ _iobToSpadBanks[iobId] = banks; }
 
+    /// multiple tiles
+    int tileNum(){ return _tileNum; }
+    void setTileNum(int tilenum){ _tileNum = tilenum; }
+    bool isMultipleTile(){return _tileNum > 1; }
+    ADG* getSubADGForSpecificTileNums(int subadg_tilenum);
+
     const std::map<int, ADGNode*>& nodes(){ return _nodes; }
     const std::map<int, ADGEdge*>& edges(){ return _edges; }
     ADGNode* node(int id);
@@ -72,8 +82,6 @@ public:
     void print();
     
 };
-
-
 
 
 
