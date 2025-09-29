@@ -4,8 +4,12 @@ ADG::ADG(){}
 
 ADG::~ADG()
 {
+    std::cout << "delete adg" << std::endl;
+    std::cout << "numGpeNodes: " << _numGpeNodes << std::endl;
+    std::cout << "numIobNodes: " << _numIobNodes << std::endl;
     for(auto& elem : _nodes){
         auto node = elem.second;
+        node->print();
         auto sub_adg = node->subADG();
         if(sub_adg){
             delete sub_adg;
@@ -111,9 +115,205 @@ ADG& ADG::operator=(const ADG& that){
     return *this;
 }
 
-ADG* ADG::getSubADGForSpecificTileNums(int subadg_tilenum){
-    ADG* subadg = new ADG();
-    
+inline bool isTileInFirstN(int tileId, int neededTiles) {
+    assert(tileId >= 0);
+    assert(neededTiles > 0);
+    return tileId < neededTiles;
+}
+
+ADGNode* subADGNodeClone(ADGNode* from) {
+    ADGNode* to;
+    // assert(from && to);
+
+    // ---------- 1) GIBNode specific ----------
+    if (from->type() == "GIB") {
+        auto bTo   = new GIBNode();
+        auto bFrom = dynamic_cast<GIBNode*>(from);
+        assert(bFrom);
+
+        bTo->setTrackReged(bFrom->trackReged());
+
+        //
+        // for (int o = 0; o < numOutputs; ++o) {
+        //     bTo->setOutReged(o, bFrom->outReged(o));
+        //     for (int in : bFrom->out2ins(o)) bTo->addOut2ins(o, in);
+        // }
+        // for (int i = 0; i < numInputs; ++i) {
+        //     for (int out : bFrom->in2outs(i)) bTo->addIn2outs(i, out);
+        // }
+        //
+        to = dynamic_cast<ADGNode*>(bTo);
+    }
+
+    // ---------- 2) FUNode（GPE/IOB's father class） ----------
+    else if (auto fFrom = dynamic_cast<FUNode*>(from)) {
+        FUNode* fTo;
+        // ---------- 3) GPENode specific ----------
+        if (from->type() == "GPE") {
+            auto gFrom = dynamic_cast<GPENode*>(from);
+            GPENode* gTo = new GPENode();
+            assert(gFrom && gTo);
+            gTo->setNumRfReg(gFrom->numRfReg());
+
+            fTo = dynamic_cast<FUNode*>(gTo);
+        }
+
+        // ---------- 4) IOBNode specific ----------
+        else if (from->type() == "IOB") {
+            auto iFrom = dynamic_cast<IOBNode*>(from);
+            IOBNode* iTo = new IOBNode();
+            assert(iFrom && iTo);
+            iTo->setIndex(iFrom->index());
+
+            fTo = dynamic_cast<FUNode*>(iTo);
+        }
+
+        fTo->setMaxDelay(fFrom->maxDelay());
+        fTo->setNumOperands(fFrom->numOperands());
+
+        for (const auto& op : fFrom->operations()) {
+            fTo->addOperation(op);
+        }
+
+        for (int oi = 0; oi < fFrom->numOperands(); ++oi) {
+            const auto& ins = fFrom->operandInputs(oi);
+            for (int inPort : ins) {
+                fTo->addOperandInputs(oi, inPort);
+            }
+        }
+
+        // cfgIdMap（public）
+        fTo->cfgIdMap = fFrom->cfgIdMap;
+
+        to = dynamic_cast<ADGNode*>(fTo);
+    }
+
+    // ---------- 5) General copy ----------
+    to->setCfgBlkIdx(from->cfgBlkIdx());
+    to->setTile(from->tile());
+    to->setX(from->x());
+    to->setY(from->y());
+    to->setId(from->id());
+    to->setName(from->name());
+    to->setType(from->type());
+    to->setBitWidth(from->bitWidth());
+
+    for (const auto& kv : from->configInfo()) {
+        to->addConfigInfo(kv.first, kv.second);
+    }
+
+    if (from->subADG()) {
+        ADG* sub = new ADG();
+        *sub = *(from->subADG());   
+        to->setSubADG(sub);
+    }
+    return to; 
+}
+
+void subADGEdgeCopy(ADGEdge* from, ADGEdge* to){
+    to->setId(from->id());
+    to->setEdge(from->srcId(), from->srcPortIdx(), from->dstId(), from->dstPortIdx());
+}
+
+ADG* ADG::inducedSubgraphByFirstNTiles(size_t n) {
+    assert(n <= this->_tileNum);
+    // if (n == 1 && this->_tileNum == 1) return this;
+    if (n <= 0) return new ADG();
+
+    auto sub = new ADG();
+    sub->_bitWidth       = this->_bitWidth;
+    sub->_cfgDataWidth   = this->_cfgDataWidth;
+    sub->_cfgAddrWidth   = this->_cfgAddrWidth;
+    sub->_cfgBlkOffset   = this->_cfgBlkOffset;
+    sub->_cfgSpadSize    = this->_cfgSpadSize;
+    sub->_cfgSpadDataWidth = this->_cfgSpadDataWidth;
+    sub->_iobAgNestLevels= this->_iobAgNestLevels;
+    sub->_iobSpadBankSize= this->_iobSpadBankSize;
+    sub->_iobToSpadBanks = this->_iobToSpadBanks;
+    sub->_cfgBits        = this->_cfgBits;
+    sub->_tileNum        = n;
+
+
+    std::unordered_set<int> keep; 
+    keep.reserve(_nodes.size());
+    for (const auto& kv : this->nodes()) {
+        const int nid = kv.first;
+        ADGNode* nd = kv.second;
+        int t = nd->tile();
+        if (t >= 0 && isTileInFirstN(t, n)) {
+            ADGNode* clone = subADGNodeClone(nd);
+            *clone = *nd;           
+            sub->addNode(nid, nd);  
+            keep.insert(nid);
+        }
+    }
+
+    /// prune nodes's connection To first n Tiles
+    for(auto& nid : keep){
+        ADGNode* nd = this->node(nid);
+        auto inputs = nd->inputs();  // <input-index, <node-id, node-port-idx>>
+        for(auto pair : inputs){
+            auto in_idx = pair.first;
+            auto in_node = pair.second.first;
+            if(keep.count(in_node) == 0){
+                // do not belong to needed tile
+                nd->delInput(in_idx);
+            }
+        }
+        auto outputs = nd->outputs();  // <output-index, set<node-id, node-port-idx>>
+        for(auto pair : outputs){
+            auto out_idx = pair.first;
+            auto out_nodes = pair.second;
+            for(auto out_node : out_nodes){
+                if(keep.count(out_node.first) == 0){
+                    // do not belong to needed tile
+                    nd->delOutput(out_idx, /*std::pair*/out_node);
+                }
+            }
+        }
+
+        if(nd -> type() == "GPE" || nd -> type() == "IOB"){
+            FUNode* f = dynamic_cast<FUNode*>(nd);
+            for(int operand = 0; operand < f->numOperands(); operand++){
+                std::set<int> finputs = f->operandInputs(operand);
+                for(auto finput : finputs){
+                    if(nd->inputs().count(finput) == 0){
+                        f->delOperandInputs(operand, finput);
+                    }
+                }
+            }
+        }
+    }
+
+    sub->_numGpeNodes = 0;
+    sub->_numIobNodes = 0;
+    for (const auto& kv : sub->_nodes) {
+        ADGNode* nd = kv.second;
+        if (nd->type() == "GPE") ++sub->_numGpeNodes;
+        if (nd->type() == "IOB") ++sub->_numIobNodes;
+    }
+
+    for (const auto& kv : _edges) {
+        const int eid = kv.first;
+        ADGEdge* e = kv.second;
+
+        int srcId = e->srcId();
+        int dstId = e->dstId();
+
+        if (keep.count(srcId) && keep.count(dstId)) {
+            ADGEdge* ce = new ADGEdge();
+            // *ce = *e;           
+            subADGEdgeCopy(e, ce);      
+            sub->addEdge(eid, ce);   
+        }
+    }
+
+    //// compare two adg:
+    std::cout << "original adg: " << std::endl;
+    this->print();
+    std::cout << "suv adg: " << std::endl;
+    sub->print();
+    return sub;
 }
 
 void ADG::print(){

@@ -4,7 +4,7 @@
 #include "adg/adg_node.h"
 #include "adg/adg_edge.h"
 #include "graph/graph.h"
-
+#include <unordered_set>
 
 
 class ADG : public Graph
@@ -66,7 +66,7 @@ public:
     int tileNum(){ return _tileNum; }
     void setTileNum(int tilenum){ _tileNum = tilenum; }
     bool isMultipleTile(){return _tileNum > 1; }
-    ADG* getSubADGForSpecificTileNums(int subadg_tilenum);
+    ADG* inducedSubgraphByFirstNTiles(size_t n);
 
     const std::map<int, ADGNode*>& nodes(){ return _nodes; }
     const std::map<int, ADGEdge*>& edges(){ return _edges; }

@@ -171,6 +171,13 @@ int main(int argc, char **argv) {
     cl::desc("Detail information"),
     cl::value_desc("bool"),
     cl::init(false));
+
+  static cl::opt<int> specifictilenum(
+    "tile",
+    cl::Optional, 
+    cl::desc("tile num to map"), 
+    cl::value_desc("int"), 
+    cl::init(1));
   // static cl::opt<int> nthreads(
   //   "j", 
   //   cl::Optional, 
@@ -267,6 +274,8 @@ int main(int argc, char **argv) {
   std::vector<float>storePEusage;
   std::vector<float>storeFUusage;
   std::vector<int>bestLatency;
+
+  ADG* subadg = adg->inducedSubgraphByFirstNTiles(specifictilenum);
   // adg->print();
 
   //////////////////////////////////////////
@@ -293,7 +302,7 @@ int main(int argc, char **argv) {
   /// Map ADORA Tensor
   /////////////////////////
   MapAdoraTensorOp(&context, moduleop, tensor_mapper_Vec, &CEmitter, &PyEmitter,
-    adg, GeneralOpNameFile_str, timeout_ms, max_iters, objOpt, verbose);
+    subadg, GeneralOpNameFile_str, timeout_ms, max_iters, objOpt, verbose);
   // if(emit_type == "pytest"){
   //   MapAdoraTensorOp(tensor_mapper_Vec)
   // }
@@ -327,7 +336,7 @@ int main(int argc, char **argv) {
     if(kernel->hasAttr("ADORAGemm"))
       return WalkResult::advance();
       
-    MapperSA* mapper = new MapperSA(adg, timeout_ms, max_iters, objOpt);
+    MapperSA* mapper = new MapperSA(subadg, timeout_ms, max_iters, objOpt);
     mapper_Vec.push_back(mapper);
     /// Generating DFG
     // std::string fileName = kernel.getKernelName();
@@ -417,6 +426,8 @@ int main(int argc, char **argv) {
     delete ir;
   for(auto mapper: tensor_mapper_Vec)
     delete mapper;
+
+  // delete adg;
 
   return 0; 
 }

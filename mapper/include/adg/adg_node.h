@@ -6,6 +6,7 @@
 #include <vector>
 #include <set>
 #include <assert.h>
+#include <memory>
 #include "graph/graph_node.h"
 
 // configuration data location
