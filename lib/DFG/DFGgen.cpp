@@ -1453,15 +1453,16 @@ SmallVector<std::string, 3> GetACCInfoFromYieldNode(LLVMCDFGNode* yieldnode, Sma
   count_interval_repeat[1] = total_interval_str;
 
   // assert(SuccNode->outputNodes().size() == 1);
-  LLVMCDFGNode* NextYieldNode;
+  LLVMCDFGNode* NextYieldNode = nullptr;
   for(LLVMCDFGNode* nextnode : SuccNode->outputNodes()){
+    nextnode->operation()->dump();
     if(!nextnode->isInputBackEdge(SuccNode)){
       /// backedge is a loop-carried variable
       NextYieldNode = nextnode;
       break;
     }
   }
-  if(NextYieldNode->getTypeName() == "yield"){
+  if(!NextYieldNode && NextYieldNode->getTypeName() == "yield"){
     /// Get the yield index of this yielded value in the outer for level.
     // AffineYieldOp outeryieldop =  dyn_cast<AffineYieldOp>(outerFor.getBody()->getTerminator());
     // int OuterIndex = GetYieldIndexFromValue(dyn_cast<affine::YieldOp>(NextYieldNode->operation()), forop.getResults()[index]);
