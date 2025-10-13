@@ -209,7 +209,7 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
             loc, vecadd, C_out[col * ((tile_row_size + 3) / 4) + row], memIVmap, j_it);
         setPingpongAttr(vecStoreC);
       }   
-      else if(tile_col_size % 4 == 1) {        
+      else if(tile_row_size % 4 == 1) {        
         /// generate vector input for C
         SmallVector<AffineExpr, 2> Exprs;
         Exprs.push_back(builder.getAffineConstantExpr(4*row)); // last dim's affine expr
@@ -228,7 +228,7 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
         setPingpongAttr(StoreC);
       }  
     }
-    
+
     builder.create<affine::AffineYieldOp>(loc);
   };
 }

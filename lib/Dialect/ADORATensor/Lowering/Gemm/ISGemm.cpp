@@ -133,7 +133,6 @@ StationaryBodyBuilderFn BodyOfTiledWithInputStationary(
 
         A_stationaries.push_back(LoadA);     
       }  
-
     }
 
     ///////////////////////

@@ -136,7 +136,6 @@ StationaryBodyBuilderFn BodyOfTiledWithWeightStationary(
 
         B_stationaries.push_back(LoadB);     
       }  
-
     }
 
     ///////////////////////

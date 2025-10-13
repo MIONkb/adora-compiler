@@ -1455,14 +1455,14 @@ SmallVector<std::string, 3> GetACCInfoFromYieldNode(LLVMCDFGNode* yieldnode, Sma
   // assert(SuccNode->outputNodes().size() == 1);
   LLVMCDFGNode* NextYieldNode = nullptr;
   for(LLVMCDFGNode* nextnode : SuccNode->outputNodes()){
-    nextnode->operation()->dump();
+    // nextnode->operation()->dump();
     if(!nextnode->isInputBackEdge(SuccNode)){
       /// backedge is a loop-carried variable
       NextYieldNode = nextnode;
       break;
     }
   }
-  if(!NextYieldNode && NextYieldNode->getTypeName() == "yield"){
+  if(NextYieldNode!=nullptr && NextYieldNode->getTypeName() == "yield"){
     /// Get the yield index of this yielded value in the outer for level.
     // AffineYieldOp outeryieldop =  dyn_cast<AffineYieldOp>(outerFor.getBody()->getTerminator());
     // int OuterIndex = GetYieldIndexFromValue(dyn_cast<affine::YieldOp>(NextYieldNode->operation()), forop.getResults()[index]);
