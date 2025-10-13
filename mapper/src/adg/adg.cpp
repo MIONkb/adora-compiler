@@ -240,7 +240,7 @@ ADG* ADG::inducedSubgraphByFirstNTiles(size_t n) {
         const int nid = kv.first;
         ADGNode* nd = kv.second;
         int t = nd->tile();
-        if (t >= 0 && isTileInFirstN(t, n)) {
+        if (t >= 0 && isTileInFirstN(t, n) || t == -1) { /// -1 means not a multi-tile cgra
             ADGNode* clone = subADGNodeClone(nd);
             *clone = *nd;           
             sub->addNode(nid, nd);  
