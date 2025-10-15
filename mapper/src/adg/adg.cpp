@@ -216,9 +216,14 @@ void subADGEdgeCopy(ADGEdge* from, ADGEdge* to){
 }
 
 ADG* ADG::inducedSubgraphByFirstNTiles(size_t n) {
-    assert(n <= this->_tileNum);
+    // assert(n <= this->_tileNum);
     // if (n == 1 && this->_tileNum == 1) return this;
-    if (n <= 0) return new ADG();
+    if (n == 9999999 && this->_tileNum > 0){
+        n = this->_tileNum;
+    } 
+    // else{
+    //     return new ADG();
+    // }
 
     auto sub = new ADG();
     sub->_bitWidth       = this->_bitWidth;

@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
     cl::Optional, 
     cl::desc("tile num to map"), 
     cl::value_desc("int"), 
-    cl::init(1));
+    cl::init(9999999));
   // static cl::opt<int> nthreads(
   //   "j", 
   //   cl::Optional, 
