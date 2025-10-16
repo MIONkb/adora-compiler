@@ -770,11 +770,9 @@ bool Mapping::routeDfgEdgeFromDst(DFGEdge* edge, ADGNode* srcNode, ADGNode* dstN
             int nextDstPort = elem.second;
             auto nextId = std::make_pair(nextNodeId, nextDstPort);
             ADGNode* nextNode = _adg->node(nextNodeId);
-            std::cout << "nextNodeId = " << nextNodeId << std::endl;
-            nextNode->print();
-            if(nextNode == nullptr) { //  not in this tile
-                continue;
-            }
+            // if(nextNode == nullptr) { //  not in this tile
+            //     continue;
+            // }
             std::string nextNodeType = nextNode->type();
             if((srcNode != nullptr) && (srcNode->id() == nextNodeId) && srcNodeOutPortIdx == nextDstPort){ // get to the srcNode
                 success = true;

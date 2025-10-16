@@ -301,9 +301,10 @@ ADG* ADG::inducedSubgraphByFirstNTiles(size_t n) {
         }
 
         if(nd -> type() == "GPE" || nd -> type() == "IOB"){
+            FUNode* fFrom = dynamic_cast<FUNode*>(this->node(nid));
             FUNode* f = dynamic_cast<FUNode*>(nd);
-            for(int operand = 0; operand < f->numOperands(); operand++){
-                std::set<int> finputs = f->operandInputs(operand);
+            for(int operand = 0; operand < fFrom->numOperands(); operand++){
+                std::set<int> finputs = fFrom->operandInputs(operand);
                 for(auto finput : finputs){
                     if(nd->inputs().count(finput)){
                         f->addOperandInputs(operand, finput);
