@@ -133,15 +133,13 @@ ADGNode* subADGNodeClone(ADGNode* from) {
 
         bTo->setTrackReged(bFrom->trackReged());
 
-        //
-        // for (int o = 0; o < numOutputs; ++o) {
-        //     bTo->setOutReged(o, bFrom->outReged(o));
-        //     for (int in : bFrom->out2ins(o)) bTo->addOut2ins(o, in);
-        // }
+        for (int o = 0; o < bFrom->numOutputs(); ++o) {
+            bTo->setOutReged(o, bFrom->outReged(o));
+        }
         // for (int i = 0; i < numInputs; ++i) {
         //     for (int out : bFrom->in2outs(i)) bTo->addIn2outs(i, out);
         // }
-        //
+        
         to = dynamic_cast<ADGNode*>(bTo);
     }
 
@@ -175,12 +173,12 @@ ADGNode* subADGNodeClone(ADGNode* from) {
             fTo->addOperation(op);
         }
 
-        for (int oi = 0; oi < fFrom->numOperands(); ++oi) {
-            const auto& ins = fFrom->operandInputs(oi);
-            for (int inPort : ins) {
-                fTo->addOperandInputs(oi, inPort);
-            }
-        }
+        // for (int oi = 0; oi < fFrom->numOperands(); ++oi) {
+        //     const auto& ins = fFrom->operandInputs(oi);
+        //     for (int inPort : ins) {
+        //         fTo->addOperandInputs(oi, inPort);
+        //     }
+        // }
 
         // cfgIdMap（public）
         fTo->cfgIdMap = fFrom->cfgIdMap;
@@ -224,6 +222,9 @@ ADG* ADG::inducedSubgraphByFirstNTiles(size_t n) {
     // else{
     //     return new ADG();
     // }
+    //// compare two adg:
+    std::cout << "original adg 1: " << std::endl;
+    this->print();
 
     auto sub = new ADG();
     sub->_bitWidth       = this->_bitWidth;
@@ -245,48 +246,10 @@ ADG* ADG::inducedSubgraphByFirstNTiles(size_t n) {
         const int nid = kv.first;
         ADGNode* nd = kv.second;
         int t = nd->tile();
-        if (t >= 0 && isTileInFirstN(t, n) || t == -1) { /// -1 means not a multi-tile cgra
-            ADGNode* clone = subADGNodeClone(nd);
-            *clone = *nd;           
-            sub->addNode(nid, nd);  
+        if ((t >= 0 && isTileInFirstN(t, n)) || t == -1) { /// -1 means not a multi-tile cgra
+            ADGNode* clone = subADGNodeClone(nd);        
+            sub->addNode(nid, clone);  
             keep.insert(nid);
-        }
-    }
-
-    /// prune nodes's connection To first n Tiles
-    for(auto& nid : keep){
-        ADGNode* nd = this->node(nid);
-        auto inputs = nd->inputs();  // <input-index, <node-id, node-port-idx>>
-        for(auto pair : inputs){
-            auto in_idx = pair.first;
-            auto in_node = pair.second.first;
-            if(keep.count(in_node) == 0){
-                // do not belong to needed tile
-                nd->delInput(in_idx);
-            }
-        }
-        auto outputs = nd->outputs();  // <output-index, set<node-id, node-port-idx>>
-        for(auto pair : outputs){
-            auto out_idx = pair.first;
-            auto out_nodes = pair.second;
-            for(auto out_node : out_nodes){
-                if(keep.count(out_node.first) == 0){
-                    // do not belong to needed tile
-                    nd->delOutput(out_idx, /*std::pair*/out_node);
-                }
-            }
-        }
-
-        if(nd -> type() == "GPE" || nd -> type() == "IOB"){
-            FUNode* f = dynamic_cast<FUNode*>(nd);
-            for(int operand = 0; operand < f->numOperands(); operand++){
-                std::set<int> finputs = f->operandInputs(operand);
-                for(auto finput : finputs){
-                    if(nd->inputs().count(finput) == 0){
-                        f->delOperandInputs(operand, finput);
-                    }
-                }
-            }
         }
     }
 
@@ -313,8 +276,55 @@ ADG* ADG::inducedSubgraphByFirstNTiles(size_t n) {
         }
     }
 
+    /// prune nodes's connection To first n Tiles
+    for(auto& nid : keep){
+        ADGNode* nd = sub->node(nid);
+        auto inputs = nd->inputs();  // <input-index, <node-id, node-port-idx>>
+        for(auto pair : inputs){
+            auto in_idx = pair.first;
+            auto in_node = pair.second.first;
+            if(keep.count(in_node) == 0){
+                // do not belong to needed tile
+                nd->delInput(in_idx);
+            }
+        }
+        auto outputs = nd->outputs();  // <output-index, set<node-id, node-port-idx>>
+        for(auto pair : outputs){
+            auto out_idx = pair.first;
+            auto out_nodes = pair.second;
+            for(auto out_node : out_nodes){
+                if(keep.count(out_node.first) == 0){
+                    // do not belong to needed tile
+                    nd->delOutput(out_idx, /*std::pair*/out_node);
+                }
+            }
+        }
+
+        if(nd -> type() == "GPE" || nd -> type() == "IOB"){
+            FUNode* f = dynamic_cast<FUNode*>(nd);
+            for(int operand = 0; operand < f->numOperands(); operand++){
+                std::set<int> finputs = f->operandInputs(operand);
+                for(auto finput : finputs){
+                    if(nd->inputs().count(finput)){
+                        f->addOperandInputs(operand, finput);
+                    }
+                }
+            }
+        }
+        else if(nd -> type() == "GIB"){
+            auto gib = dynamic_cast<GIBNode*>(nd);
+            auto bFrom = dynamic_cast<GIBNode*>(this->node(nid));
+            for (int o = 0; o < bFrom->numOutputs(); ++o) {
+                for (int in : bFrom->out2ins(o)) gib->addOut2ins(o, in);
+            }
+            for (int i = 0; i < bFrom->numInputs(); ++i) {
+                for (int out : bFrom->in2outs(i)) gib->addIn2outs(i, out);
+            }
+        }
+    }
+
     //// compare two adg:
-    std::cout << "original adg: " << std::endl;
+    std::cout << "original adg 2: " << std::endl;
     this->print();
     std::cout << "suv adg: " << std::endl;
     sub->print();
