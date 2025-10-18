@@ -66,7 +66,7 @@ You can download the specified version from the following link:  [LLVM GitHub Re
 
 To install LLVM, follow script:  
 ```bash
-./bash_tools/build_llvm.sh
+./build_tools/build_llvm.sh
 ```
 ### 2 Adora(This project)
 

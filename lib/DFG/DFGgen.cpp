@@ -658,8 +658,8 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
         assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
         // IterArgConsumer->dump();
-        // if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
-        //   continue;
+        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+          continue;
         assert(isa<arith::AddFOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
         IterArgConsumer->replaceAllUsesWith(AnotherOperand.getDefiningOp());
