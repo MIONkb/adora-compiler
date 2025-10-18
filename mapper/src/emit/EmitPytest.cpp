@@ -1219,7 +1219,7 @@ async def aux_stream(
     # 3. Execute on device
     # ------------------------------
     await stream.execution_start()
-    await stream.execution_finish()
+    # await stream.execution_finish()
     # ------------------------------
     # 4. Device → Host transfer
     # ------------------------------

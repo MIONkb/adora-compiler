@@ -1217,7 +1217,7 @@ void Mapping::latencySchedule(){
     auto& topoNodes = _dfg->topoNodes();
     std::list<int> unscheduledNodes(topoNodes.rbegin(), topoNodes.rend());        
 
-    // @jhlou set pre-assigned RDU for some node:Merge
+    // @jhlou set pre-assigned RDU for some node: Interleave(INTLV/MERGE)
     preAssignRdu();
 
     // calculate the routing latency of each edge, not inlcuding the RDU

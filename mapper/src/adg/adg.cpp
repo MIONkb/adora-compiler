@@ -222,9 +222,6 @@ ADG* ADG::inducedSubgraphByFirstNTiles(size_t n) {
     // else{
     //     return new ADG();
     // }
-    //// compare two adg:
-    std::cout << "original adg 1: " << std::endl;
-    this->print();
 
     auto sub = new ADG();
     sub->_bitWidth       = this->_bitWidth;
@@ -324,11 +321,11 @@ ADG* ADG::inducedSubgraphByFirstNTiles(size_t n) {
         }
     }
 
-    //// compare two adg:
-    std::cout << "original adg 2: " << std::endl;
-    this->print();
-    std::cout << "suv adg: " << std::endl;
-    sub->print();
+    // //// compare two adg:
+    // std::cout << "original adg 2: " << std::endl;
+    // this->print();
+    // std::cout << "suv adg: " << std::endl;
+    // sub->print();
     return sub;
 }
 
