@@ -891,6 +891,18 @@ public:
         // std::string name_c = EmitNewValueAndGetName(op.getResult(), "float");
         // _os << "float " << name_c << " = " << std::to_string(value) << ";\n";
       }
+      else if(floatattr.getType().isBF16()){
+        double value = floatattr.getValueAsDouble();
+        ConstOpToValueStr[op.getResult()] = std::to_string(value);  
+        // std::string name_c = EmitNewValueAndGetName(op.getResult(), "float");
+        // _os << "float " << name_c << " = " << std::to_string(value) << ";\n";
+      }
+      else if(floatattr.getType().isF16()){
+        double value = floatattr.getValueAsDouble();
+        ConstOpToValueStr[op.getResult()] = std::to_string(value);  
+        // std::string name_c = EmitNewValueAndGetName(op.getResult(), "float");
+        // _os << "float " << name_c << " = " << std::to_string(value) << ";\n";
+      }
     } 
     else if(isa<IntegerAttr>(constattr))
     {
