@@ -753,7 +753,7 @@ public:
     mlir::Type t = mt.getElementType();
 
     std::string type = getEmitType(t);
-    indent() << EmitNewValueAndGetName(op.getResult(), type) << "\n";
+    indent() << EmitNewValueAndGetName(op.getResult(), type) << "= 0\n";
 
     return true; 
   }

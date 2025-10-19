@@ -19,6 +19,10 @@ std::string getEmitType(const mlir::Type valType){
     return std::string("float");
   else if (valType.isa<Float64Type>())
     return std::string("double");
+  else if (valType.isa<BFloat16Type>())
+    return std::string("bfloat");
+  else if (valType.isa<Float16Type>())
+    return std::string("float16");
 
   // Handle integer types.
   else if (valType.isa<IndexType>())
