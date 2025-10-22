@@ -219,6 +219,11 @@ LLVMCDFGNode* LLVMCDFGNode::getInputPort(int idx)
     return _inputPortMap[idx];
 } 
 
+void LLVMCDFGNode::setInputPort(LLVMCDFGNode *node, int idx)
+{
+    _inputPortMap[idx] = node;
+} 
+
 // input -> this node is back-edge
 bool LLVMCDFGNode::isInputBackEdge(LLVMCDFGNode *node)
 {

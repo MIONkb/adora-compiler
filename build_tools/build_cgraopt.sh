@@ -4,6 +4,7 @@ LLVM_BUILD_DIR=/home/jhlou/CGRVOPT/onnx-mlir/third_party/llvm-project-onnx/dynam
 LLVM_INSTALL_DIR=/home/jhlou/CGRVOPT/onnx-mlir/third_party/llvm-project-onnx/dynamicbuild
 THIRDPARTY_ONNX_PRJ_DIR=/home/jhlou/CGRVOPT/onnx-mlir
 
+mkdir build && cd build
 # ......................................................................
 cmake -GNinja \
   ..\

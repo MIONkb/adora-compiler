@@ -142,6 +142,7 @@ static void SetACCOperandIdx(LLVMCDFGNode* node){
     }
     else{
       node->setInputIdx(innode, 0);
+      node->setInputPort(innode, 0);
     }
   }
 }
