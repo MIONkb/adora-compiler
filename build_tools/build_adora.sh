@@ -1,7 +1,7 @@
 #!/bin/bash
 ### set LLVM_BUILD_DIR to your own llvm path
-LLVM_BUILD_DIR=/home/jhlou/CGRVOPT/onnx-mlir/third_party/llvm-project-onnx/dynamicbuild
-LLVM_INSTALL_DIR=/home/jhlou/CGRVOPT/onnx-mlir/third_party/llvm-project-onnx/dynamicbuild
+LLVM_BUILD_DIR="/home/share/llvm-project-Polygeist/build/"
+LLVM_INSTALL_DIR="/home/share/llvm-project-Polygeist/build/"
 THIRDPARTY_ONNX_PRJ_DIR=/home/jhlou/CGRVOPT/onnx-mlir
 
 mkdir build && cd build

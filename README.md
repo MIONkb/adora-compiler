@@ -71,10 +71,10 @@ To install LLVM, follow script:
 ### 2 Adora(This project)
 
 Update the LLVM installation path in the following files to your own path:
-- `build_cgraopt.sh`
+- `build_adora.sh`
 <!-- - `CMakeLists.txt` -->
 
-After making the changes, run `build_cgraopt.sh`.  
+After making the changes, run `build_adora.sh`.  
 **Tip:** It is recommended to execute the script line-by-line (copy-paste using `Ctrl+C`/`Ctrl+V`) for better control.
 
 
