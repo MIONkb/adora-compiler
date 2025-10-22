@@ -1062,7 +1062,9 @@ bool ConvertGreaterToLess(LLVMCDFGNode* node){
   auto input0 = node->getInputPort(0);
   auto input1 = node->getInputPort(1);
   node->setInputIdx(input0, 1);
+  node->setInputPort(input0, 1);
   node->setInputIdx(input1, 0);
+  node->setInputPort(input1, 0);
 
   return true;
 }

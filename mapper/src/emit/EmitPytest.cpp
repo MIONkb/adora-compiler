@@ -1242,7 +1242,7 @@ async def aux_stream(
     for i in range(len(optrs)):
         await stream.memcpyDeviceToHost(d_data=optrs[i], h_data=odata[i], size=olen[i])
 
-    ## await stream.release()
+    await stream.release()
     return
 
 def DeviceData_Pong(ptr : DeviceData) -> DeviceData:
