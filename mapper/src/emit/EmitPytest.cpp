@@ -829,9 +829,27 @@ public:
       // assert("Unsupported!\n");
     }
 
-    assert(op.getMemref().getType().cast<MemRefType>().getShape().size() == 0);
+    // assert(op.getMemref().getType().cast<MemRefType>().getShape().size() == 0
+    //     || (op.getMemref().getType().cast<MemRefType>() == 1 && op.getMemref().getType().cast<MemRefType>().isDynamicDim()));
     std::string memref = _pytestemitter->lookupName(op.getMemref());
-    indent() << memref << " = " << value << "\n";
+    if(op.getMemref().getType().cast<MemRefType>().getShape().size() == 0){
+      indent() << memref << " = " << value << "\n";
+    }
+    else{
+      //// affine index operand is simplified
+      indent() << memref << "[";
+      ::mlir::Operation::operand_range indices = op.getIndices();
+      for(int i = 0; i < indices.size(); i++){
+        mlir::Value operand = indices[i];
+        indent() << _pytestemitter->lookupName(operand);  
+        if(i != indices.size() - 1){
+          indent() <<",";
+        }   
+      }
+      std::string arg = _pytestemitter->lookupName(op.getMemref());
+
+      indent() << "]" << " = " << value << "\n";
+    }
     return true;
     // return emitter.emitAffineStore(op), true; 
   }

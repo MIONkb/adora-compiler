@@ -276,7 +276,7 @@ int main(int argc, char **argv) {
   std::vector<int>bestLatency;
 
   ADG* subadg = adg->inducedSubgraphByFirstNTiles(specifictilenum);
-  // adg->print();
+  subadg->print();
 
   //////////////////////////////////////////
   /// Pre-set mapping
