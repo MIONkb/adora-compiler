@@ -827,6 +827,8 @@ public:
     else{
       std::string value = _pytestemitter->lookupName(op.getValue());
       // assert("Unsupported!\n");
+      if(value == "")
+        value = ConstOpToValueStr[op.getValue()];
     }
 
     // assert(op.getMemref().getType().cast<MemRefType>().getShape().size() == 0
@@ -837,18 +839,19 @@ public:
     }
     else{
       //// affine index operand is simplified
-      indent() << memref << "[";
+      std::stringstream ss;
+      ss << memref << "[";
       ::mlir::Operation::operand_range indices = op.getIndices();
       for(int i = 0; i < indices.size(); i++){
         mlir::Value operand = indices[i];
-        indent() << _pytestemitter->lookupName(operand);  
+        ss << _pytestemitter->lookupName(operand);  
         if(i != indices.size() - 1){
-          indent() <<",";
+          ss <<",";
         }   
       }
-      std::string arg = _pytestemitter->lookupName(op.getMemref());
 
-      indent() << "]" << " = " << value << "\n";
+      ss << "]" << " = " << value;
+      indent() << ss.str() << "\n";
     }
     return true;
     // return emitter.emitAffineStore(op), true; 
