@@ -2180,21 +2180,26 @@ static void SpecifyFPNodePrecision(LLVMCDFG* CDFG, bool verbose){
       unsigned width = floatTy.getWidth();
       std::string precision;
 
-      if (floatTy.isF16())
-        precision = "F16";
-      else if (floatTy.isBF16())
-        precision = "BF16";
-      else if (floatTy.isF32())
-        precision = "F32";
-      else if (floatTy.isF64())
-        precision = "F64";
-
       std::string oldName, newName;
       oldName = node->getTypeName();
-      if(precision == "BF16"){
-        newName = "B" + oldName;
+
+      if (floatTy.isF16()){
+        precision = "16";
+        newName = oldName + precision;
       }
-      newName = newName + precision.substr(2);
+      else if (floatTy.isBF16()){
+        precision = "16";
+        newName = "B" + oldName + precision;
+      }
+      else if (floatTy.isF32()){
+        precision = "32";
+        newName = oldName + precision;
+      }
+      else if (floatTy.isF64()){
+        precision = "64";
+        newName = oldName + precision;
+      }
+      
       node->setTypeName(newName);
     }
   }

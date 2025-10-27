@@ -20,14 +20,14 @@ module  {
       }
 
       ////
-        %5 = arith.muli %1, %1 : i32
-        %6 = arith.addi %5, %c19_i32 : i32
-        %7 = arith.muli %6, %1 : i32
-        %8 = arith.muli %7, %1 : i32
-        %9 = arith.addi %8, %c3_i32 : i32
-        %10 = arith.muli %9, %1 : i32      
-      %c = compare %2, 0
-      %3 = sel %c, %10, %c1_i32
+      //   %5 = arith.muli %1, %1 : i32
+      //   %6 = arith.addi %5, %c19_i32 : i32
+      //   %7 = arith.muli %6, %1 : i32
+      //   %8 = arith.muli %7, %1 : i32
+      //   %9 = arith.addi %8, %c3_i32 : i32
+      //   %10 = arith.muli %9, %1 : i32      
+      // %c = compare %2, 0
+      // %3 = sel %c, %10, %c1_i32
       ////
 
       %4 = arith.addi %arg2, %3 : i32
