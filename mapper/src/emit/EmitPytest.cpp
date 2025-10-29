@@ -669,7 +669,7 @@ public:
         */
 
         ///// get iob_ens:
-        BYTES_LIST iob_ens = _pytestemitter->getIobens(kernel);
+        BYTES_LIST iob_ens = _pytestemitter->getIobEns(kernel);
         std::stringstream iobens_ss;
         for(int _ = 0; _ < iob_ens.size(); _++){
           iobens_ss << iob_ens.getByte(_);
@@ -1598,6 +1598,7 @@ void PytestEmitter::GenerateCGRACFGAndEXE(
   int cfgBaseAddrCtrl = cfgBaseAddr / cfgSpadDataByte; // config base address the controller access
   
   BYTES_LIST iob_ens = _kernel_to_iob_ens[kernel];
+  BYTES_LIST tile_ens = _kernel_to_tile_ens[kernel];
 
   CFGandEXE << "data_ptr.append(iptrs)\n";
   // CFGandEXE << "data_ptr.append(optrs)\n\n";
@@ -1611,6 +1612,15 @@ void PytestEmitter::GenerateCGRACFGAndEXE(
       CFGandEXE << "," ;
   }
   CFGandEXE << "],\n" ;
+
+  CFGandEXE << "\ttile_en=[" ;
+  for(int _ = 0; _ < tile_ens.size(); _++){
+    CFGandEXE << tile_ens.getByte(_);
+    if(_ != tile_ens.size() - 1)
+      CFGandEXE << "," ;
+  }
+  CFGandEXE << "],\n" ;
+  
   CFGandEXE << "\tdata_ptr=data_ptr\n";
   CFGandEXE << ")\n" ;
 

@@ -151,6 +151,7 @@ public:
 
   llvm::SmallDenseMap<ADORA::KernelOp, Configuration> KnToConfiguration;
   void setMapResult(ADORA::KernelOp k, MapperSA* mapper);
+  void setTileEnsForEachKernel();
   
   /// @brief Get SPAD information (which bank to transfer data, data size...) for every data block load.
   ///        This information is store in _LoadToDfgIoInfos/_StoreToDfgIoInfo
@@ -164,7 +165,9 @@ public:
   void setADG(ADG* _) {_adg = _;}
   ADG* getADG(){return _adg;}
 
-  BYTES_LIST getIobens(KernelOp& kernel){return _kernel_to_iob_ens[kernel];};
+  BYTES_LIST getIobEns(KernelOp& kernel){return _kernel_to_iob_ens[kernel];};
+  void setTileEns(KernelOp& kernel, BYTES_LIST ens){_kernel_to_tile_ens[kernel] = ens;};
+  BYTES_LIST getTileEns(KernelOp& kernel){return _kernel_to_tile_ens[kernel];};
   llvm::SmallDenseMap<ADORA::DataBlockLoadOp, llvm::SmallVector<dfgIoInfo>> 
     getLoadToDfgIoInfosMap(){return _LoadToDfgIoInfos;};
   llvm::SmallDenseMap<ADORA::DataBlockStoreOp, dfgIoInfo>
@@ -181,6 +184,7 @@ protected:
   ADG* _adg;
 
   std::map<KernelOp, BYTES_LIST> _kernel_to_iob_ens;
+  std::map<KernelOp, BYTES_LIST> _kernel_to_tile_ens;
   // uint64_t _iob_ens = 0;
   llvm::SmallDenseMap<ADORA::DataBlockLoadOp, llvm::SmallVector<dfgIoInfo>> _LoadToDfgIoInfos;
   llvm::SmallDenseMap<ADORA::DataBlockStoreOp, dfgIoInfo> _StoreToDfgIoInfo;
