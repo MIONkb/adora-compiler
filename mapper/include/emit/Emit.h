@@ -151,6 +151,7 @@ public:
 
   llvm::SmallDenseMap<ADORA::KernelOp, Configuration> KnToConfiguration;
   void setMapResult(ADORA::KernelOp k, MapperSA* mapper);
+  void setTileEnsForKernel(ADORA::KernelOp k);
   void setTileEnsForEachKernel();
   
   /// @brief Get SPAD information (which bank to transfer data, data size...) for every data block load.

@@ -670,11 +670,17 @@ public:
 
         ///// get iob_ens:
         BYTES_LIST iob_ens = _pytestemitter->getIobEns(kernel);
-        std::stringstream iobens_ss;
+        BYTES_LIST tile_ens = _pytestemitter->getTileEns(kernel);
+        std::stringstream iobens_ss, tileens_ss;
         for(int _ = 0; _ < iob_ens.size(); _++){
           iobens_ss << iob_ens.getByte(_);
           if(_ != iob_ens.size() - 1)
             iobens_ss << "," ;
+        }
+        for(int _ = 0; _ < tile_ens.size(); _++){
+          tileens_ss << tile_ens.getByte(_);
+          if(_ != tile_ens.size() - 1)
+            tileens_ss << "," ;
         }
 
         indent() << "pingpong = False" << "\n";
@@ -683,16 +689,19 @@ public:
         indent() << "config_" << knName << " = DeviceConfig("
                 << "config_values=" << "cfgbit_" << knName << ", "
                 << "iob_en=[" << iobens_ss.str() << "], "
+                << "tile_en=[" << tileens_ss.str() << "], "
                 << "data_ptr=data_ptr)\n";
         
         indent() << "config_" << knName << "_ping" << " = DeviceConfig("
                 << "config_values=" << "cfgbit_" << knName << "_ping" << ", "
                 << "iob_en=[" << iobens_ss.str() << "], "
+                << "tile_en=[" << tileens_ss.str() << "], "
                 << "data_ptr=ptrs_ping)\n";
 
         indent() << "config_" << knName << "_pong" << " = DeviceConfig("
                 << "config_values=" << "cfgbit_" << knName << "_pong" << ", "
                 << "iob_en=[" << iobens_ss.str() << "], "
+                << "tile_en=[" << tileens_ss.str() << "], "
                 << "data_ptr=ptrs_pong)\n";
 
         indent() << "await aux_stream_pingpong_init(stream, ["
@@ -1620,7 +1629,7 @@ void PytestEmitter::GenerateCGRACFGAndEXE(
       CFGandEXE << "," ;
   }
   CFGandEXE << "],\n" ;
-  
+
   CFGandEXE << "\tdata_ptr=data_ptr\n";
   CFGandEXE << ")\n" ;
 

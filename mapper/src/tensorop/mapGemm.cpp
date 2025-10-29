@@ -114,7 +114,9 @@ void TensorDataflowGen::MapNestedForOrKernel(
       // if(_emit_type == "pytest"){
         pyEmitter->setMapResult(kernel, mapper);
         pyEmitter->DataBlockOperationsToSPADInfo(kernel, mapper);
+        pyEmitter->setTileEnsForKernel(kernel);
         pyEmitter->GenerateCGRAConfig(kernel, mapper);
+
       // }
       // else{ /// default to be C
       //   cEmitter->setMapResult(kernel, mapper);

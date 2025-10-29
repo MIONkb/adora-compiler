@@ -384,11 +384,13 @@ int main(int argc, char **argv) {
       if(emit_type == "pytest"){
         PyEmitter.setMapResult(kernel, mapper);
         PyEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
+        PyEmitter.setTileEnsForKernel(kernel);
         PyEmitter.GenerateCGRAConfig(kernel, mapper);
       }
       else{ /// default to be C
         CEmitter.setMapResult(kernel, mapper);
         CEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
+        CEmitter.setTileEnsForKernel(kernel);
         CEmitter.GenerateCGRAConfig(kernel, mapper);
       }
     }
