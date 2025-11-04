@@ -407,7 +407,7 @@ void BaseEmitter::setTileEnsForKernel(ADORA::KernelOp kn){
   Configuration config = KnToConfiguration[kn];
   std::set<int> tiles = config.getConfiguredTiles();
 
-  BYTES_LIST bytes(getADG()->tileNum());
+  BYTES_LIST bytes((getADG()->tileNum() + 7)/8);
   for (int tile : tiles) {
     if (tile < 0) {
       assert(tiles.size() == 1);

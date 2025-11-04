@@ -2160,7 +2160,9 @@ static void SpecifyFPNodePrecision(LLVMCDFG* CDFG, bool verbose){
         llvm::isa<mlir::arith::CmpFOp>(op)) 
     {
       mlir::Type resultTy;
-      if (op->getNumResults() > 0)
+      if (llvm::isa<mlir::arith::CmpFOp>(op))
+        resultTy = op->getOperand(0).getType();
+      else if (op->getNumResults() > 0)
         resultTy = op->getResult(0).getType();
       else
         continue;
