@@ -15,8 +15,8 @@ set(ADORANNC_FILES
   adora-nncompiler.py
 )
 
-set(ADORACC_TARGETS ${ADORACC_FILES})
-list(TRANSFORM ADORANCC_TARGETS PREPEND ${PROJECT_BINARY_DIR}/bin/)
+set(ADORANNC_TARGETS ${ADORANNC_FILES})
+# list(ADORANNC_TARGETS PREPEND ${PROJECT_BINARY_DIR}/bin/)
 
 
 #if(${AIE_LINKER} STREQUAL NONE)
@@ -25,32 +25,19 @@ list(TRANSFORM ADORANCC_TARGETS PREPEND ${PROJECT_BINARY_DIR}/bin/)
 #set(CONFIG_DISABLE_LINK False)
 #endif()
 
-
-# configure_file(adoracc/configure.py.in ${PROJECT_BINARY_DIR}/bin/adoracc/configure.py)
-install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/adoracc/configure.py DESTINATION ${PYTHON_INSTALL_PATH}/adoracc)
-
-# Stuff our python into the build area:
-add_custom_target(adoracc.py ALL DEPENDS ${ADORACC_TARGETS})
-
 # This chicanery is necessary to ensure executable permissions.
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/copy_adoracc.cmake"
-"file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/adoracc.py
+"file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/adora-nncompiler.py
 DESTINATION ${PROJECT_BINARY_DIR}/bin
 FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_WRITE
 GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)")
 
-add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/bin/adoracc.py COMMAND
+add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/bin/adora-nncompiler.py COMMAND
 ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/copy_adoracc.cmake)
 
-foreach(file ${ADORACC_SUBFILES})
-add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/bin/adoracc/${file}
-                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/adoracc/${file}
-                   ${PROJECT_BINARY_DIR}/bin/adoracc/${file}
-                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/adoracc/${file})
-endforeach()
 
 # Install our python stuff too.
-install(PROGRAMS adoracc.py DESTINATION ${PYTHON_INSTALL_PATH})
+install(PROGRAMS adora-nncompiler.py DESTINATION ${PYTHON_INSTALL_PATH})
 foreach(file ${ADORACC_SUBFILES})
-  install(PROGRAMS adoracc/${file} DESTINATION ${PYTHON_INSTALL_PATH}/adoracc)
+  install(PROGRAMS adora-nncompiler/${file} DESTINATION ${PYTHON_INSTALL_PATH}/adora-nncompiler)
 endforeach()
