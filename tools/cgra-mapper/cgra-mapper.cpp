@@ -44,6 +44,7 @@
 #include "spdlog/cfg/argv.h"
 #include "emit/EmitCGRACall.h"
 #include "emit/EmitPytest.h"
+#include "emit/EmitVitisSDK.h"
 #include "tensorop/TensorOp.h"
 
 // #include "mlir/Dialect/Arith/Transforms/Passes.h"
@@ -154,9 +155,9 @@ int main(int argc, char **argv) {
   static cl::opt<std::string> emit_type(
     "output-type",
     cl::Required, 
-    cl::desc("emit the execution file type: c(defualt), pytest"), 
-    cl::value_desc("c or pytest"), 
-    cl::init("c"));
+    cl::desc("emit the execution file type: c(defualt), pytest, sdk(vitis sdk)"), 
+    cl::value_desc("c/pytest/sdk"), 
+    cl::init("pytest"));
 
   static cl::opt<std::string> outputFilename(
     "output", 
@@ -283,6 +284,7 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////
   CGRACallEmitter CEmitter(moduleop);
   PytestEmitter PyEmitter(moduleop);
+  VitisSDKEmitter SDKEmitter(moduleop);
   
   std::vector<MapperSA*>mapper_Vec;
   std::vector<DFGIR*>DFGIR_Vec;
@@ -367,6 +369,9 @@ int main(int argc, char **argv) {
     // some io nodes must be placed at some place
     if(emit_type == "pytest"){
       PyEmitter.preestablishPlacementConstraints(kernel, mapper);
+    }
+    else if(emit_type == "sdk"){
+      
     }
     else{ /// default to be C
       CEmitter.preestablishPlacementConstraints(kernel, mapper);
