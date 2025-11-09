@@ -31,6 +31,7 @@ namespace ADORA {
 
 class VitisSDKEmitter : public CGRACallEmitter {
 public:
+  using CGRACallEmitter::CGRACallEmitter;
   // /////////////////////////////////
   // // The following functions must be implemented in your derived class.
   // // These functions are defined as pure virtual functions in the base class

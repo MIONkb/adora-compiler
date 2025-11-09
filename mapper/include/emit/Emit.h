@@ -132,7 +132,7 @@ public:
   virtual bool emitCGRACallFunction(llvm::raw_ostream &os) = 0;
   /////////////////////////////////
 
-  BaseEmitter(mlir::ModuleOp m): _moduleop(m){};
+  BaseEmitter(mlir::ModuleOp& m): _moduleop(m){};
   ~BaseEmitter(){};
 
   unsigned getIndent(){return _currentIndent;}
