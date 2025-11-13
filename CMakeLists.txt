@@ -62,7 +62,8 @@ endif()
 
 install(
   TARGETS
-    MLIRADORAOps MLIRADORALowerings MLIRADORATransforms
+    MLIRADORAOps MLIRADORAKernelOp 
+    MLIRADORALowerings MLIRADORATransforms
     MLIRADORATransformsUtility MLIRADORALoopTransforms
     MLIRADORAKernelExtract GeneralCDFGGen
     ADORATensorInterface ADORATensorOps ADORATensorLower

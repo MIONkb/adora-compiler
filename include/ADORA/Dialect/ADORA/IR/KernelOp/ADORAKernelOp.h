@@ -1,8 +1,8 @@
 //===- Test.h - Test dialect --------------------------------------*- C++ -*-===//
 //===----------------------------------------------------------------------===//
 
-#ifndef CGRAOPT_DIALECT_ADORA_IR_H_
-#define CGRAOPT_DIALECT_ADORA_IR_H_
+#ifndef CGRAOPT_DIALECT_ADORA_KERNELOP_H_
+#define CGRAOPT_DIALECT_ADORA_KERNELOP_H_
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -34,42 +34,16 @@
 #endif
 
 #define GET_OP_CLASSES
-#include "ADORA/Dialect/ADORA/IR/ADORAOps.h.inc"
-#include "ADORA/Dialect/ADORA/IR/ADORAOpsTypes.h.inc"
-
-#include "ADORA/Dialect/ADORA/IR/KernelOp/ADORAKernelOp.h"
+#include "ADORA/Dialect/ADORA/IR/KernelOp/ADORAKernelOp.h.inc"
+#include "ADORA/Dialect/ADORA/IR/KernelOp/ADORAKernelOpTypes.h.inc"
 //===----------------------------------------------------------------------===//
 // ADORA Dialect Helpers
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
 namespace ADORA {
-//===----------------------------------------------------------------------===//
-// A templated find func for smallvector
-//===----------------------------------------------------------------------===//
-template <typename T, unsigned N>
-inline int findElement(const llvm::SmallVector<T, N>& vec, const T& elem) {
-  for (unsigned i = 0; i < vec.size(); ++i) {
-    if (vec[i] == elem) {
-      return i;
-    }
-  }
-  return -1;
-}
 
-//===----------------------------------------------------------------------===//
-// A templated find func for value range
-//===----------------------------------------------------------------------===//
-inline mlir::Value findElement(const ValueRange vec, const mlir::Value& elem) {
-  for (ValueRange::iterator itr = vec.begin(); itr != vec.end(); ++itr) {
-    if (*itr == elem) {
-      return *itr;
-    }
-  }
-  
-  return NULL;
-}
 } // namespace ADORA
 } // namespace mlir
 
-#endif //CGRAOPT_DIALECT_ADORA_IR_H_
+#endif //CGRAOPT_DIALECT_ADORA_KERNELOP_H_

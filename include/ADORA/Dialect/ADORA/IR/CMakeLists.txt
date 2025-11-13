@@ -1,3 +1,5 @@
+add_subdirectory(KernelOp)
+
 add_mlir_dialect(ADORAOps ADORA)
 add_mlir_doc(ADORAOps ADORAOps Dialects/ -gen-op-doc )
 
