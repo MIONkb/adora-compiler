@@ -125,7 +125,7 @@ ParseResult KernelOp::parse(OpAsmParser &parser, OperationState &result) {
 //=======================================
 //=======================================
 
-LogicalResult specifyOneOperationToADORAKernel(Operation *op) {
+LogicalResult mlir::ADORA::specifyOneOperationToADORAKernel(Operation *op) {
   assert(op && "specifyOneOperationToADORAKernel: null op");
   if (op->getParentOfType<ADORA::KernelOp>())
     return LogicalResult::failure();
@@ -145,10 +145,10 @@ LogicalResult specifyOneOperationToADORAKernel(Operation *op) {
   return LogicalResult::success();
 }
 
-LogicalResult specifyOneOperationToADORAKernel(Operation *op, std::string kernel_name) {
+LogicalResult mlir::ADORA::specifyOneOperationToADORAKernel(Operation *op, std::string kernel_name) {
   if(specifyOneOperationToADORAKernel(op).succeeded()){
     if(kernel_name != "")
-      dyn_cast<ADORA::KernelOp>(op.getOperation()->getParentOp()).setKernelName(kernel_name);
+      dyn_cast<ADORA::KernelOp>(op->getParentOp()).setKernelName(kernel_name);
     return LogicalResult::success();
   }
 
