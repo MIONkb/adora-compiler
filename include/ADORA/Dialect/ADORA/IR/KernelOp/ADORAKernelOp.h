@@ -43,6 +43,22 @@
 namespace mlir {
 namespace ADORA {
 
+/// @brief Wraps a single operation into a newly created ADORA::KernelOp.
+/// 
+/// This utility isolates the given operation by creating a new KernelOp at the
+/// same insertion point, moves the specified operation into the kernel’s body,
+/// and appends a TerminatorOp to complete the region. It is mainly used for
+/// lowering or kernel extraction passes that transform standalone operations
+/// into kernel-level representations.
+///
+/// @param op The operation to be encapsulated into a KernelOp.
+/// @return success if the operation was successfully wrapped, failure otherwise
+///         (e.g., if the operation is already inside a KernelOp).
+LogicalResult specifyOneOperationToADORAKernel(Operation *op);
+/// @param op The operation to be encapsulated.
+/// @param kernel_name A user-defined kernel name to be attached to the new KernelOp.
+LogicalResult specifyOneOperationToADORAKernel(Operation *op, std::string kernel_name);
+
 } // namespace ADORA
 } // namespace mlir
 

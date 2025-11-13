@@ -125,6 +125,36 @@ ParseResult KernelOp::parse(OpAsmParser &parser, OperationState &result) {
 //=======================================
 //=======================================
 
+LogicalResult specifyOneOperationToADORAKernel(Operation *op) {
+  assert(op && "specifyOneOperationToADORAKernel: null op");
+  if (op->getParentOfType<ADORA::KernelOp>())
+    return LogicalResult::failure();
+
+  OpBuilder builder(op);
+  Location loc = op->getLoc();
+
+  auto kernel = builder.create<ADORA::KernelOp>(loc);
+
+  Block &entry = kernel.getBody().front();
+  builder.setInsertionPointToEnd(&entry);
+  auto term = builder.create<ADORA::TerminatorOp>(loc);
+
+  op->remove();
+  entry.getOperations().insert(Block::iterator(term.getOperation()), op);
+
+  return LogicalResult::success();
+}
+
+LogicalResult specifyOneOperationToADORAKernel(Operation *op, std::string kernel_name) {
+  if(specifyOneOperationToADORAKernel(op).succeeded()){
+    if(kernel_name != "")
+      dyn_cast<ADORA::KernelOp>(op.getOperation()->getParentOp()).setKernelName(kernel_name);
+    return LogicalResult::success();
+  }
+
+  return LogicalResult::failure();
+}
+
 
 #define GET_OP_CLASSES
 #include "ADORA/Dialect/ADORA/IR/KernelOp/ADORAKernelOp.cpp.inc"
