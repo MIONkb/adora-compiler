@@ -5,10 +5,10 @@
 set -e
 
 ### set LLVM_SRC_DIR to your own path
-LLVM_SRC_DIR=~/CGRVOPT/onnx-mlir/third_party/llvm-project-onnx/
+LLVM_SRC_DIR=~/CGRVOPT/llvm-project-onnx
 
-build_dir=$LLVM_SRC_DIR/dynamicbuild
-install_dir=$LLVM_SRC_DIR/dynamicbuild
+build_dir=$LLVM_SRC_DIR/build
+install_dir=$LLVM_SRC_DIR/build
 
 echo "Using LLVM source dir: $LLVM_SRC_DIR"
 

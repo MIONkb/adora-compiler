@@ -1,8 +1,7 @@
 
 
-ONNX_PROJ_DIR=/home/jhlou/CGRVOPT/onnx-mlir
-MLIR_DIR=$ONNX_PROJ_DIR/third_party/llvm-project-onnx/build/lib/cmake/mlir
-MLIR_DIR=$ONNX_PROJ_DIR/third_party/llvm-project-onnx/dynamicbuild/lib/cmake/mlir
+ONNX_PROJ_DIR="/home/share/onnx-mlir"
+MLIR_DIR="/home/jhlou/CGRVOPT/llvm-project-onnx/build/lib/cmake/mlir"
 ADORA_INSTALL_DIR=/home/jhlou/CGRVOPT/cgra-opt/build
 
 mkdir $ONNX_PROJ_DIR/build && cd $ONNX_PROJ_DIR/build
