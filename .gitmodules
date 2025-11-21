@@ -1,4 +1,8 @@
-[submodule "third_party/onnx-mlir"]
-	path = third_party/onnx-mlir
+# [submodule "llvm-project"]
+# 	path = llvm-project
+# 	url = https://github.com/llvm/llvm-project/tree/b270525f730be6e7196667925f5a9bfa153262e9
+
+[submodule "frontend/adora-onnx-mlir"]
+	path = frontend/adora-onnx-mlir
 	url = https://github.com/MIONkb/adora-onnx-mlir
-	branch = main
+	branch = adora

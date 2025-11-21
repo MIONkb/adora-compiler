@@ -372,7 +372,7 @@ void AutoSetDataflowStrategy(
 
   // Map rule for strategy (which dims correspond to row/col; which is innermost non-stationary)
 
-  auto pairs = findFeasibleSpatialMap(num_pe, num_iob, /*limit=*/300);
+  auto pairs = findFeasibleSpatialMap(num_pe, num_iob, /*limit=*/30000);
 
   std::vector<MatMulStrategy> strategies;
   if(_strategy == MatMulStrategy::Undefine){
