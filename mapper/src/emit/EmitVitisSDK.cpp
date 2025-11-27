@@ -1125,8 +1125,9 @@ bool VitisSDKEmitter::emitCGRACallFunction(llvm::raw_ostream &os) {
 // Copyright (c) 2025 ADORA
 // All rights reserved.
 //
-// Automatically generated file for Vitis SDK based CGRA call function from ADORA.)XXX";
-  os << "// Generated on: " << timebuf << "\n";
+// Automatically generated file for Vitis SDK based CGRA call function from ADORA.
+)XXX";
+  os << "// Generated on: " << timebuf;
   os << R"XXX(
 //
 //===----------------------------------------------------------------------===//
