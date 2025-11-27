@@ -41,8 +41,8 @@ public:
   void emitBlock(mlir::Block &block, llvm::raw_ostream &os) override;
   // std::string GenerateCGRAConfig(ADORA::KernelOp& kernel, MapperSA* mapper) override;
   // std::string GenerateCGRAConfig(ADORA::KernelOp& kernel, Configuration configuration, ADG* adg) override;
-  // void GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, MapperSA* mapper) override;
-  // void GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, Configuration configuration, ADG* adg) override;
+  void GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, MapperSA* mapper) override;
+  void GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, Configuration configuration, ADG* adg) override;
   bool emitCGRACallFunction(llvm::raw_ostream &os) override;
   // /////////////////////////////////
 

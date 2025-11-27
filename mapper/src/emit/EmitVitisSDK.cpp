@@ -3,6 +3,8 @@
 // Copyright 2023-2024 The ADORA Authors.
 //
 //===----------------------------------------------------------------------===//
+#include <ctime>
+
 #include "emit/Emit.h"
 #include "emit/EmitVitisSDK.h"
 #include "emit/OpVisitor.h"
@@ -11,6 +13,11 @@
 using namespace mlir;
 using namespace mlir::ADORA;
 
+#define _CGRA_BASE_ADDR      0x90000000
+#define _CGRA_BASE_ADDR_STR  "0x90000000"
+
+#define _CGRA_LITE_ADDR      0x90040000
+#define _CGRA_LITE_ADDR_STR  "0x90040000"
 
 //===----------------------------------------------------------------------===//
 // Some tool functions
@@ -43,10 +50,10 @@ static int NewValueNameId(const llvm::SmallDenseMap<mlir::Value, Op_Name_C>& val
 // }
 
 namespace {
-class CGRVOpEmitter : public MLIROpVisitorBase<CGRVOpEmitter, bool> {
+class VitisSDKOpEmitter : public MLIROpVisitorBase<VitisSDKOpEmitter, bool> {
 public:
-  CGRVOpEmitter(llvm::raw_ostream &os) : _os(os) {}
-  CGRVOpEmitter(VitisSDKEmitter& emitter, llvm::raw_ostream &os) : 
+  VitisSDKOpEmitter(llvm::raw_ostream &os) : _os(os) {}
+  VitisSDKOpEmitter(VitisSDKEmitter& emitter, llvm::raw_ostream &os) : 
       _cgracallemitter(&emitter) ,_os(os) {setIndent(emitter.getIndent());}
   using MLIROpVisitorBase::visitOp;
 
@@ -114,11 +121,13 @@ public:
       uint64_t DMA_Len = 8; /// 64bit
       int fuse = 0;
       std::stringstream load_data;
-      load_data <<"load_data(*" << Memref_BaseAddr  ////address not pointer
-              <<", 0x" << std::hex << spadbaddr 
+      load_data <<"HostToDeviceTransfer(IntcController, AxiCdmaInstance, &" 
+              << Memref_BaseAddr  ////address not pointer
+              <<", 0x" << std::hex << spadbaddr
+              <<" + " << _CGRA_BASE_ADDR_STR
               <<", " << std::dec << DMA_Len 
-              <<", " << std::dec << fuse  /*fuse*/
-              <<", _task_id" /*Task id*/ << ", LD_DEP_ST_LAST_TASK" /*Task dep*/
+              // <<", " << std::dec << fuse  /*fuse*/
+              // <<", _task_id" /*Task id*/ << ", LD_DEP_ST_LAST_TASK" /*Task dep*/
               <<");\n";
       indent() << load_data.str();
       _os << "\n";
@@ -273,14 +282,16 @@ public:
       auto spadbaddr = SPAD_BaseAddrs[i];
       int fuse = (i == SPAD_BaseAddrs.size() - 1)? 0 : 1; /// fuse: 0 - broadcast, 1 - non-broadcast
       std::stringstream load_data;
-      load_data <<"load_data(" << Memref_BaseAddr 
+      load_data << "HostToDeviceTransfer(IntcController, AxiCdmaInstance, &" 
+              << Memref_BaseAddr 
               <<" + " << "dramoffset_" << BLid
               <<" + " << "roffset_" << BLid
               <<", 0x" << std::hex << spadbaddr 
               <<" + " << "spadoffset_" << BLid 
+              <<" + " << _CGRA_BASE_ADDR_STR
               <<", " << std::dec << DMA_Len 
-              <<", " << std::dec << fuse  /*fuse*/
-              <<", _task_id" /*Task id*/ << ", LD_DEP_ST_LAST_TASK" /*Task dep*/
+              // <<", " << std::dec << fuse  /*fuse*/
+              // <<", _task_id" /*Task id*/ << ", LD_DEP_ST_LAST_TASK" /*Task dep*/
               <<");\n";
       indent() << load_data.str();
 
@@ -331,10 +342,11 @@ public:
       int fuse = 0;
 
       std::stringstream store_data;
-      store_data <<"store(&" << Memref_BaseAddr  //// address not pointer
-              <<", 0x" << std::hex << spadbaddr 
+      store_data <<"DeviceToHostTransfer(IntcController, AxiCdmaInstance, " 
+              <<"0x" << std::hex << spadbaddr << " + " << _CGRA_BASE_ADDR_STR
+              << ", &" << Memref_BaseAddr  //// address not pointer
               <<", " << std::dec << DMA_Len 
-              <<", _task_id" /*Task id*/ << ", 0" /*Task dep*/
+              // <<", _task_id" /*Task id*/ << ", 0" /*Task dep*/
               <<");\n";
       indent() << store_data.str();
 
@@ -494,13 +506,15 @@ public:
       auto spadbaddr = SPAD_BaseAddrs[i];
       int fuse = (i == SPAD_BaseAddrs.size() - 1)? 0 : 1; /// fuse: 0 - broadcast, 1 - non-broadcast
       std::stringstream store_data;
-      store_data <<"store(" << Memref_BaseAddr 
+      store_data << "DeviceToHostTransfer(IntcController, AxiCdmaInstance, " 
+              <<"0x" << std::hex << spadbaddr 
+              <<" + " << "spadoffset_" << BLid 
+              <<" + " << _CGRA_BASE_ADDR_STR
+              << ", &"<< Memref_BaseAddr 
               <<" + " << "dramoffset_" << BLid
               <<" + " << "roffset_" << BLid
-              <<", 0x" << std::hex << spadbaddr 
-              <<" + " << "spadoffset_" << BLid 
               <<", " << std::dec << DMA_Len 
-              <<", _task_id" /*Task id*/ << ", 0" /*Task dep*/
+              // <<", _task_id" /*Task id*/ << ", 0" /*Task dep*/
               <<");\n";
       indent() << store_data.str();
 
@@ -877,7 +891,7 @@ private:
   llvm::raw_ostream &_os;
   unsigned _indent = 0;
 };
-CGRVOpEmitter* opEmitter;
+VitisSDKOpEmitter* opEmitter;
 } // namespace
 
 
@@ -893,6 +907,10 @@ CGRVOpEmitter* opEmitter;
 void VitisSDKEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os) {
   std::stringstream ostr;
   ostr << "void " << funcop.getSymName().str() << "(";
+  // "static XAxiCdma AxiCdmaInstance;	/* Instance of the XAxiCdma */""
+  // "static XScuGic IntcController;	/* Instance of the Interrupt Controller */""
+  ostr << "XAxiCdma AxiCdmaInstance, XScuGic IntcController, ";
+
   // Funtion args
   ArrayRef<mlir::Type> argTypes = funcop.getArgumentTypes();
   for(int argIdx = 0; argIdx < argTypes.size(); argIdx++){
@@ -910,11 +928,17 @@ void VitisSDKEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &
     else if(argType.isIndex()){
       ostr << "int " << "arg_" << argIdx;
     }
+    else if(argType.isInteger(16)){
+      ostr << "int16_t " << "arg_" << argIdx;
+    }
     else if(argType.isInteger(32)){
       ostr << "int32_t " << "arg_" << argIdx;
     }
     else if(argType.isInteger(64)){
       ostr << "int64_t " << "arg_" << argIdx;
+    }
+    else if(argType.isUnsignedInteger(16)){
+      ostr << "uint16_t " << "arg_" << argIdx;
     }
     else if(argType.isUnsignedInteger(32)){
       ostr << "uint32_t " << "arg_" << argIdx;
@@ -925,9 +949,118 @@ void VitisSDKEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &
     
   }
   ostr << "){\n";
+  ostr << "  int Status;\n";
+  ostr << "  int16_t *SrcPtr, *DesPtr;\n";
+
+  os << ostr.str() << "\n";
+}
+
+/// @brief Get the config and execution instructions of CGRA
+void VitisSDKEmitter::GenerateCGRACFGAndEXE(
+  ADORA::KernelOp& kernel, Configuration cfg, ADG* adg){
+  // adg->print();
+  /////////////////////// CFG is generated in GenerateCGRACFGData()
+  std::stringstream CFGandEXE;
+
+  int cfgSpadDataByte = adg->cfgSpadDataWidth() / 8;
+  int cfgAddrWidth = adg->cfgAddrWidth();
+  int cfgDataWidth = adg->cfgDataWidth();
+  int alignWidth = (cfgAddrWidth > 16) ? 32 : 16;
+  assert(alignWidth >= cfgAddrWidth && cfgDataWidth >= alignWidth);
+
+  if(!MapHasKey(KnToCfgData, kernel)){
+    std::string cfgdata = GenerateCGRAConfig(kernel, cfg, adg);
+    CFGandEXE << cfgdata << "\n";
+  }
+  assert(MapHasKey(KnToCfgData, kernel));
+  std::string CFGarrayName = KnToCfgArrayInfo[kernel].first;
+  int cfgNum = KnToCfgArrayInfo[kernel].second;
+
+  /// replace the variable part of the config
+  CFGandEXE << std::hex;
+  for(auto elem : cfg.VarReplaceInfo){
+    std::string varcfg_name = lookupVarConfigName(elem.first);
+    for(auto& replace: elem.second) {
+      CFGandEXE << std::dec << CFGarrayName << "[" << replace.Idx0 << "][" << replace.Idx1 << "] = ";
+      assert(replace.lshift == 0 || replace.rshift == 0);
+      if(replace.lshift == 0){
+        // right shift
+        CFGandEXE << std::hex << "(" << varcfg_name << " >> 0x" << replace.rshift << ")"
+                  << " | " 
+                  << std::dec << "(" << CFGarrayName  <<"[" << replace.Idx0 << "][" << replace.Idx1 << "]" 
+                  << std::hex << " & 0x" << replace.getMask() << ");\n" ;
+      }
+      else{
+        // left shift
+        CFGandEXE << std::hex << "(" << varcfg_name << " << 0x" << replace.lshift << ")"
+                  << " | " 
+                  << std::dec << "(" << CFGarrayName <<"[" << replace.Idx0 << "][" << replace.Idx1 << "]" 
+                  << std::hex << " & 0x" << replace.getMask() << ");\n" ;
+      }
+    }
+  }
+  CFGandEXE << std::dec;
+ 
+    // _cfg_num = cfgNum;
+    // _cfg_len = cfgNum * (alignWidth + cfgDataWidth) / 8; // length of config_addr and config_data in bytes
+    // int cfgSpadSize = _adg->cfgSpadSize();
+    // int cfgBaseAddr;
+    // _ld_cfg_dep = 0;
+    // if(_cfg_len <= cfgSpadSize - _old_cfg_status.end){
+    //     cfgBaseAddr = _old_cfg_status.end;
+    // }else if(_cfg_len <= _old_cfg_status.start){
+    //     cfgBaseAddr = 0;
+    // }else{ // cfg data space overlap last cfg data space
+    //     cfgBaseAddr = 0;
+    //     _ld_cfg_dep = LD_DEP_EX_LAST_TASK;
+    // }
+    // _old_cfg_status.start = cfgBaseAddr;
+    // _old_cfg_status.end = cfgBaseAddr + (_cfg_len +  cfgSpadDataByte - 1) / cfgSpadDataByte * cfgSpadDataByte;
+    // _old_cfg_status.end = std::min(_old_cfg_status.end, cfgSpadSize);
+  int cfg_len = cfgNum * (alignWidth + cfgDataWidth) / 8; // length of config_addr and config_data in bytes
+  int cfgBaseAddr = 0;
+  int banks = adg->numIobNodes();
+  int sizeofBank = adg->iobSpadBankSize();
+  int cfgBaseAddrSpad = cfgBaseAddr + banks * sizeofBank; // cfg spad on top of iob spad
+  int cfgBaseAddrCtrl = cfgBaseAddr / cfgSpadDataByte; // config base address the controller access
+  // tile enables
+  
+  
+  BYTES_LIST iob_ens = _kernel_to_iob_ens[kernel];
+  assert(iob_ens.As32b().size() == 1);
+  BYTES_LIST tile_ens = _kernel_to_tile_ens[kernel];
+  assert(tile_ens.As32b().size() == 1);
+
+  CFGandEXE << "HostToDeviceTransfer(IntcController, AxiCdmaInstance, " 
+            << "(void*)" << CFGarrayName << ", "
+            << "0x" << std::hex << cfgBaseAddrSpad << " + " << _CGRA_BASE_ADDR_STR << ", " 
+            << std::dec << cfg_len 
+              // <<", " << std::dec << fuse  /*fuse*/
+              // <<", _task_id" /*Task id*/ << ", LD_DEP_ST_LAST_TASK" /*Task dep*/
+            <<");\n";
+
+  CFGandEXE << "cgra_config(0x" 
+    << std::hex << cfgBaseAddrCtrl << std::dec << ", " 
+    << cfgNum << ", " 
+    << std::hex << tile_ens.As32b()[0] << std::dec <<");\n";
+  CFGandEXE << "cgra_exe(" << std::hex << iob_ens.As32b()[0] << std::dec << ");\n";
+
+  KnToCfgExe[kernel] = CFGandEXE.str();
+  
+  // std::cout << CFGandEXE.str() << std::endl;
+}
 
 
-  os << ostr.str();
+/// @brief Get the config and execution instructions of CGRA
+/// @param mapper The SA mapper which has completed mapping
+void VitisSDKEmitter::GenerateCGRACFGAndEXE(ADORA::KernelOp& kernel, MapperSA* mapper){
+  /// why MapperSA (without&) will cause bug ?? memory leakage?
+  /// Generate CGRA configuration
+  ADG* adg = mapper->getADG();
+  Configuration cfg(mapper->_mapping);
+  KnToConfiguration[kernel] = cfg;
+  _adg = adg;
+  GenerateCGRACFGAndEXE(kernel, cfg, adg);
 }
 
 /// @brief Emit a block (maybe a loop body, maybe a function body), especially the for loop structure
@@ -972,28 +1105,69 @@ void VitisSDKEmitter::emitBlock(mlir::Block &block, llvm::raw_ostream &os) {
 /// @param os
 /// @return Successful or not
 bool VitisSDKEmitter::emitCGRACallFunction(llvm::raw_ostream &os) {
-  opEmitter = new CGRVOpEmitter(*this, os);
+  opEmitter = new VitisSDKOpEmitter(*this, os);
   // ADORAEmitterState state(os);
   // ModuleEmitter(state).emitModule(module);
   // return failure(state.encounteredError);
+  std::time_t t = std::time(nullptr);
+  std::tm tm;
+  #ifdef _WIN32
+  localtime_s(&tm, &t);
+  #else
+  localtime_r(&t, &tm);
+  #endif
+  char timebuf[64];
+  std::strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", &tm);
+
   os << R"XXX(
 //===----------------------------------------------------------------------===//
 //
-// Automatically generated file for CGRA call function in ADORA.
+// Copyright (c) 2025 ADORA
+// All rights reserved.
+//
+// Automatically generated file for Vitis SDK based CGRA call function from ADORA.)XXX";
+  os << "// Generated on: " << timebuf << "\n";
+  os << R"XXX(
 //
 //===----------------------------------------------------------------------===//
+)XXX";  
 
-#include "include/ISA.h"
+  //// generate ADDR
+  // std::stringstream cgra_lite_addr;
+  // cgra_lite_addr << std::hex << 0x90000000 
+  //                   + getADG()->numIobNodes() * getADG()->iobSpadBankSize()
+  //                   + getADG()->cfgSpadSize();
+  os << R"XXX(#include "cgra_cdma.h"
+)XXX";
 
-static uint8_t _task_id = 0;
+  os << "#define CGRA_BASE_ADDR " << _CGRA_BASE_ADDR_STR << "\n";
+  os << "#define CGRA_LITE_ADDR " << _CGRA_LITE_ADDR_STR << "\n";
 
-#define LD_DEP_ST_LAST_TASK 1     // this load command depends on the store command of last task
-#define LD_DEP_EX_LAST_TASK 2     // this load command depends on the execute command of last task
-#define LD_DEP_ST_LAST_SEC_TASK 3 // this load command depends on the store command of last second task
-#define EX_DEP_ST_LAST_TASK 1     // this execute command depends on the store command of last task
+  os << R"XXX(
+inline void HostToDeviceTransfer(
+  XScuGic* IntcController, XAxiCdma* AxiCdmaInstance, 
+  void* src_h, void* dst_d, int64_t bytelen){
+  int Status;
+  Status = XAxiCdma_DataTransfer(*IntcController, *AxiCdmaInstance, (UINTPTR)src_h, (UINTPTR)dst_d, bytelen);
+  if (Status != XST_SUCCESS) {
+    xil_printf("XAxiCdma Data Transfer Failed. Status: %d\r\n", Status);
+    abort();
+  }
+}
 
+inline void DeviceToHostTransfer(
+  XScuGic* IntcController, XAxiCdma* AxiCdmaInstance, 
+  void* src_d, void* dst_h, int64_t bytelen){
+  int Status;
+  Status = XAxiCdma_DataTransfer(*IntcController, *AxiCdmaInstance, (UINTPTR)src_d, (UINTPTR)dst_h, bytelen);
+  if (Status != XST_SUCCESS) {
+    xil_printf("XAxiCdma Data Transfer Failed. Status: %d\r\n", Status);
+    abort();
+  }
+}
 
 )XXX";
+  // os <<  "#define CGRA_LITE_ADDR " << cgra_lite_addr.str() << "\n";
 
   //// emit configuration data array
   os << R"XXX(
@@ -1019,7 +1193,7 @@ static uint8_t _task_id = 0;
     emitBlock(funcop.getBody().front(), os);
 
     // / function tail
-    os << "  fence(1);\n";
+    os << "  	return ;\n";
     os << "}\n";
   }
 

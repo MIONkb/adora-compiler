@@ -303,7 +303,7 @@ int main(int argc, char **argv) {
   /////////////////////////
   /// Map ADORA Tensor
   /////////////////////////
-  MapAdoraTensorOp(&context, moduleop, tensor_mapper_Vec, &CEmitter, &PyEmitter,
+  MapAdoraTensorOp(&context, moduleop, tensor_mapper_Vec, &CEmitter, &PyEmitter, &SDKEmitter,
     subadg, GeneralOpNameFile_str, timeout_ms, max_iters, objOpt, verbose);
   // if(emit_type == "pytest"){
   //   MapAdoraTensorOp(tensor_mapper_Vec)
@@ -371,7 +371,7 @@ int main(int argc, char **argv) {
       PyEmitter.preestablishPlacementConstraints(kernel, mapper);
     }
     else if(emit_type == "sdk"){
-      
+      SDKEmitter.preestablishPlacementConstraints(kernel, mapper);
     }
     else{ /// default to be C
       CEmitter.preestablishPlacementConstraints(kernel, mapper);
@@ -391,6 +391,12 @@ int main(int argc, char **argv) {
         PyEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
         PyEmitter.setTileEnsForKernel(kernel);
         PyEmitter.GenerateCGRAConfig(kernel, mapper);
+      }
+      else if(emit_type == "sdk"){
+        SDKEmitter.setMapResult(kernel, mapper);
+        SDKEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
+        SDKEmitter.setTileEnsForKernel(kernel);
+        SDKEmitter.GenerateCGRAConfig(kernel, mapper);
       }
       else{ /// default to be C
         CEmitter.setMapResult(kernel, mapper);
@@ -412,6 +418,15 @@ int main(int argc, char **argv) {
       std::error_code ec;
       llvm::raw_fd_ostream outputFile(outputFilename, ec, sys::fs::FA_Write);
       PyEmitter.emitPytest(outputFile);
+    }
+  }
+  else if(emit_type == "sdk"){
+    if(outputFilename == "-")
+      SDKEmitter.emitCGRACallFunction(llvm::errs());
+    else{
+      std::error_code ec;
+      llvm::raw_fd_ostream outputFile(outputFilename, ec, sys::fs::FA_Write);
+      SDKEmitter.emitCGRACallFunction(outputFile);
     }
   }
   else{ /// default to be C
