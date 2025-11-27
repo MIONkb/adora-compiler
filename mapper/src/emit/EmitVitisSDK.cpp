@@ -355,7 +355,7 @@ public:
 
       if(IsLastBlockStoreOp(op)){
         indent() << "_task_id++;\n";
-        indent() << "wait_cgra_all_finish();\n";
+        indent() << "wait_cgra_all_finish();\n\n";
       }
 
       return true;
@@ -536,7 +536,7 @@ public:
 
     if(IsLastBlockStoreOp(op)){
       indent() << "_task_id++;\n";
-      indent() << "wait_cgra_all_finish();\n";
+      indent() << "wait_cgra_all_finish();\n\n";
     }
 
     return true;    
@@ -1142,6 +1142,7 @@ bool VitisSDKEmitter::emitCGRACallFunction(llvm::raw_ostream &os) {
   //                   + getADG()->cfgSpadSize();
   os << R"XXX(
 #include "cgra_cdma.h"
+#include "cgra_axil.h"
 static uint8_t _task_id = 0;
 )XXX";
 
