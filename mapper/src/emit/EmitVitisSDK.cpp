@@ -355,6 +355,7 @@ public:
 
       if(IsLastBlockStoreOp(op)){
         indent() << "_task_id++;\n";
+        indent() << "wait_cgra_all_finish();\n";
       }
 
       return true;
@@ -535,6 +536,7 @@ public:
 
     if(IsLastBlockStoreOp(op)){
       indent() << "_task_id++;\n";
+      indent() << "wait_cgra_all_finish();\n";
     }
 
     return true;    
