@@ -1137,7 +1137,9 @@ bool VitisSDKEmitter::emitCGRACallFunction(llvm::raw_ostream &os) {
   // cgra_lite_addr << std::hex << 0x90000000 
   //                   + getADG()->numIobNodes() * getADG()->iobSpadBankSize()
   //                   + getADG()->cfgSpadSize();
-  os << R"XXX(#include "cgra_cdma.h"
+  os << R"XXX(
+#include "cgra_cdma.h"
+static uint8_t _task_id = 0;
 )XXX";
 
   os << "#define CGRA_BASE_ADDR " << _CGRA_BASE_ADDR_STR << "\n";
@@ -1193,7 +1195,7 @@ inline void DeviceToHostTransfer(
     emitBlock(funcop.getBody().front(), os);
 
     // / function tail
-    os << "  	return ;\n";
+    os << "  return ;\n";
     os << "}\n";
   }
 
