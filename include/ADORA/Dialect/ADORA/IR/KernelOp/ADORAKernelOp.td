@@ -79,7 +79,7 @@ def ADORA_KernelOp : ADORA_Op<"kernel">,
 
     std::string getKernelName(){
       return hasKernelName()? 
-        getOperation()->getAttr("KernelName").cast<StringAttr>().str() :
+        mlir::cast<mlir::StringAttr>(getOperation()->getAttr("KernelName")).str() :
         "";
     }
 
