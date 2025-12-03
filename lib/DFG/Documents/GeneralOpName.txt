@@ -79,4 +79,4 @@ scf.yield scf_yield
 vector.extract vector_extract
 
 
-@fusableOp: MAC,FMAC32
+// @fusableOp: MAC,FMAC32

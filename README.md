@@ -58,7 +58,7 @@ ADORA includes two compilers designed for the FDRA CGRA SoC:
 
 ### 1 LLVM-18
 
-~~LLVM Commit: `26eb4285b56edd8c897642078d91f16ff0fd3472` (Same as [Polygeist GitHub Repository](https://github.com/llvm/Polygeist))~~
+<!-- ~~LLVM Commit: `26eb4285b56edd8c897642078d91f16ff0fd3472` (Same as [Polygeist GitHub Repository](https://github.com/llvm/Polygeist))~~ -->
 
 LLVM Commit: `b270525f730be6e7196667925f5a9bfa153262e9` (Same as [ONNX-MLIR v5.0.0](https://github.com/onnx/onnx-mlir/tree/v0.5.0.0))
 

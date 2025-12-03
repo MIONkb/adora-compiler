@@ -54,4 +54,4 @@ cmake -GNinja \
  # -DLLVM_OPTIMIZED_TABLEGEN=ON -DLLVM_ENABLE_OCAMLDOC=OFF -DLLVM_ENABLE_BINDINGS=OFF 
 
 cmake --build "$build_dir" --target opt mlir-opt mlir-translate mlir-cpu-runner clang install
-ninja -j 16 install 
+ninja -j 72 install 

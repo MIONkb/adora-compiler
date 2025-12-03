@@ -1,120 +1,74 @@
-import os
+#!/usr/bin/env python3
 import sys
-import asyncio
-import shutil
-from argparse import ArgumentParser
-from rich.progress import Progress, TimeElapsedColumn, MofNCompleteColumn, TextColumn
+import re
 
-class AdoraCCompiler:
-    def __init__(self, opts):
-        self.opts = opts
-        self.env = os.environ.copy()
-        self.rootfolder = os.getcwd()
-        self.ir_folder = os.path.join(self.rootfolder, "IR")
-        self.temp_folder = os.path.join(self.ir_folder, "tempfiles")
-        self.progress_bar = None
+def strip_module_attrs(text: str) -> str:
+    """
+    删除 MLIR 中:
+        module attributes { ... } 
+    的内容，只保留空的 {}。
+    支持跨行与嵌套括号。
+    """
+    TOKEN = "module attributes "
 
-    def check_env(self):
-        """检查必要的环境变量是否已设置"""
-        required_vars = ["CGRVOPT_PROJECT_PATH", "CGRA_ADG_PATH", "CHIPYARD_DIR"]
-        for var in required_vars:
-            if var not in self.env:
-                print(f"Error: {var} is not set. Please source your environment before running this script.")
-                sys.exit(1)
+    out = []
+    i = 0
+    n = len(text)
 
-    async def run_command(self, task, command, cwd=None):
-        """异步运行命令"""
-        command_str = " ".join(command)
-        if task:
-            self.progress_bar.update(task, advance=0, command=command_str[:30])
-        proc = await asyncio.create_subprocess_exec(
-            *command, cwd=cwd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=self.env
-        )
-        stdout, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            print(f"Error: Command failed: {command_str}")
-            print(stderr.decode())
-            sys.exit(1)
-        if task:
-            self.progress_bar.update(task, advance=1, command="")
-        return stdout.decode()
+    while True:
+        pos = text.find(TOKEN, i)
+        if pos == -1:
+            out.append(text[i:])
+            break
 
-    async def compile_to_mlir(self, task):
-        """阶段 0：将 C 源代码编译为 MLIR"""
-        kernel_src = self.opts.kernel
-        dataset_size = self.opts.dataset_size
-        ir_folder = self.ir_folder
-        os.makedirs(ir_folder, exist_ok=True)
-        command = [
-            "cgeist", "-O2", "-lm", "-lgcc",
-            "-Dsize_t=int", "-Dwint_t=int", "-DROCKET_TARGET", "-D_riscv", f"-D{dataset_size}",
-            "--import-all-index",
-            f"-I{self.env['CGRVOPT_PROJECT_PATH']}/experiment/Cbenchmarks/Polybench/utilities",
-            f"-I{self.env['CHIPYARD_DIR']}/.conda-env/riscv-tools/riscv64-unknown-elf/include/machine/",
-            f"{kernel_src}.c", "-S", "-o", f"{ir_folder}/{kernel_src}.mlir"
-        ]
-        await self.run_command(task, command)
+        out.append(text[i:pos])
+        out.append(TOKEN)
 
-    async def optimize_kernels(self, task):
-        """阶段 1：优化 MLIR 内核"""
-        src_folder = os.path.join(self.ir_folder, "0_kernels")
-        tar_folder = os.path.join(self.ir_folder, "1_kernels_opt")
-        os.makedirs(tar_folder, exist_ok=True)
-        for file in os.listdir(src_folder):
-            if file.endswith(".mlir"):
-                filename = os.path.splitext(file)[0]
-                command = [
-                    "cgra-opt", "--adora-simplify-loadstore", "--adora-math-rewrite",
-                    "--adora-adjust-kernel-mem-footprint=cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock",
-                    os.path.join(src_folder, file), "-o", os.path.join(tar_folder, f"{filename}_opt.mlir")
-                ]
-                await self.run_command(task, command)
+        brace_start = pos + len(TOKEN)
 
-    async def generate_dfgs(self, task):
-        """阶段 2：生成 DFG"""
-        src_folder = os.path.join(self.ir_folder, "1_kernels_opt")
-        tar_folder = os.path.join(self.ir_folder, "2_dfgs")
-        os.makedirs(tar_folder, exist_ok=True)
-        for file in os.listdir(src_folder):
-            if file.endswith("_opt.mlir"):
-                filename = os.path.splitext(file)[0]
-                command = [
-                    "cgra-opt", "--adora-kernel-dfg-gen",
-                    os.path.join(src_folder, file)
-                ]
-                await self.run_command(task, command)
-                dot_file = os.path.join(tar_folder, f"{filename}_CDFG.dot")
-                png_file = os.path.join(tar_folder, f"{filename}_CDFG.png")
-                await self.run_command(task, ["dot", dot_file, "-Tpng", "-o", png_file])
+        if brace_start >= n or text[brace_start] != '{':
+            # 格式不符合，也跳过
+            i = brace_start
+            continue
 
-    async def run_flow(self):
-        """运行整个编译流程"""
-        with Progress(
-            *Progress.get_default_columns(),
-            TimeElapsedColumn(),
-            MofNCompleteColumn(),
-            TextColumn("{task.fields[command]}")
-        ) as progress:
-            self.progress_bar = progress
-            task = progress.add_task("[green] Compilation Flow", total=3, command="Starting")
-            await self.compile_to_mlir(task)
-            await self.optimize_kernels(task)
-            await self.generate_dfgs(task)
-            progress.update(task, advance=1, command="Completed")
+        # 写入空 {}
+        out.append("{}")
 
-def parse_args():
-    """解析命令行参数"""
-    parser = ArgumentParser(description="Adora Compiler")
-    parser.add_argument("--kernel", type=str, required=True, help="Kernel source file (without extension)")
-    parser.add_argument("--dataset-size", type=str, default="MINI_DATASET", help="Dataset size (default: MINI_DATASET)")
-    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
-    return parser.parse_args()
+        # 跳过原始 {...}
+        j = brace_start + 1
+        brace_depth = 1
+        while j < n and brace_depth > 0:
+            if text[j] == '{':
+                brace_depth += 1
+            elif text[j] == '}':
+                brace_depth -= 1
+            j += 1
+
+        i = j  # 从右括号后继续扫描
+
+    return "".join(out)
+
 
 def main():
-    opts = parse_args()
-    compiler = AdoraCCompiler(opts)
-    compiler.check_env()
-    asyncio.run(compiler.run_flow())
+    if len(sys.argv) != 2:
+        print("用法: python clean_module_attrs.py <file.mlir>")
+        sys.exit(1)
+
+    mlir_file = sys.argv[1]
+
+    # 读取
+    with open(mlir_file, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    # 清理
+    cleaned = strip_module_attrs(text)
+
+    # 覆盖写回
+    with open(mlir_file, "w", encoding="utf-8") as f:
+        f.write(cleaned)
+
+    # print(f"已清除 module attributes: {mlir_file}")
+
 
 if __name__ == "__main__":
     main()
