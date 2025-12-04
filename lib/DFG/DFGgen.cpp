@@ -659,7 +659,7 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
         assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
         // IterArgConsumer->dump();
-        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+        if(isa<affine::AffineYieldOp>(IterArgConsumer))
           continue;
         assert(isa<arith::AddFOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
@@ -680,8 +680,11 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
         assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
 
-        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
-          continue;   
+        // what is this for?
+        // if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+        //   continue;   
+        if(isa<affine::AffineYieldOp>(IterArgConsumer))
+          continue;
         
         assert(isa<arith::AddIOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
@@ -702,8 +705,8 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
         assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
         
-        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
-          continue;  
+        if(isa<affine::AffineYieldOp>(IterArgConsumer))
+          continue;
 
         assert(isa<arith::MulFOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
@@ -724,8 +727,8 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
         assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
         
-        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
-          continue;  
+        if(isa<affine::AffineYieldOp>(IterArgConsumer))
+          continue;
                   
         assert(isa<arith::MulIOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));

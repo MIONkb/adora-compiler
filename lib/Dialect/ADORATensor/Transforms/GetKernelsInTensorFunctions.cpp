@@ -19,9 +19,10 @@
 #include "llvm/Support/Debug.h"
 
 // #include "ADORA/Dialect/ADORA/IR/ADORA.h"
+#include "ADORA/Dialect/ADORA/Utility/Utility.h"
 #include "ADORA/Dialect/ADORATensor/Utility/Utility.h"
 #include "ADORA/Dialect/ADORATensor/Transforms/Passes.h"
-#include "../PassDetail.h"
+#include "PassDetail.h"
 
 using namespace llvm; // for llvm::dbgs / errs
 using namespace mlir;
@@ -31,7 +32,9 @@ using namespace mlir::ADORA::ADORATensor;
 
 #define DEBUG_TYPE "adora-extract-kernels-in-tensor-function"
 
-namespace {
+namespace mlir {
+namespace ADORA {
+namespace ADORATensor {
 
 static bool isAllowedOpInKernelBody(Operation *op) {
   auto name = op->getName().getStringRef();
@@ -93,8 +96,6 @@ static void renameKernelsInFunc(func::FuncOp func) {
 static LogicalResult convertAllLoopsToKernels(func::FuncOp func,
                                               ArrayRef<AffineForOp> loops) {
   bool changed = false;
-
-  // 拷贝一份列表，防止 SpecifiedAffineFortoKernel 在内部修改 IR 时迭代崩掉
   SmallVector<AffineForOp, 4> loopsCopy(loops.begin(), loops.end());
 
   for (AffineForOp forOp : loopsCopy) {
@@ -125,25 +126,22 @@ static LogicalResult handleMultiLoopFunction(func::FuncOp func,
 
 struct ADORATensorFunctionsToKernel
     : public ADORATensorFunctionsToKernelBase<ADORATensorFunctionsToKernel> {
-
+  ADORATensorFunctionsToKernel() = default;
   using Base = ADORATensorFunctionsToKernelBase<ADORATensorFunctionsToKernel>;
   using Base::Base;
 
   void runOnOperation() override {
     func::FuncOp func = getOperation();
 
-    // 只处理带有 `adora_kernel` 这个 unit attribute 的函数
     if (!func->hasAttrOfType<UnitAttr>("adora_kernel"))
       return;
 
-    // 收集当前函数中的所有 AffineForOp
     SmallVector<AffineForOp, 4> loops;
     func.walk([&](AffineForOp forOp) { loops.push_back(forOp); });
 
     if (loops.empty())
       return;
 
-    // 读取 onnx_layer 字符串属性（如果存在）
     StringRef onnxLayer;
     if (auto layerAttr = func->getAttrOfType<StringAttr>("onnx_layer"))
       onnxLayer = layerAttr.getValue();
@@ -154,9 +152,6 @@ struct ADORATensorFunctionsToKernel
              << " affine.for loops, onnx_layer = \"" << onnxLayer << "\"\n";
     });
 
-    // ---- 版本 1：简单情况 ----
-    // 1) onnx_layer == "Add"：把函数内所有 for 循环都转成 kernel
-    // 2) 或者函数本身只包含一个 for 循环：也统一转成 kernel
     if (onnxLayer == "Add" || loops.size() == 1) {
       if (failed(convertAllLoopsToKernels(func, loops))) {
         signalPassFailure();
@@ -164,7 +159,6 @@ struct ADORATensorFunctionsToKernel
       return;
     }
 
-    // ---- 版本 2：多 for-loop 情况，调用预留接口 ----
     if (failed(handleMultiLoopFunction(func, loops))) {
       signalPassFailure();
       return;
@@ -172,9 +166,12 @@ struct ADORATensorFunctionsToKernel
   }
 };
 
-} // namespace
 
 std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::ADORA::ADORATensor::createADORATensorFunctionsToKernelPass() {
+createADORATensorFunctionsToKernelPass() {
   return std::make_unique<ADORATensorFunctionsToKernel>();
 }
+
+}
+}
+} // namespace
