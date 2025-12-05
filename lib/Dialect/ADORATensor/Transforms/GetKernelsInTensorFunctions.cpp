@@ -36,6 +36,8 @@ namespace mlir {
 namespace ADORA {
 namespace ADORATensor {
 
+#define IsKernelizableLayer(type, target) ((type) == (target))
+
 static bool isAllowedOpInKernelBody(Operation *op) {
   auto name = op->getName().getStringRef();
   return
@@ -152,7 +154,9 @@ struct ADORATensorFunctionsToKernel
              << " affine.for loops, onnx_layer = \"" << onnxLayer << "\"\n";
     });
 
-    if (onnxLayer == "Add" || loops.size() == 1) {
+    if (  IsKernelizableLayer(onnxLayer, "Mul") 
+        ||IsKernelizableLayer(onnxLayer, "Add") 
+        ||IsKernelizableLayer(onnxLayer, "MatMul")  ) {
       if (failed(convertAllLoopsToKernels(func, loops))) {
         signalPassFailure();
       }
