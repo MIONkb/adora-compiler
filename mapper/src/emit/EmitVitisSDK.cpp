@@ -121,7 +121,7 @@ public:
       uint64_t DMA_Len = 8; /// 64bit
       int fuse = 0;
       std::stringstream load_data;
-      load_data <<"HostToDeviceTransfer(IntcController, AxiCdmaInstance, &" 
+      load_data <<"HostToDeviceTransfer(IntcController, AxiCdmaInstance, " 
               << Memref_BaseAddr  ////address not pointer
               <<", 0x" << std::hex << spadbaddr
               <<" + " << _CGRA_BASE_ADDR_STR
@@ -282,7 +282,7 @@ public:
       auto spadbaddr = SPAD_BaseAddrs[i];
       int fuse = (i == SPAD_BaseAddrs.size() - 1)? 0 : 1; /// fuse: 0 - broadcast, 1 - non-broadcast
       std::stringstream load_data;
-      load_data << "HostToDeviceTransfer(IntcController, AxiCdmaInstance, &" 
+      load_data << "HostToDeviceTransfer(IntcController, AxiCdmaInstance, " 
               << Memref_BaseAddr 
               <<" + " << "dramoffset_" << BLid
               <<" + " << "roffset_" << BLid
@@ -344,7 +344,7 @@ public:
       std::stringstream store_data;
       store_data <<"DeviceToHostTransfer(IntcController, AxiCdmaInstance, " 
               <<"0x" << std::hex << spadbaddr << " + " << _CGRA_BASE_ADDR_STR
-              << ", &" << Memref_BaseAddr  //// address not pointer
+              << ", " << Memref_BaseAddr  //// address not pointer
               <<", " << std::dec << DMA_Len 
               // <<", _task_id" /*Task id*/ << ", 0" /*Task dep*/
               <<");\n";
@@ -355,7 +355,6 @@ public:
 
       if(IsLastBlockStoreOp(op)){
         indent() << "_task_id++;\n";
-        indent() << "wait_cgra_all_finish();\n\n";
       }
 
       return true;
@@ -511,7 +510,7 @@ public:
               <<"0x" << std::hex << spadbaddr 
               <<" + " << "spadoffset_" << BLid 
               <<" + " << _CGRA_BASE_ADDR_STR
-              << ", &"<< Memref_BaseAddr 
+              << ", "<< Memref_BaseAddr 
               <<" + " << "dramoffset_" << BLid
               <<" + " << "roffset_" << BLid
               <<", " << std::dec << DMA_Len 
@@ -536,7 +535,6 @@ public:
 
     if(IsLastBlockStoreOp(op)){
       indent() << "_task_id++;\n";
-      indent() << "wait_cgra_all_finish();\n\n";
     }
 
     return true;    
@@ -911,7 +909,7 @@ void VitisSDKEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &
   ostr << "void " << funcop.getSymName().str() << "(";
   // "static XAxiCdma AxiCdmaInstance;	/* Instance of the XAxiCdma */""
   // "static XScuGic IntcController;	/* Instance of the Interrupt Controller */""
-  ostr << "XAxiCdma AxiCdmaInstance, XScuGic IntcController, ";
+  ostr << "XAxiCdma* AxiCdmaInstance, XScuGic* IntcController, ";
 
   // Funtion args
   ArrayRef<mlir::Type> argTypes = funcop.getArgumentTypes();
@@ -1046,6 +1044,7 @@ void VitisSDKEmitter::GenerateCGRACFGAndEXE(
     << cfgNum << ", " 
     << std::hex << tile_ens.As32b()[0] << std::dec <<");\n";
   CFGandEXE << "cgra_exe(" << std::hex << iob_ens.As32b()[0] << std::dec << ");\n";
+  CFGandEXE << "wait_cgra_all_finish();\n\n";
 
   KnToCfgExe[kernel] = CFGandEXE.str();
   
@@ -1150,22 +1149,22 @@ static uint8_t _task_id = 0;
   os << "#define CGRA_LITE_ADDR " << _CGRA_LITE_ADDR_STR << "\n";
 
   os << R"XXX(
-inline void HostToDeviceTransfer(
+static void HostToDeviceTransfer(
   XScuGic* IntcController, XAxiCdma* AxiCdmaInstance, 
   void* src_h, void* dst_d, int64_t bytelen){
   int Status;
-  Status = XAxiCdma_DataTransfer(*IntcController, *AxiCdmaInstance, (UINTPTR)src_h, (UINTPTR)dst_d, bytelen);
+  Status = XAxiCdma_DataTransfer(IntcController, AxiCdmaInstance, (UINTPTR)src_h, (UINTPTR)dst_d, bytelen);
   if (Status != XST_SUCCESS) {
     xil_printf("XAxiCdma Data Transfer Failed. Status: %d\r\n", Status);
     abort();
   }
 }
 
-inline void DeviceToHostTransfer(
+static void DeviceToHostTransfer(
   XScuGic* IntcController, XAxiCdma* AxiCdmaInstance, 
   void* src_d, void* dst_h, int64_t bytelen){
   int Status;
-  Status = XAxiCdma_DataTransfer(*IntcController, *AxiCdmaInstance, (UINTPTR)src_d, (UINTPTR)dst_h, bytelen);
+  Status = XAxiCdma_DataTransfer(IntcController, AxiCdmaInstance, (UINTPTR)src_d, (UINTPTR)dst_h, bytelen);
   if (Status != XST_SUCCESS) {
     xil_printf("XAxiCdma Data Transfer Failed. Status: %d\r\n", Status);
     abort();
