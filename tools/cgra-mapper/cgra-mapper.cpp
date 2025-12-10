@@ -271,7 +271,10 @@ int main(int argc, char **argv) {
   ADG* adg = adg_ir.getADG();
   int numGpeNodes = adg->numGpeNodes();
   int numFuNodes = numGpeNodes + adg->numIobNodes();
-  std::cout << "numGpeNodes: " << numGpeNodes << ", numFuNodes(GPE+IOB): "  << numFuNodes << std::endl;
+  int numTiles = adg->tileNum();
+  std::cout << "numGpeNodes: " << numGpeNodes 
+            << ", numFuNodes(GPE+IOB): "  << numFuNodes 
+            << ", numTiles: "  << numTiles << std::endl;
   std::vector<float>storePEusage;
   std::vector<float>storeFUusage;
   std::vector<int>bestLatency;
@@ -285,6 +288,10 @@ int main(int argc, char **argv) {
   CGRACallEmitter CEmitter(moduleop);
   PytestEmitter PyEmitter(moduleop);
   VitisSDKEmitter SDKEmitter(moduleop);
+
+  CEmitter.setTotalTileNum(numTiles);
+  PyEmitter.setTotalTileNum(numTiles);
+  SDKEmitter.setTotalTileNum(numTiles);
   
   std::vector<MapperSA*>mapper_Vec;
   std::vector<DFGIR*>DFGIR_Vec;

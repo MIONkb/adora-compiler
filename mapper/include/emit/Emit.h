@@ -166,6 +166,8 @@ public:
   void setADG(ADG* _) {_adg = _;}
   ADG* getADG(){return _adg;}
 
+  void setTotalTileNum(int n){_totalTileNum = n;};
+  int getTotalTileNum(){return _totalTileNum;};
   BYTES_LIST getIobEns(KernelOp& kernel){return _kernel_to_iob_ens[kernel];};
   void setTileEns(KernelOp& kernel, BYTES_LIST ens){_kernel_to_tile_ens[kernel] = ens;};
   BYTES_LIST getTileEns(KernelOp& kernel){return _kernel_to_tile_ens[kernel];};
@@ -184,6 +186,7 @@ protected:
   // std::map<int, int> _dfgIoSpadAddrs;
   ADG* _adg;
 
+  int _totalTileNum = 1;
   std::map<KernelOp, BYTES_LIST> _kernel_to_iob_ens;
   std::map<KernelOp, BYTES_LIST> _kernel_to_tile_ens;
   // uint64_t _iob_ens = 0;

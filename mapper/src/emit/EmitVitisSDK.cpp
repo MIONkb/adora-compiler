@@ -1019,9 +1019,9 @@ void VitisSDKEmitter::GenerateCGRACFGAndEXE(
     // _old_cfg_status.end = std::min(_old_cfg_status.end, cfgSpadSize);
   int cfg_len = cfgNum * (alignWidth + cfgDataWidth) / 8; // length of config_addr and config_data in bytes
   int cfgBaseAddr = 0;
-  int banks = adg->numIobNodes();
+  int banksEachTile = adg->numIobNodes()/adg->tileNum();
   int sizeofBank = adg->iobSpadBankSize();
-  int cfgBaseAddrSpad = cfgBaseAddr + banks * sizeofBank; // cfg spad on top of iob spad
+  int cfgBaseAddrSpad = cfgBaseAddr + (banksEachTile * sizeofBank) * getTotalTileNum(); // cfg spad on top of iob spad
   int cfgBaseAddrCtrl = cfgBaseAddr / cfgSpadDataByte; // config base address the controller access
   // tile enables
   
@@ -1043,7 +1043,8 @@ void VitisSDKEmitter::GenerateCGRACFGAndEXE(
     << std::hex << cfgBaseAddrCtrl << std::dec << ", " 
     << cfgNum << ", " 
     << std::hex << tile_ens.As32b()[0] << std::dec <<");\n";
-  CFGandEXE << "cgra_exe(" << std::hex << iob_ens.As32b()[0] << std::dec << ");\n";
+  CFGandEXE << "cgra_exe(" << std::hex << iob_ens.As32b()[0]  << std::dec
+            << ", "     << std::hex << tile_ens.As32b()[0] << std::dec << ");\n";
   CFGandEXE << "wait_cgra_all_finish();\n\n";
 
   KnToCfgExe[kernel] = CFGandEXE.str();
