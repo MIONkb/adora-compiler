@@ -77,7 +77,7 @@ Update the LLVM installation path in the following files to your own path:
 After making the changes, run `build_adora.sh`.  
 **Tip:** It is recommended to execute the script line-by-line (copy-paste using `Ctrl+C`/`Ctrl+V`) for better control.
 
-### 3 adora-onnx-mlir (Option)
+### 3 adora-onnx-mlir (Optional)
 
 A self-hosted version of onnx-mlir is provided as a submodule. You can initialize and update it with:
 ```bash
@@ -87,7 +87,7 @@ Then follow the installation script build_tools/build_onnxmlir.sh.
 
 If you only need to run small existing models in experiments, or only use C kernels, you can skip adora-onnx-mlir.
 
-### 4 CGRA (Option)
+### 4 CGRA (Optional)
 
 You can download and install the CGRA from the appropriate repository:  
 [CGRA Repository](https://github.com/MIONkb/VITRA-CGRA)
