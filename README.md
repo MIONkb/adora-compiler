@@ -56,7 +56,7 @@ ADORA includes two compilers designed for the FDRA CGRA SoC:
 
 # Build
 
-### 1 LLVM-18
+### 1 LLVM-18  (Unskippable)
 
 <!-- ~~LLVM Commit: `26eb4285b56edd8c897642078d91f16ff0fd3472` (Same as [Polygeist GitHub Repository](https://github.com/llvm/Polygeist))~~ -->
 
@@ -68,7 +68,7 @@ To install LLVM, follow script:
 ```bash
 ./build_tools/build_llvm.sh
 ```
-### 2 Adora(This project)
+### 2 Adora (This project)
 
 Update the LLVM installation path in the following files to your own path:
 - `build_adora.sh`
@@ -77,14 +77,22 @@ Update the LLVM installation path in the following files to your own path:
 After making the changes, run `build_adora.sh`.  
 **Tip:** It is recommended to execute the script line-by-line (copy-paste using `Ctrl+C`/`Ctrl+V`) for better control.
 
+### 3 adora-onnx-mlir (Option)
 
-### 3 Rocket+CGRA SoC
+A self-hosted version of onnx-mlir is provided as a submodule. You can initialize and update it with:
+```bash
+git submodule update --init --recursive
+```
+Then follow the installation script build_tools/build_onnxmlir.sh.
 
-You can download and install the Rocket+CGRA SoC from the appropriate repository:  
-[FDRA Repository](https://github.com/MIONkb/FDRA)
+If you only need to run small existing models in experiments, or only use C kernels, you can skip adora-onnx-mlir.
 
-or you wanna run with a light-weighted python api(cocotb):
-[MatrixMeld](https://github.com/FDU-ME-ARC/MatrixMeld)
+### 4 CGRA (Option)
+
+You can download and install the CGRA from the appropriate repository:  
+[CGRA Repository](https://github.com/MIONkb/VITRA-CGRA)
+
+A light-weighted python api(cocotb) will be released soon.
 
 ### 4 Other Dependencies You May Need
 
