@@ -100,6 +100,7 @@ static LogicalResult convertAllLoopsToKernels(func::FuncOp func,
   bool changed = false;
   SmallVector<AffineForOp, 4> loopsCopy(loops.begin(), loops.end());
 
+  func.dump();
   for (AffineForOp forOp : loopsCopy) {
     if (!forOp || forOp->getParentOfType<func::FuncOp>() != func)
       continue;
@@ -107,9 +108,10 @@ static LogicalResult convertAllLoopsToKernels(func::FuncOp func,
     if (succeeded(extractSingleForToKernel(forOp)))
       changed = true;
   }
-
+  func.dump();
   if (changed)
     renameKernelsInFunc(func);
+  func.dump();
 
   return success();
 }
@@ -139,8 +141,11 @@ struct ADORATensorFunctionsToKernel
       return;
 
     SmallVector<AffineForOp, 4> loops;
-    func.walk([&](AffineForOp forOp) { loops.push_back(forOp); });
-
+    for (Operation &op : llvm::make_early_inc_range(func.getOps())) {
+      if (auto forOp = dyn_cast<AffineForOp>(&op)) {
+        loops.push_back(forOp); 
+      }
+    }
     if (loops.empty())
       return;
 
@@ -160,6 +165,7 @@ struct ADORATensorFunctionsToKernel
       if (failed(convertAllLoopsToKernels(func, loops))) {
         signalPassFailure();
       }
+      func.dump();
       return;
     }
 
