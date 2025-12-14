@@ -55,6 +55,7 @@ set(LIBS
   #ADORA
   MLIRADORAMisc
   MLIRADORAOps
+  MLIRADORAKernelOp
   MLIRADORATransforms
   MLIRADORALowerings
   GeneralCDFGGen

@@ -14,6 +14,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Twine.h"
 
+#include "ADORA/Dialect/ADORA/IR/KernelOp/ADORAKernelOp.h"
 #include "ADORA/Dialect/ADORA/IR/ADORA.h"
 #include "ADORA/Dialect/ADORA/Utility/Utility.h"
 
@@ -49,7 +50,6 @@ LogicalResult mlir::ADORA::SpecifiedAffineFortoKernel(mlir::affine::AffineForOp&
     return LogicalResult::failure();
   }
 
-  // errs()<<"    op :" << op->getName().getStringRef() << "\n";
   OpBuilder builder(kernelforOp.getOperation());
 
   // Create a kernel op and move the body region of the innermost loop into it
