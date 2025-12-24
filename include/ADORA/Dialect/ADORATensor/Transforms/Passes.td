@@ -70,7 +70,8 @@ def ADORATensorFunctionsToKernel : Pass<"adora-extract-kernels-in-tensor-functio
   let summary = "Extract kernels in a FuncOp converted from onnx model";
   let constructor = "mlir::ADORA::ADORATensor::createADORATensorFunctionsToKernelPass()";
   let dependentDialects = [
-    // "::mlir::ADORA::ADORADialect"
+    "::mlir::ADORA::ADORADialect",
+    "::mlir::ADORA::ADORATensor::ADORATensorDialect"
     // "arith::AffineDialect"
   ];
   let options = [
