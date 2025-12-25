@@ -435,7 +435,7 @@ StationaryBodyBuilderFn TileofOutputStationary(
         MemRefType newMemRef = MemRefType::get(shape, dtype);
 
         ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                  (loc, A, memIVmap, ValueRange({vi, vj}), newMemRef);
+                  (loc, C, memIVmap, ValueRange({vi, vj}), newMemRef);
 
         BlockLoad.setKernelName("GEMMOS");
         BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
