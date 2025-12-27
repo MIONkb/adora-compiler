@@ -526,7 +526,8 @@ def InterleaverOp : ADORA_Op<"interleaver">{
   }];
 
   let builders = [
-    OpBuilder<(ins "ValueRange":$inputs)>
+    OpBuilder<(ins "ValueRange":$inputs)>,
+    OpBuilder<(ins "ValueRange":$inputs, "ArrayRef<int64_t>": $outShape)>
   ];
 
  // Define inputs as a variadic argument.

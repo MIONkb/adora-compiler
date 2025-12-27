@@ -153,12 +153,13 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
           /// generate interleaver for C
           SmallVector<int64_t, 4> shape;
           shape.push_back(4);
+          shape.push_back(1);
           
           SmallVector<mlir::Value> ToInterleaver; 
           for(int i = 0; i < 4;i++){
             ToInterleaver.push_back(inner.getResult(col * tile_row_size + row * 4 + i));
           }     
-          ADORA::InterleaverOp interleaver = builder.create<ADORA::InterleaverOp>(loc, ToInterleaver);
+          ADORA::InterleaverOp interleaver = builder.create<ADORA::InterleaverOp>(loc, ToInterleaver, shape);
           
           /// generate vector input for C
           SmallVector<AffineExpr, 2> Exprs;
@@ -184,12 +185,13 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
         /// generate interleaver for C
         SmallVector<int64_t, 4> shape;
         shape.push_back(tile_row_size % 4);
+        shape.push_back(1);
         
         SmallVector<mlir::Value> ToInterleaver; 
         for(int i = 0; i < tile_row_size % 4; i++){
           ToInterleaver.push_back(inner.getResult(col * tile_row_size + row * 4 + i));
         }     
-        ADORA::InterleaverOp interleaver = builder.create<ADORA::InterleaverOp>(loc, ToInterleaver);
+        ADORA::InterleaverOp interleaver = builder.create<ADORA::InterleaverOp>(loc, ToInterleaver, shape);
         
         /// generate vector input for C
         SmallVector<AffineExpr, 2> Exprs;

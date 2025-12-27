@@ -743,6 +743,22 @@ void InterleaverOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState 
   build(odsBuilder, odsState, outtype, inputs);
 }
 
+void InterleaverOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ValueRange inputs, ArrayRef<int64_t> outShape){
+  assert(inputs.size() > 1 && "InterleaverOp requires at least 2 inputs");
+
+  ::mlir::Type intype = inputs.front().getType();
+  for (::mlir::Value v : inputs) {
+    assert(v.getType() == intype &&
+           "All inputs of InterleaverOp should have the same type.");
+  }
+
+  // Construct result vector shape:
+  //   [numInputs] + outShape
+
+  ::mlir::Type outtype = ::mlir::VectorType::get(outShape, intype);
+  build(odsBuilder, odsState, outtype, inputs);
+}
+
 LogicalResult InterleaverOp::verify() {
   if(!(getInputs().size() > 1)){
     return emitOpError(
