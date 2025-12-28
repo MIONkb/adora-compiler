@@ -2010,19 +2010,33 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
 
       if(isa<ADORA::InterleaverOp>(vecop) || 
         isa<arith::AddIOp>(vecop) || isa<arith::AddFOp>(vecop)){
-        int vecnum;
-        if(isa<ADORA::InterleaverOp>(vecop)){
-          /// get the input num of interleaver
-          int interleaverNum = dyn_cast<ADORA::InterleaverOp>(vecop).getInterleaveNumber();
-          vecnum = interleaverNum;
+        int vecnum = 1;
+        ArrayRef<int64_t> shape = dyn_cast<mlir::VectorType>(vecop->getResult(0).getType()).getShape();;
+        int dimLargerThanOne = -1;
+        for(int _ = 0; _ < shape.size(); _++){
+          int _dim = shape[_];
+          vecnum *= _dim;
+          if(_dim > 1) {
+            assert(dimLargerThanOne == -1); /// ensure only one dim is larger than 1
+            dimLargerThanOne = _;
+          }
         }
-        else if(isa<arith::AddIOp>(vecop) || isa<arith::AddFOp>(vecop)){
-          assert(dyn_cast<mlir::VectorType>(vecop->getResult(0).getType()).getShape().size() == 1);
-          vecnum = dyn_cast<mlir::VectorType>(vecop->getResult(0).getType()).getShape()[0];
-        }
-        else{
-          assert(false && "Unsupported input of vector_store.");
-        }
+        assert(dimLargerThanOne != -1);
+        // if(isa<ADORA::InterleaverOp>(vecop)){
+        //   /// get the input num of interleaver
+        //   int interleaverNum = dyn_cast<ADORA::InterleaverOp>(vecop).getInterleaveNumber();
+        //   vecnum = interleaverNum;
+        // }
+        // else if(isa<arith::AddIOp>(vecop) || isa<arith::AddFOp>(vecop)){
+        //   shape = dyn_cast<mlir::VectorType>(vecop->getResult(0).getType()).getShape();
+        //   vecnum = 1;
+        //   for(auto _dim : shape){
+        //     vecnum *= _dim;
+        //   }
+        // }
+        // else{
+        //   assert(false && "Unsupported input of vector_store.");
+        // }
 
         /// fix linear access of extractop
         assert(node->isLSaffine() && node->getTypeName() == "Output");
@@ -2032,20 +2046,34 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
         std::string step, count;
 
         SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
+        ArrayRef<int64_t> memRefShape =  vecstoreop.getMemRefType().getShape();
+        int innermostStep = ElementBytes;
+        for(int dim = 0; dim < dimLargerThanOne; dim++){
+          innermostStep *= memRefShape[memRefShape.size() - 1 - dim];
+        }        
         newLinearAccess.push_back(std::pair(ElementBytes, vecnum));
         // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
 
         int level = 0;
         while (std::getline(ss, step, ',')) {
           std::getline(ss, count, ',');
-
-          if(level == 1){
-            int newstep = std::stoi(step) - ElementBytes * vecnum + ElementBytes;
-            newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
+          if(level == 0){
+            assert(std::stoi(step) % innermostStep == 0);
+            assert(std::stoi(count) % vecnum == 0);
+            int newstep = std::stoi(step) / innermostStep - innermostStep * vecnum;
+            int newcount = std::stoi(count) / vecnum;
+            newLinearAccess.push_back(std::pair(newstep, newcount));   
           }
-          else if(level != 0) {
+          else {
             newLinearAccess.push_back(std::pair(std::stoi(step), std::stoi(count)));
           }
+          // if(level == 1){
+          //   int newstep = std::stoi(step) - ElementBytes * vecnum + ElementBytes;
+          //   newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
+          // }
+          // else if(level != 0) {
+          //   newLinearAccess.push_back(std::pair(std::stoi(step), std::stoi(count)));
+          // }
 
           level++;
         }
@@ -2067,18 +2095,27 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
 
       if(isa<ADORA::DeinterleaverOp>(userop) || 
         isa<arith::AddIOp>(userop) || isa<arith::AddFOp>(userop)){
-        int vecnum;
-        if(isa<ADORA::DeinterleaverOp>(userop)){
-          /// get the input num of interleaver
-          int vecnum = dyn_cast<ADORA::DeinterleaverOp>(userop).getDeinterleaveNumber();
+        int vecnum = 1;
+        ArrayRef<int64_t> shape = dyn_cast<mlir::VectorType>(op->getResult(0).getType()).getShape();
+        // if(isa<ADORA::DeinterleaverOp>(userop)){
+        //   /// get the input num of interleaver
+        //   int vecnum = dyn_cast<ADORA::DeinterleaverOp>(userop).getDeinterleaveNumber();
+        // }
+        // else if(isa<arith::AddIOp>(userop) || isa<arith::AddFOp>(userop)){
+        int dimLargerThanOne = -1;
+        for(int _ = 0; _ < shape.size(); _++){
+          int _dim = shape[_];
+          vecnum *= _dim;
+          if(_dim > 1) {
+            assert(dimLargerThanOne == -1); /// ensure only one dim is larger than 1
+            dimLargerThanOne = _;
+          }
         }
-        else if(isa<arith::AddIOp>(userop) || isa<arith::AddFOp>(userop)){
-          assert(dyn_cast<mlir::VectorType>(userop->getResult(0).getType()).getShape().size() == 1);
-          vecnum = dyn_cast<mlir::VectorType>(userop->getResult(0).getType()).getShape()[0];
-        }
-        else{
-          assert(false && "Unsupported input of vector_store.");
-        }
+        assert(dimLargerThanOne != -1);
+        // }
+        // else{
+        //   assert(false && "Unsupported input of vector_store.");
+        // }
 
         /// fix linear access of extractop
         assert(node->isLSaffine() && node->getTypeName() == "Input");
@@ -2088,18 +2125,25 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
         std::string step, count;
 
         SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
-        newLinearAccess.push_back(std::pair(ElementBytes, vecnum));
+        ArrayRef<int64_t> memRefShape =  vecloadop.getMemRefType().getShape();
+        int innermostStep = ElementBytes;
+        for(int dim = 0; dim < dimLargerThanOne; dim++){
+          innermostStep *= memRefShape[memRefShape.size() - 1 - dim];
+        }
+        newLinearAccess.push_back(std::pair(innermostStep, vecnum));
         // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
 
         int level = 0;
         while (std::getline(ss, step, ',')) {
           std::getline(ss, count, ',');
-
-          if(level == 1){
-            int newstep = std::stoi(step) - ElementBytes * vecnum + ElementBytes;
-            newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
+          if(level == 0){
+            assert(std::stoi(step) % innermostStep == 0);
+            assert(std::stoi(count) % vecnum == 0);
+            int newstep = std::stoi(step) / innermostStep - innermostStep * vecnum;
+            int newcount = std::stoi(count) / vecnum;
+            newLinearAccess.push_back(std::pair(newstep, newcount));   
           }
-          else if(level != 0) {
+          else {
             newLinearAccess.push_back(std::pair(std::stoi(step), std::stoi(count)));
           }
 
