@@ -538,7 +538,7 @@ AffineForOp TiledOutputStationaryGemm(
   }
   else{
     N_temporal_tile = 1;
-    K_temporal_tile = ShapeB[1];    
+    K_temporal_tile = ShapeB[0];    
   }
 
   // make sure matmul is legal
@@ -561,6 +561,20 @@ AffineForOp TiledOutputStationaryGemm(
   N_step = (N_temporal_tile * tilecol);
   K_step = K_temporal_tile;
 
+  //==========================================================
+  // Allocate output buffer (type comes from GEMM output, NOT C)
+  //==========================================================
+  Location loc = op.getLoc();
+
+  auto outTy = op.getO().getType().dyn_cast<MemRefType>();
+  assert(outTy && "Expected GemmOp to return memref as output in lowering.");
+
+  Value out = opbuilder.create<memref::AllocOp>(loc, outTy);
+
+  //==========================================================
+  // Initialize out with C (copy if same shape, else broadcast init)
+  //==========================================================
+  initOutWithC2DLike(opbuilder, loc, out, op.getC(), ArrayRef<int64_t>({ShapeA[0], ShapeA[1]}));
 
   //////////////////////////////////////
   /// Generate systolic gemm

@@ -33,7 +33,6 @@ namespace mlir{
 namespace ADORA{
 namespace ADORATensor{
 
-
 bool TensorOpCDFGVisitor::visitOp(ADORATensor::GemmOp op){
   SystolicImplInterface SystolicPara(op);
   ArrayRef<int64_t> tilesize = SystolicPara.getTileSize();
