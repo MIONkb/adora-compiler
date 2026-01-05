@@ -495,9 +495,9 @@ AffineForOp TiledWeightStationaryGemm(
 ){
   assert(tilesize.size() == 2 || tilesize.size() == 3 ||  tilesize.size() == 4);
 
-  llvm::SmallVector<int64_t, 2> ShapeA = getShape(op.getA());
-  llvm::SmallVector<int64_t, 2> ShapeB = getShape(op.getB());
-  llvm::SmallVector<int64_t, 2> ShapeC = getShape(op.getC());
+  llvm::SmallVector<int64_t, 2> ShapeA = get2DShape(op.getA());
+  llvm::SmallVector<int64_t, 2> ShapeB = get2DShape(op.getB());
+  llvm::SmallVector<int64_t, 2> ShapeC = get2DShape(op.getC());
 
   //////////////////////////////////////
   /// Get tiled matmul micro-kernel parameter, which is also the tile of B matrix 

@@ -167,7 +167,7 @@ affine::AffineForOp OffDeviceNestedLoop(
           SmallVector<Value> lastThreeIvs(allIvs.end() - 3, allIvs.end());
           InnerMostBodyBuilder(b, loc, lastThreeIvs);
         });
-      current = inner;
+      current = inner;                                   
     }
     else{
       auto inner = innerBuilder.create<affine::AffineForOp>(

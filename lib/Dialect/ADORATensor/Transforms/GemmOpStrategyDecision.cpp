@@ -217,6 +217,47 @@ static ArrayRef<int64_t> getShape(mlir::Type t){
   }
 }
 
+/// Trim a shape to 2D if possible.
+/// - If shape is [1, M, N] (or [0, M, N]), drop the leading dimension
+/// - If shape is already 2D, keep it
+/// - Otherwise, return the original shape (or assert, depending on policy)
+static inline llvm::SmallVector<int64_t, 2>
+trimTo2D(llvm::ArrayRef<int64_t> shape) {
+  llvm::SmallVector<int64_t, 2> result;
+
+  if (shape.size() == 3 && (shape[0] == 1 || shape[0] == 0)) {
+    // [1, M, N] -> [M, N]
+    result.push_back(shape[1]);
+    result.push_back(shape[2]);
+    return result;
+  }
+
+  else if (shape.size() == 2) {
+    // [M, N] -> [M, N]
+    result.push_back(shape[0]);
+    result.push_back(shape[1]);
+    return result;
+  }
+
+  else if (shape.size() == 1) {
+    result.push_back(shape[0]);
+    return result;
+  }
+
+  // Fallback policy (choose ONE):
+  // 1) Be permissive: take the last two dims
+  if (shape.size() > 2) {
+    result.push_back(shape[shape.size() - 2]);
+    result.push_back(shape[shape.size() - 1]);
+    return result;
+  }
+
+  // 2) Or be strict:
+  // assert(false && "trimTo2D: unsupported shape rank");
+
+  return result;
+}
+
 // pipeline fill estimate for a rowxcol systolic array
 inline int64_t pipeFill(int64_t row, int64_t col) {
 
@@ -341,9 +382,17 @@ void AutoSetDataflowStrategy(
   int dByte = getDataBytes(A.getType());
 
   // Get shape info
-  auto shapeA = getShape(A.getType());
-  auto shapeB = getShape(B.getType());
-  auto shapeC = getShape(C.getType());
+  auto shapeA = trimTo2D(getShape(A.getType()));
+  auto shapeB = trimTo2D(getShape(B.getType()));
+  auto shapeC = trimTo2D(getShape(C.getType()));
+
+  if(shapeC.size() == 1){
+    llvm::SmallVector<int64_t, 2> newShapeC;
+    newShapeC.push_back(shapeA[0]);
+    newShapeC.push_back(shapeC[0]);
+    shapeC = newShapeC;
+  }
+
 
   // Extract M, N, K (assuming standard GEMM layout)
   int64_t M = shapeA[0];

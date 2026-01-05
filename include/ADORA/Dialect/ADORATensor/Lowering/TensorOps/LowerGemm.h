@@ -93,6 +93,21 @@ static inline llvm::SmallVector<int64_t, 2> getShape(mlir::Value v) {
   return {};
 }
 
+static inline llvm::SmallVector<int64_t, 2> get2DShape(mlir::Value v) {
+  llvm::SmallVector<int64_t, 4> shape = getShape(v);
+
+  // Case 1: already 2D
+  if (shape.size() == 2)
+    return {shape[0], shape[1]};
+
+  // Case 2: 3D and first dim is 1 → drop it
+  else if (shape.size() == 3 && shape[0] == 1)
+    return {shape[1], shape[2]};
+
+  // Otherwise: not a valid 2D shape
+  return {};
+}
+
 }
 }
 
