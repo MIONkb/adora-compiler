@@ -125,6 +125,9 @@ static inline llvm::SmallVector<int64_t, 2> get2DShape(mlir::Value v) {
   else if (shape.size() == 3 && shape[0] == 1)
     return {shape[1], shape[2]};
 
+  else if (shape.size() == 1)
+    return {1, shape[0]};
+
   // Otherwise: not a valid 2D shape
   return {};
 }

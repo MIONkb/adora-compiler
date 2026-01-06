@@ -158,9 +158,9 @@ void initOutWithC2DLike(
   }
 
   // Important: affine.for body must end with affine.yield
-  nb.create<affine::AffineYieldOp>(loc);
+  // nb.create<affine::AffineYieldOp>(loc);
   mb.setInsertionPointAfter(nFor);
-  mb.create<affine::AffineYieldOp>(loc);
+  // mb.create<affine::AffineYieldOp>(loc);
 }
 
 /// @brief Generate a nested affine.for loop on device(data transfer is already done).

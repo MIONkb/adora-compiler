@@ -237,14 +237,14 @@ bool ConsecutiveAccessSameMemAddr(Access0_T access0, Access1_T access1){
    //// First, Check whether the two loads are consecutive loads in same block.
   mlir::Block* block = access0.getOperation()->getBlock();
 
-  LLVM_DEBUG(llvm::errs() << "access0:" << access0 << "\n");
-  LLVM_DEBUG(llvm::errs() << "access1:" << access1 << "\n");
-  LLVM_DEBUG(llvm::errs() << "access0 block:\n" );
-  LLVM_DEBUG(block->dump());
+  // LLVM_DEBUG(llvm::errs() << "access0:" << access0 << "\n");
+  // LLVM_DEBUG(llvm::errs() << "access1:" << access1 << "\n");
+  // LLVM_DEBUG(llvm::errs() << "access0 block:\n" );
+  // LLVM_DEBUG(block->dump());
 
   bool find_access0 = false;
   for(auto iter = block->begin(); iter != block->end(); iter++){
-    LLVM_DEBUG(llvm::errs() << "iter:" << *iter << "\n");
+    // LLVM_DEBUG(llvm::errs() << "iter:" << *iter << "\n");
     if(!find_access0 && isa<Access0_T>(iter)){
       Access0_T access = dyn_cast<Access0_T>(iter);
       if(access0 == access){

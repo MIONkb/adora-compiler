@@ -519,7 +519,7 @@ AffineForOp TiledOutputStationaryGemm(
 
   llvm::SmallVector<int64_t, 2> ShapeA = get2DShape(op.getA());
   llvm::SmallVector<int64_t, 2> ShapeB = get2DShape(op.getB());
-  llvm::SmallVector<int64_t, 2> ShapeC = get2DShape(op.getC());
+  llvm::SmallVector<int64_t, 2> ShapeO = get2DShape(op.getO());
 
   //////////////////////////////////////
   /// Get tiled matmul micro-kernel parameter, which is also the tile of B matrix 
@@ -542,9 +542,9 @@ AffineForOp TiledOutputStationaryGemm(
   }
 
   // make sure matmul is legal
-  assert(ShapeA.size() == 2 && ShapeB.size() == 2 && ShapeC.size() == 2);
-  assert(ShapeA[0] == ShapeC[0] && ShapeA[1] == ShapeB[0] && ShapeB[1] == ShapeC[1]);
-  assert(ShapeC[1] % (tilecol * N_temporal_tile) == 0 
+  assert(ShapeA.size() == 2 && ShapeB.size() == 2 && ShapeO.size() == 2);
+  assert(ShapeA[0] == ShapeO[0] && ShapeA[1] == ShapeB[0] && ShapeB[1] == ShapeO[1]);
+  assert(ShapeO[1] % (tilecol * N_temporal_tile) == 0 
       && ShapeA[0] % tilerow == 0 
       && ShapeB[0] % K_temporal_tile == 0);
   
@@ -569,6 +569,7 @@ AffineForOp TiledOutputStationaryGemm(
   auto outTy = op.getO().getType().dyn_cast<MemRefType>();
   assert(outTy && "Expected GemmOp to return memref as output in lowering.");
 
+  opbuilder.setInsertionPointAfter(op.getOperation());
   Value out = opbuilder.create<memref::AllocOp>(loc, outTy);
 
   //==========================================================
@@ -576,6 +577,7 @@ AffineForOp TiledOutputStationaryGemm(
   //==========================================================
   initOutWithC2DLike(opbuilder, loc, out, op.getC(), ArrayRef<int64_t>({ShapeA[0], ShapeA[1]}));
 
+  op.getOperation()->getBlock()->dump();
   //////////////////////////////////////
   /// Generate systolic gemm
   //////////////////////////////////////
@@ -586,12 +588,12 @@ AffineForOp TiledOutputStationaryGemm(
       /*upper bounds*/{ShapeA[0], ShapeB[1], ShapeB[0]}, //// M -> N -> K 
       /*steps*/{M_step, N_step, K_step}, //// M -> N -> K 
       /*InnerMostBodyBuilder*/TileofOutputStationary(
-        op.getA(), op.getB(), op.getC(), N_temporal_tile, K_temporal_tile, tilerow, tilecol
+        op.getA(), op.getB(), out, N_temporal_tile, K_temporal_tile, tilerow, tilecol
       )
     );
   
-  op.getOperation()->getBlock()->push_back(loop);
-  loop.getOperation()->moveAfter(op);
+  // op.getOperation()->getBlock()->push_back(loop);
+  loop.getOperation()->moveAfter(out.getDefiningOp());
   // } 
   // else{
   //   loop = GenerateTiledNestedLoopWithoutLoopCarry(
