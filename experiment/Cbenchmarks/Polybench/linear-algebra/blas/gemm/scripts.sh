@@ -48,7 +48,7 @@ cgra-opt \
     gesummv_kernel_0.mlir
 
 cgra-opt \
-    --ADORA-kernel-dfg-gen \
+    --adora-kernel-dfg-gen \
     /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/linear-algebra/kernels/bicg_small/1_kernels_opt/bicg_kernel_opt.mlir
 
 

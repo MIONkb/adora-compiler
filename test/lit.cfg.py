@@ -1,22 +1,27 @@
 import os
-
 import lit.formats
-import lit.util
-
-from lit.llvm import llvm_config
 
 config.name = "ADORA"
-config.test_format = lit.formats.ShTest(execute_external=True)
+config.test_format = lit.formats.ShTest(True)
 config.suffixes = [".mlir"]
 config.test_source_root = os.path.dirname(__file__)
-config.test_exec_root = os.path.join(config.adora_test_output_dir, "test")
 
-llvm_config.use_default_substitutions()
+# ---- Find tool dirs injected by lit.site.cfg.py ----
+adora_tools_dir = getattr(config, "adora_tools_dir", None)
+llvm_tools_dir  = getattr(config, "llvm_tools_dir", None)
 
-config.substitutions.append(("%cgra-opt", os.path.join(config.adora_tools_dir, "cgra-opt")))
-config.substitutions.append(("%FileCheck", os.path.join(config.llvm_tools_dir, "FileCheck")))
+# ---- Update PATH so tools can be found ----
+paths = []
+if adora_tools_dir:
+  paths.append(adora_tools_dir)
+if llvm_tools_dir:
+  paths.append(llvm_tools_dir)
 
-config.excludes = [
-    "CMakeLists.txt",
-    "lit.site.cfg.py.in",
-]
+config.environment["PATH"] = os.pathsep.join(paths + [config.environment.get("PATH", "")])
+
+# ---- Substitutions used by RUN lines ----
+if adora_tools_dir:
+  config.substitutions.append(("%cgra-opt", os.path.join(adora_tools_dir, "cgra-opt")))
+
+if llvm_tools_dir:
+  config.substitutions.append(("%FileCheck", os.path.join(llvm_tools_dir, "FileCheck")))
