@@ -459,49 +459,177 @@ SmallDenseMap<unsigned, SmallVector<Operation* >>
 //////////////////////////////////
 ///// Dependency analysis for data block operations
 //////////////////////////////////
+static bool canonicalizeAndEqual(mlir::AffineMap map1, mlir::ValueRange ops1,
+                                 mlir::AffineMap map2, mlir::ValueRange ops2) {
+  llvm::SmallVector<mlir::Value, 8> v1(ops1.begin(), ops1.end());
+  llvm::SmallVector<mlir::Value, 8> v2(ops2.begin(), ops2.end());
 
-/// @brief check the dependency between two data block op.
-///    Two data blocks are dependent under the following conditions:
-///       1. 
-///       2.
-/// @param store  
-/// @param load  
-/// @return 
-bool checkDependencyBetweenBlockStoreAndBlockLoad(ADORA::DataBlockStoreOp& store, ADORA::DataBlockLoadOp& load) {
-  if(store.getTargetMemref() == load.getOriginalMemref()){
-    return true;
+  // IMPORTANT: canonicalize the (map, operands) pair together.
+  // Do NOT canonicalize only the map while comparing the original operands.
+  simplifyMapWithOperands(map1, v1);
+  simplifyMapWithOperands(map2, v2);
+
+  if (map1 != map2) return false;
+  if (v1.size() != v2.size()) return false;
+  for (size_t i = 0; i < v1.size(); ++i)
+    if (v1[i] != v2[i]) return false;
+  return true;
+}
+
+static llvm::SmallVector<int64_t, 8>
+getBlockShapeForLoad(ADORA::DataBlockLoadOp &op) {
+  // For BlockLoad, the tile/block shape is the result memref shape.
+  auto ty = op.getResult().getType().cast<mlir::MemRefType>();
+  return llvm::SmallVector<int64_t, 8>(ty.getShape().begin(), ty.getShape().end());
+}
+
+static llvm::SmallVector<int64_t, 8>
+getBlockShapeForStore(ADORA::DataBlockStoreOp &op) {
+  // For BlockStore, the tile/block shape is typically the source memref shape
+  // (the on-chip tile buffer being written back to the original array).
+  auto ty = op.getSourceMemref().getType().cast<mlir::MemRefType>();
+  return llvm::SmallVector<int64_t, 8>(ty.getShape().begin(), ty.getShape().end());
+}
+
+struct Interval {
+  int64_t lb = 0;
+  int64_t ub = -1; // inclusive
+};
+
+using Box = llvm::SmallVector<Interval, 8>;
+
+/// Try to derive an axis-aligned rectangular region (box) with constant bounds.
+/// Each dimension is represented as an inclusive interval [lb, ub].
+/// Return false if any bound cannot be derived as a constant.
+static bool tryGetConstantBoxFromMapAndShape(mlir::AffineMap map,
+                                            mlir::ValueRange operands,
+                                            llvm::ArrayRef<int64_t> shape,
+                                            Box &outBox) {
+  // Canonicalize (map, operands) together.
+  llvm::SmallVector<mlir::Value, 8> ops(operands.begin(), operands.end());
+  simplifyMapWithOperands(map, ops);
+
+  outBox.clear();
+  outBox.reserve(map.getNumResults());
+
+  for (unsigned d = 0; d < map.getNumResults(); ++d) {
+    mlir::AffineExpr e = map.getResult(d);
+
+    // Extract constant from AffineExpr.
+    auto cst = e.dyn_cast<mlir::AffineConstantExpr>();
+    if (!cst)
+      return false;
+
+    // Be conservative if shape is missing or dynamic.
+    if (d >= shape.size())
+      return false;
+    if (shape[d] == mlir::ShapedType::kDynamic)
+      return false;
+
+    int64_t lb = cst.getValue();
+    int64_t ub = lb + shape[d] - 1;
+    outBox.push_back(Interval{lb, ub});
   }
-
-  return false;
+  return true;
 }
 
-bool AccessSameDataBlock(ADORA::DataBlockLoadOp& op1, ADORA::DataBlockLoadOp& op2){
-  
+/// Interval overlap check:
+/// max(lb1, lb2) <= min(ub1, ub2)  <=>  lb1 <= ub2 && lb2 <= ub1
+static bool intervalsOverlap(const Interval &a, const Interval &b) {
+  return (a.lb <= b.ub) && (b.lb <= a.ub);
 }
 
-bool AccessSameDataBlock(ADORA::DataBlockStoreOp& op1, ADORA::DataBlockLoadOp& op2){
-  if(op1.getTargetMemref() == op2.getOriginalMemref()){
-    /// check affine map
-    AffineMap map1 = op1.getAffineMap();
-    AffineMap map2 = op2.getAffineMap();
-
-    simplifyMapWithOperands(map1, SmallVector<mlir::Value> (op1.getMapOperands()));
-    simplifyMapWithOperands(map2, SmallVector<mlir::Value> (op2.getMapOperands()));
-
-    if(map1 != map2) return false;
-
-    for(int idx = 0; idx < op1.getMapOperands().size(); idx++){
-      if(op1.getMapOperands() [idx] != op2.getMapOperands() [idx]){
-        return false;
-      } 
-    }
-
-    assert(op1.getMapOperands().size() == op2.getMapOperands().size());
+/// Two boxes overlap iff they overlap in every dimension.
+/// If ranks are inconsistent, return true conservatively.
+static bool boxesOverlap(const Box &a, const Box &b) {
+  if (a.size() != b.size())
     return true;
+
+  for (size_t d = 0; d < a.size(); ++d) {
+    if (!intervalsOverlap(a[d], b[d]))
+      return false;
   }
-
-  return false;
+  return true;
 }
 
+// NOTE: non-const refs because generated op getters are not const-qualified.
+static bool mayOverlapDataBlockRegion(ADORA::DataBlockStoreOp &store,
+                                      ADORA::DataBlockLoadOp  &load) {
+  /// Conservative overlap dependency check:
+  /// - Must refer to the same backing array (store.target == load.original).
+  /// - If constant bounds can be derived, check overlap using per-dim intervals.
+  /// - If bounds cannot be derived, return true (conservative: may overlap).
+
+  if (store.getTargetMemref() != load.getOriginalMemref())
+    return false;
+
+  auto shapeS = getBlockShapeForStore(store);
+  auto shapeL = getBlockShapeForLoad(load);
+
+  Box boxS, boxL;
+  bool okS = tryGetConstantBoxFromMapAndShape(store.getAffineMap(),
+                                             store.getMapOperands(),
+                                             shapeS, boxS);
+  bool okL = tryGetConstantBoxFromMapAndShape(load.getAffineMap(),
+                                             load.getMapOperands(),
+                                             shapeL, boxL);
+
+  if (!okS || !okL)
+    return true; // Conservative fallback.
+
+  return boxesOverlap(boxS, boxL);
 }
+
+
+
+/// Exact same datablock: BlockLoad vs BlockLoad.
+/// Two loads access the exact same data block if:
+///   1) They use the same original backing memref.
+///   2) After canonicalization, they have identical affine map and map operands.
+bool AccessSameDataBlock(ADORA::DataBlockLoadOp &op1,
+                         ADORA::DataBlockLoadOp &op2) {
+  if (op1.getOriginalMemref() != op2.getOriginalMemref())
+    return false;
+
+  return canonicalizeAndEqual(op1.getAffineMap(), op1.getMapOperands(),
+                              op2.getAffineMap(), op2.getMapOperands());
+}
+
+/// Exact same datablock: BlockStore(target) vs BlockLoad(original).
+/// A store and a load access the exact same data block if:
+///   1) store.target == load.original (same backing array)
+///   2) After canonicalization, they have identical affine map and map operands.
+bool AccessSameDataBlock(ADORA::DataBlockStoreOp &store,
+                         ADORA::DataBlockLoadOp &load) {
+  if (store.getTargetMemref() != load.getOriginalMemref())
+    return false;
+
+  return canonicalizeAndEqual(store.getAffineMap(), store.getMapOperands(),
+                              load.getAffineMap(),  load.getMapOperands());
+}
+
+/// Dependency check between a BlockStore and a BlockLoad.
+/// There are two supported modes:
+///   - ExactSameBlock: dependent only if they access the exact same block.
+///   - OverlapConservative: dependent if their block regions overlap, or if
+///     overlap cannot be disproved (conservative).
+/// Dependency check between a BlockStore and a BlockLoad.
+/// Policy:
+///   - If they access the exact same block => dependent.
+///   - Otherwise, if their block regions may overlap => dependent (conservative).
+bool checkDependencyBetweenBlockStoreAndBlockLoad(ADORA::DataBlockStoreOp &store,
+                                                 ADORA::DataBlockLoadOp &load) {
+  // Different backing arrays => no dependency.
+  if (store.getTargetMemref() != load.getOriginalMemref())
+    return false;
+
+  // Fast path: exact same block.
+  if (AccessSameDataBlock(store, load))
+    return true;
+
+  // Conservative overlap test (may return true if overlap cannot be disproved).
+  return mayOverlapDataBlockRegion(store, load);
+}
+
+} // namespace
 }
