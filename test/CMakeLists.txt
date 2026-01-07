@@ -1,5 +1,7 @@
 set(ADORA_TEST_DEPENDS
   cgra-opt
+  tensor-opt
+  cgra-mapper
   FileCheck
 )
 
