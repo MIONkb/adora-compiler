@@ -42,9 +42,9 @@ cgra-opt \
 
     
 cgra-opt \
-    --ADORA-extract-affine-for-to-kernel \
-    --ADORA-hoist-loadstore \
-    --ADORA-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
+    --adora-extract-affine-for-to-kernel \
+    --adora-simplify-loadstore \
+    --adora-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
     gesummv_kernel_0.mlir
 
 cgra-opt \
