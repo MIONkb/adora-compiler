@@ -612,6 +612,8 @@ AffineForOp TiledOutputStationaryGemm(
     op->setAttr("ADORAGemm", UnitAttr::get(loop.getContext()));
   });
 
+  op.getO().replaceAllUsesWith(out);
+  
   loop.dump();
 
   return loop;
