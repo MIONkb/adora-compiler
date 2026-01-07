@@ -2,6 +2,24 @@
 // RUN: %cgra-opt --adora-kernel-dfg-gen %s | %FileCheck %s
 // RUN: test -s gemm_opt_0_CDFG.dot
 // RUN: test -s gemm_opt_1_CDFG.dot
+// RUN: %FileCheck %s --check-prefix=DOT0 --input-file=gemm_opt_0_CDFG.dot
+// RUN: %FileCheck %s --check-prefix=DOT1 --input-file=gemm_opt_1_CDFG.dot
+//
+// DOT0: Digraph G
+// DOT0-DAG: Input{{[0-9]+}} -> FMUL32{{[0-9]+}}
+// DOT0-DAG: CONST{{[0-9]+}} -> FMUL32{{[0-9]+}}
+// DOT0-DAG: FMUL32{{[0-9]+}} -> Output{{[0-9]+}}
+// DOT0: }
+//
+// DOT1: Digraph G {
+// DOT1-DAG: Input{{[0-9]+}} -> FMUL32{{[0-9]+}}
+// DOT1-DAG: CONST{{[0-9]+}} -> FMUL32{{[0-9]+}}
+// DOT1-DAG: FMUL32{{[0-9]+}} -> FMUL32{{[0-9]+}}
+// DOT1-DAG: FMUL32{{[0-9]+}} -> FACC32{{[0-9]+}}
+// DOT1-DAG: Input{{[0-9]+}} -> FADD32{{[0-9]+}}
+// DOT1-DAG: FADD32{{[0-9]+}} -> Output{{[0-9]+}}
+// DOT1-DAG: FACC32{{[0-9]+}} -> FADD32{{[0-9]+}}
+// DOT1: }
 //
 // CHECK: module {
 // CHECK:   func.func @gemm_opt(%arg0: memref<?x25xf32>, %arg1: memref<?x30xf32>, %arg2: memref<?x25xf32>) attributes {llvm.linkage = #llvm.linkage<external>} {
