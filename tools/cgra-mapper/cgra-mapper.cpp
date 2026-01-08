@@ -35,6 +35,8 @@
 #include <thread>
 #include <mutex>
 #include <getopt.h>
+#include <atomic>
+#include <algorithm>
 
 #include "op/operations.h"
 #include "ir/adg_ir.h"
@@ -185,6 +187,12 @@ int main(int argc, char **argv) {
   //   cl::desc("Allow N mapping jobs at once(default to be 1)"),
   //   cl::value_desc("[N]"),
   //   cl::init(1));
+  static cl::opt<int> parallel_cores(
+    "parallel-cores",
+    cl::Optional, 
+    cl::desc("Allow N mapping jobs at once within each func.func (default to be 1)"),
+    cl::value_desc("[N]"),
+    cl::init(1));
   // spdlog::cfg::helpers::load_levels("true");
 
   InitLLVM y(argc, argv);
@@ -340,27 +348,40 @@ int main(int argc, char **argv) {
   //   kernels.push_back(kernel);
   // });
 
-  int kernel_cnt = 0;
-  moduleop.walk([&](ADORA::KernelOp kernel) {
-    if(kernel->hasAttr("ADORAGemm"))
-      return WalkResult::advance();
-      
+  std::atomic<int> kernel_cnt{0};
+  std::mutex mlir_mutex;
+  std::mutex emitter_mutex;
+  std::mutex vector_mutex;
+  int max_threads = std::max(1, parallel_cores.getValue());
+
+  auto map_kernel = [&](ADORA::KernelOp kernel) {
     MapperSA* mapper = new MapperSA(subadg, timeout_ms, max_iters, objOpt);
-    mapper_Vec.push_back(mapper);
+    {
+      std::lock_guard<std::mutex> lock(vector_mutex);
+      mapper_Vec.push_back(mapper);
+    }
     /// Generating DFG
-    // std::string fileName = kernel.getKernelName();
-  
-    std::string kernelName = kernel.getKernelName();
+    std::string kernelName;
+    {
+      std::lock_guard<std::mutex> lock(mlir_mutex);
+      kernelName = kernel.getKernelName();
+    }
     if(kernelName.empty()){
-      kernelName = "kernel_" + std::to_string(kernel_cnt);
+      kernelName = "kernel_" + std::to_string(kernel_cnt.fetch_add(1));
     }
     LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile_str);
-    generateCDFGfromKernel(CDFG, kernel, /*verbose=*/verbose);
+    {
+      std::lock_guard<std::mutex> lock(mlir_mutex);
+      generateCDFGfromKernel(CDFG, kernel, /*verbose=*/verbose);
+    }
     // CDFG->CDFGtoDOT(CDFG->name_str()+"_CDFG.dot");
 
     /// DFG Mapping to CGRA architecture
     DFGIR* dfg_ir = new DFGIR(CDFG);
-    DFGIR_Vec.push_back(dfg_ir);
+    {
+      std::lock_guard<std::mutex> lock(vector_mutex);
+      DFGIR_Vec.push_back(dfg_ir);
+    }
 
     DFG* dfg = dfg_ir->getDFG();
     int numNodes = dfg->nodes().size();
@@ -374,16 +395,18 @@ int main(int argc, char **argv) {
     mapper->setDFG(dfg);
 
     // some io nodes must be placed at some place
-    if(emit_type == "pytest"){
-      PyEmitter.preestablishPlacementConstraints(kernel, mapper);
+    {
+      std::scoped_lock lock(mlir_mutex, emitter_mutex);
+      if(emit_type == "pytest"){
+        PyEmitter.preestablishPlacementConstraints(kernel, mapper);
+      }
+      else if(emit_type == "sdk"){
+        SDKEmitter.preestablishPlacementConstraints(kernel, mapper);
+      }
+      else{ /// default to be C
+        CEmitter.preestablishPlacementConstraints(kernel, mapper);
+      }
     }
-    else if(emit_type == "sdk"){
-      SDKEmitter.preestablishPlacementConstraints(kernel, mapper);
-    }
-    else{ /// default to be C
-      CEmitter.preestablishPlacementConstraints(kernel, mapper);
-    }
-
 
     std::filesystem::create_directory(kernelName + "_map_result");
     CDFG->CDFGtoDOT(kernelName + "_map_result/before_map_" + CDFG->name_str() + "_CDFG.dot");
@@ -393,6 +416,7 @@ int main(int argc, char **argv) {
     // bool succeed = mapper->execute(/*dumpCallFunc=*/false, /*dumpMappedViz*/true, /*resultDir=*/"map_result");
     if(succeed){
       // Mapping is successful, get all blockload and blockstore op and corresponding spad memory addresses.
+      std::scoped_lock lock(mlir_mutex, emitter_mutex);
       if(emit_type == "pytest"){
         PyEmitter.setMapResult(kernel, mapper);
         PyEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
@@ -412,7 +436,40 @@ int main(int argc, char **argv) {
         CEmitter.GenerateCGRAConfig(kernel, mapper);
       }
     }
-    kernel_cnt++;
+  };
+
+  moduleop.walk([&](func::FuncOp func) {
+    SmallVector<ADORA::KernelOp> kernels;
+    func.walk([&](ADORA::KernelOp kernel) {
+      if(kernel->hasAttr("ADORAGemm"))
+        return WalkResult::advance();
+      kernels.push_back(kernel);
+      return WalkResult::advance();
+    });
+
+    if(kernels.empty()){
+      return WalkResult::advance();
+    }
+
+    size_t num_workers = std::min<size_t>(max_threads, kernels.size());
+    std::atomic<size_t> next_index{0};
+    std::vector<std::thread> workers;
+    workers.reserve(num_workers);
+    for(size_t i = 0; i < num_workers; ++i){
+      workers.emplace_back([&]() {
+        while(true){
+          size_t idx = next_index.fetch_add(1);
+          if(idx >= kernels.size()){
+            break;
+          }
+          map_kernel(kernels[idx]);
+        }
+      });
+    }
+    for(auto& worker : workers){
+      worker.join();
+    }
+    return WalkResult::advance();
   });
 
   /// Emit module to a C source file
