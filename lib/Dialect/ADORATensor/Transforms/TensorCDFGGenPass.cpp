@@ -45,7 +45,7 @@ using namespace mlir::affine;
 using namespace mlir::ADORA;
 using namespace mlir::ADORA::ADORATensor;
 
-#define DEBUG_TYPE "adora-tensor-dfg-gen"
+#define DEBUG_TYPE "adora-gen-tensor-op-cdfg"
 
 namespace mlir{
 namespace ADORA{
@@ -114,7 +114,7 @@ void ADORATensorOpCdfgGenPass::runOnOperation()
       }
       LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile_str);
       generateCDFGfromKernel(CDFG, kernel, /*verbose=*/false);
-      CDFG->CDFGtoDOT(kernelName + "_CDFG.dot");
+      CDFG->CDFGtoDOT(funcname + kernelName + "_CDFG.dot");
       kernel_cnt++;
     });   
 

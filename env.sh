@@ -19,7 +19,7 @@ export CGRA_OP_FILE_PATH=$CGRA_ADG_PATH
 export GeneralOpNameFile="$ADORA_PROJECT_PATH/lib/DFG/Documents/GeneralOpName.txt"
 
 export PATH=${ADORA_PROJECT_PATH}/build/bin:$PATH
-export PATH=${ADORA_PROJECT_PATH}/frontend/build/bin:$PATH
+export PATH=${ADORA_PROJECT_PATH}/frontend/adora-onnx-mlir/build/bin:$PATH
 ####### CONDA IN CHIPYARD
 export CHIPYARD_SOURCE_ENV="$CHIPYARD_DIR/env.sh"
 source $CHIPYARD_SOURCE_ENV
