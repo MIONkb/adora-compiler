@@ -42,15 +42,7 @@ namespace {
     unsigned NumGPE = 0;
     unsigned NumIOB = 0; 
     explicit ADORAAutoUnroll() {
-      if(CGRAadg == "notdefined" || CGRAadg == ""){
-        LLVM_DEBUG(llvm::errs() << "CGRAadg not defined.\n");
-        NumGPE = 32;
-        NumIOB = 16;
-      }
-      else{
-        NumGPE = getInstanceNumFromADG(CGRAadg, "GPE");
-        NumIOB = getInstanceNumFromADG(CGRAadg, "IOB");
-      }
+
       // if (unrollJamFactor)
       //   this->unrollJamFactor = *unrollJamFactor;
     }
@@ -86,13 +78,26 @@ bool ADORAAutoUnroll::KernelIsInPerfectNestedLoop(ADORA::KernelOp kernel){
   AffineForOp parentfor = dyn_cast<AffineForOp>(parent);
 
   // We already know that the block can't be empty.
-  auto hasTwoElements = [](Block *block) {
-    auto secondOpIt = std::next(block->begin());
-    return secondOpIt != block->end() && &*secondOpIt == &block->back();
+  auto perfectNested = [](Block *block) {
+    int nonKernelOpCount = 0;
+    auto nextOpIt = block->begin(); 
+    while(nextOpIt != block->end()){
+      if(!( isa<ADORA::KernelOp>(nextOpIt) 
+          ||isa<ADORA::DataBlockLoadOp>(nextOpIt) 
+          ||isa<ADORA::DataBlockStoreOp>(nextOpIt)
+          ||isa<ADORA::LocalMemAllocOp>(nextOpIt)) )
+      {
+        nonKernelOpCount++;
+      }
+
+      nextOpIt = std::next(nextOpIt);
+    }
+
+    return nonKernelOpCount == 1;
   };
 
   // parentForOp's body should be just this kernel and the terminator.
-  if (!hasTwoElements(parentfor.getBody()))
+  if (!perfectNested(parentfor.getBody()))
     return false;
 
   return true;
@@ -410,6 +415,15 @@ chooseAndApplyUnrollStrategyWithDeps(ADORA::KernelOp kernel, mlir::ModuleOp& m){
 }
 
 void ADORAAutoUnroll::runOnOperation() {
+  if(CGRAadg == "notdefined" || CGRAadg == ""){
+    LLVM_DEBUG(llvm::errs() << "CGRAadg not defined.\n");
+    NumGPE = 32;
+    NumIOB = 16;
+  }
+  else{
+    NumGPE = getInstanceNumFromADG(CGRAadg, "GPE");
+    NumIOB = getInstanceNumFromADG(CGRAadg, "IOB");
+  }
   // if (getOperation().isExternal())
   //   return;
   auto m = getOperation();

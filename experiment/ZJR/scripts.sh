@@ -11,8 +11,8 @@ cgra-opt \
     # --adora-auto-unroll="cgra-adg=/home/jhlou/CGRVOPT/MatrixMeld/vitrartl/spec/vitra_cgra_adg.json" \
 
 cgra-opt \
-    --adora-loop-unroll-jam="cgra-adg=/home/jhlou/CGRVOPT/MatrixMeld/vitrartl/spec/vitra_cgra_adg.json" \
-    tiled.mlir -o gray_opt.mlir 
+    --adora-auto-unroll="cgra-adg=/home/jhlou/CGRVOPT/MatrixMeld/vitrartl/spec/vitra_cgra_adg.json" \
+    tiled.mlir -o gray_opt.mlir
 
 cgra-opt \
     --adora-kernel-dfg-gen \
