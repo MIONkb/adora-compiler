@@ -2,6 +2,7 @@ add_mlir_dialect_library(ADORATensorOps
   Ops/OpHelper.cpp
   Ops/MatMul.cpp
   Ops/Gemm.cpp
+  Ops/Conv.cpp
   ADORATensorDialect.cpp
 
   ADDITIONAL_HEADER_DIRS
