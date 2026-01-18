@@ -11,6 +11,7 @@
 // #include "mlir/IR/OpDefinition.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/IR/PatternMatch.h" // hjy
 
 #include "llvm/ADT/APFloat.h"            // llvm::APFloat
 #include "llvm/ADT/APInt.h"              // llvm::APInt
@@ -142,7 +143,6 @@ static void SetACCOperandIdx(LLVMCDFGNode* node){
     }
     else{
       node->setInputIdx(innode, 0);
-      node->setInputPort(innode, 0);
     }
   }
 }
@@ -259,6 +259,8 @@ void RemoveConstantTruncF(ADORA::KernelOp kernel){
   });
   // kernel.dump();
 }
+
+
 
 /// @brief A tool function to get another operand's index for a binary operation
 /// @param Op 
@@ -659,8 +661,8 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
         assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
         // IterArgConsumer->dump();
-        if(isa<affine::AffineYieldOp>(IterArgConsumer))
-          continue;
+        // if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+        //   continue;
         assert(isa<arith::AddFOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
         IterArgConsumer->replaceAllUsesWith(AnotherOperand.getDefiningOp());
@@ -680,11 +682,8 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
         assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
 
-        // what is this for?
-        // if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
-        //   continue;   
-        if(isa<affine::AffineYieldOp>(IterArgConsumer))
-          continue;
+        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+          continue;   
         
         assert(isa<arith::AddIOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
@@ -705,8 +704,8 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
         assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
         
-        if(isa<affine::AffineYieldOp>(IterArgConsumer))
-          continue;
+        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+          continue;  
 
         assert(isa<arith::MulFOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
@@ -727,8 +726,8 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
         assert(getAllUsesInBlock(IterRegionOperand, forop.getBody()).size() == 1);
         mlir::Operation* IterArgConsumer = getAllUsesInBlock(IterRegionOperand, forop.getBody())[0];
         
-        if(isa<affine::AffineYieldOp>(IterArgConsumer))
-          continue;
+        if(isa<affine::AffineForOp>(IterArgConsumer->getParentOp()))
+          continue;  
                   
         assert(isa<arith::MulIOp>(IterArgConsumer));
         mlir::Value AnotherOperand = IterArgConsumer->getOperand(getAnotherOperandIdx(IterArgConsumer, IterRegionOperand));
@@ -800,6 +799,320 @@ void MoveAccumulationToLast(ADORA::KernelOp kernel){
   // kernel.dump();
 }
 
+
+// //hjy
+// // === Fix: 适配 ADORA::KernelOp 的 If 转换函数 ===
+// static void lowerSCFIfToSelect(ADORA::KernelOp kernel) {
+//     // 收集所有的 scf.if op，避免在遍历过程中修改导致迭代器失效
+//     llvm::SmallVector<scf::IfOp, 4> ifOps;
+//     kernel.walk([&](scf::IfOp op) {
+//         ifOps.push_back(op);
+//     });
+
+//     for (auto ifOp : ifOps) {
+//         // 1. 如果 if 没有返回值，这种转换可能不安全（或者不需要数据流转换），暂时跳过
+//         if (ifOp.getNumResults() == 0) continue;
+
+//         OpBuilder builder(ifOp);
+
+//         // 2. 将 Then 分支的所有指令（除了 yield）移动到 if 之前
+//         // 我们假设 getTanh.mlir 里的 if 是纯计算，没有内存读写冲突
+//         mlir::Block *thenBlock = &ifOp.getThenRegion().front();
+//         for (auto &op : llvm::make_early_inc_range(thenBlock->getOperations())) {
+//             if (!isa<scf::YieldOp>(op)) {
+//                 op.moveBefore(ifOp);
+//             }
+//         }
+
+//         // 3. 将 Else 分支的所有指令（除了 yield）移动到 if 之前
+//         mlir::Block *elseBlock = &ifOp.getElseRegion().front();
+//         for (auto &op : llvm::make_early_inc_range(elseBlock->getOperations())) {
+//             if (!isa<scf::YieldOp>(op)) {
+//                 op.moveBefore(ifOp);
+//             }
+//         }
+
+//         // 4. 获取 yield 的返回值
+//         auto thenYield = cast<scf::YieldOp>(thenBlock->getTerminator());
+//         auto elseYield = cast<scf::YieldOp>(elseBlock->getTerminator());
+
+//         // 5. 针对每一个返回值，生成一个 arith.select 指令
+//         for (unsigned i = 0; i < ifOp.getNumResults(); ++i) {
+//             mlir::Value trueVal = thenYield.getOperand(i);
+//             mlir::Value falseVal = elseYield.getOperand(i);
+//             mlir::Value condition = ifOp.getCondition();
+
+//             // 创建 select 指令： result = cond ? trueVal : falseVal
+//             // 注意：这里使用 builder 确保插入位置在 ifOp 之前（因为 ifOp 马上要被删了）
+//             auto selectOp = builder.create<mlir::arith::SelectOp>(
+//                 ifOp.getLoc(), condition, trueVal, falseVal);
+
+//             // 6. 将所有使用 if 结果的地方，替换为使用 select 的结果
+//             ifOp.getResult(i).replaceAllUsesWith(selectOp.getResult());
+//         }
+
+//         // 7. 删除原来的 if 结构
+//         ifOp.erase();
+//     }
+// }
+// 辅助结构体，用于记录分析结果
+struct StoreInfo {
+    mlir::Operation* op;
+    mlir::Value valueToStore;
+    mlir::Value memref;
+    llvm::SmallVector<mlir::Value, 4> indices;
+};
+
+// 辅助函数：判断两个 Store 是否写入同一个位置
+static bool isSameLocation(const StoreInfo& a, const StoreInfo& b) {
+    if (a.memref != b.memref) return false;
+    if (a.indices.size() != b.indices.size()) return false;
+    // 简单比对索引 Value 是否相同 (更复杂的分析可能需要 AffineMap 分析，但这里够用了)
+    for (size_t i = 0; i < a.indices.size(); ++i) {
+        if (a.indices[i] != b.indices[i]) return false;
+    }
+    return true;
+}
+
+// 辅助函数：在 scf.if 之前查找是否存在从相同位置的 load 操作
+// 用于避免创建新的 load，而是复用已存在的 load 值
+static mlir::Value findExistingLoadValue(scf::IfOp ifOp, mlir::Value memref, 
+                                          llvm::ArrayRef<mlir::Value> indices) {
+    // 获取 if 所在的 block
+    mlir::Block* block = ifOp->getBlock();
+    
+    // 遍历 if 之前的所有操作
+    for (auto it = block->begin(); it != Block::iterator(ifOp); ++it) {
+        mlir::Operation* op = &(*it);
+        
+        // 检查 affine.load
+        if (auto loadOp = dyn_cast<affine::AffineLoadOp>(op)) {
+            if (loadOp.getMemref() == memref) {
+                auto loadIndices = loadOp.getMapOperands();
+                if (loadIndices.size() == indices.size()) {
+                    bool match = true;
+                    for (size_t i = 0; i < indices.size(); ++i) {
+                        if (loadIndices[i] != indices[i]) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match) {
+                        return loadOp.getResult();
+                    }
+                }
+            }
+        }
+        // 检查 memref.load
+        else if (auto loadOp = dyn_cast<memref::LoadOp>(op)) {
+            if (loadOp.getMemref() == memref) {
+                auto loadIndices = loadOp.getIndices();
+                if (loadIndices.size() == indices.size()) {
+                    bool match = true;
+                    for (size_t i = 0; i < indices.size(); ++i) {
+                        if (loadIndices[i] != indices[i]) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match) {
+                        return loadOp.getResult();
+                    }
+                }
+            }
+        }
+    }
+    
+    return mlir::Value(); // 没找到返回空
+}
+
+// === Fix: 增强版，支持 Store Sinking 的 If 转换 ===
+static void lowerSCFIfToSelect(ADORA::KernelOp kernel) {
+    llvm::SmallVector<scf::IfOp, 4> ifOps;
+    kernel.walk([&](scf::IfOp op) {
+        ifOps.push_back(op);
+    });
+
+    for (auto ifOp : ifOps) {
+        OpBuilder builder(ifOp);
+        
+        // 1. 处理 Pure Data Flow (有返回值的情况，逻辑不变)
+        if (ifOp.getNumResults() > 0) {
+            mlir::Block *thenBlock = &ifOp.getThenRegion().front();
+            mlir::Block *elseBlock = &ifOp.getElseRegion().front();
+            
+            // 移动计算指令 - 使用 make_early_inc_range 避免迭代器失效
+            for (auto &op : llvm::make_early_inc_range(thenBlock->getOperations())) {
+                if (!isa<scf::YieldOp>(op)) op.moveBefore(ifOp);
+            }
+            for (auto &op : llvm::make_early_inc_range(elseBlock->getOperations())) {
+                if (!isa<scf::YieldOp>(op)) op.moveBefore(ifOp);
+            }
+
+            auto thenYield = cast<scf::YieldOp>(thenBlock->getTerminator());
+            auto elseYield = cast<scf::YieldOp>(elseBlock->getTerminator());
+
+            for (unsigned i = 0; i < ifOp.getNumResults(); ++i) {
+                auto selectOp = builder.create<mlir::arith::SelectOp>(
+                    ifOp.getLoc(), ifOp.getCondition(), thenYield.getOperand(i), elseYield.getOperand(i));
+                ifOp.getResult(i).replaceAllUsesWith(selectOp.getResult());
+            }
+            ifOp.erase();
+            continue; // 处理完有返回值的，跳过后续逻辑
+        }
+
+        // 2. 处理 Side Effects (Store Sinking) - 针对 sort.mlir
+        // 只有当没有返回值时，我们才尝试分析内部的 Store
+        if (ifOp.getNumResults() == 0) {
+            mlir::Block *thenBlock = &ifOp.getThenRegion().front();
+            mlir::Block *elseBlock = ifOp.getElseRegion().empty() ? nullptr : &ifOp.getElseRegion().front();
+
+            // 2.1 收集 Then 和 Else 分支中的所有 Store 操作
+            llvm::SmallVector<StoreInfo, 4> thenStores;
+            llvm::SmallVector<StoreInfo, 4> elseStores;
+
+            // 收集 stores 的 lambda - 不在这里移动操作，避免迭代器问题
+            auto collectStoresOnly = [&](mlir::Block* block, llvm::SmallVector<StoreInfo, 4>& stores) {
+                if (!block) return;
+                for (auto &op : block->getOperations()) {
+                    if (auto storeOp = dyn_cast<affine::AffineStoreOp>(op)) {
+                        llvm::SmallVector<mlir::Value, 4> indices(storeOp.getMapOperands().begin(), 
+                                                                   storeOp.getMapOperands().end());
+                        stores.push_back({&op, storeOp.getValue(), storeOp.getMemref(), indices});
+                    }
+                    else if (auto storeOp = dyn_cast<memref::StoreOp>(op)) {
+                        llvm::SmallVector<mlir::Value, 4> indices(storeOp.getIndices().begin(), 
+                                                                   storeOp.getIndices().end());
+                        stores.push_back({&op, storeOp.getValue(), storeOp.getMemref(), indices});
+                    }
+                }
+            };
+
+            // 移动非 store 操作的 lambda - 使用 make_early_inc_range 避免迭代器失效
+            auto moveNonStoreOps = [&](mlir::Block* block) {
+                if (!block) return;
+                for (auto &op : llvm::make_early_inc_range(block->getOperations())) {
+                    if (!isa<scf::YieldOp>(op) && 
+                        !isa<affine::AffineStoreOp>(op) && 
+                        !isa<memref::StoreOp>(op)) {
+                        op.moveBefore(ifOp);
+                    }
+                }
+            };
+
+            // 先收集所有 stores
+            collectStoresOnly(thenBlock, thenStores);
+            collectStoresOnly(elseBlock, elseStores);
+
+            // 然后移动非 store 操作
+            moveNonStoreOps(thenBlock);
+            moveNonStoreOps(elseBlock);
+
+            // 2.2 处理所有涉及的 Store
+            // 策略：我们把 Then 和 Else 的 Store 视为一个并集。
+            // 对于每一个内存位置，我们构造 select(cond, val_in_then, val_in_else)
+            
+            // 用于标记哪些 Else Store 已经被配对处理了
+            llvm::DenseSet<mlir::Operation*> processedElseOps;
+
+            for (const auto& tStore : thenStores) {
+                mlir::Value valTrue = tStore.valueToStore;
+                mlir::Value valFalse;
+                mlir::Operation* matchedElseOp = nullptr;
+
+                // 在 Else 中寻找写入同一位置的操作
+                for (const auto& eStore : elseStores) {
+                    if (isSameLocation(tStore, eStore)) {
+                        valFalse = eStore.valueToStore;
+                        matchedElseOp = eStore.op;
+                        processedElseOps.insert(eStore.op);
+                        break;
+                    }
+                }
+
+                // 如果 Else 分支没有写入这个位置，我们需要获取原来的值（保持不变）
+                if (!matchedElseOp) {
+                    // 首先尝试查找已存在的 load 操作，避免创建新的 load
+                    valFalse = findExistingLoadValue(ifOp, tStore.memref, tStore.indices);
+                    
+                    // 如果没有找到已存在的 load，才创建新的
+                    if (!valFalse) {
+                        if (isa<affine::AffineStoreOp>(tStore.op)) {
+                            auto origStore = cast<affine::AffineStoreOp>(tStore.op);
+                            auto loadOp = builder.create<affine::AffineLoadOp>(
+                                ifOp.getLoc(), origStore.getMemref(), 
+                                origStore.getAffineMap(), origStore.getMapOperands());
+                            valFalse = loadOp.getResult();
+                        } else {
+                            auto loadOp = builder.create<memref::LoadOp>(
+                                ifOp.getLoc(), tStore.memref, tStore.indices);
+                            valFalse = loadOp.getResult();
+                        }
+                    }
+                }
+
+                // 创建 Select
+                auto selectOp = builder.create<mlir::arith::SelectOp>(
+                    ifOp.getLoc(), ifOp.getCondition(), valTrue, valFalse);
+
+                // 创建新的无条件 Store (放在 If 后面)
+                if (isa<affine::AffineStoreOp>(tStore.op)) {
+                    auto origStore = cast<affine::AffineStoreOp>(tStore.op);
+                    builder.create<affine::AffineStoreOp>(
+                        ifOp.getLoc(), selectOp.getResult(), origStore.getMemref(),
+                        origStore.getAffineMap(), origStore.getMapOperands());
+                } else {
+                    builder.create<memref::StoreOp>(
+                        ifOp.getLoc(), selectOp.getResult(), tStore.memref, tStore.indices);
+                }
+            }
+
+            // 处理那些只在 Else 中出现，而 Then 中没出现的 Store
+            for (const auto& eStore : elseStores) {
+                if (processedElseOps.count(eStore.op)) continue;
+
+                mlir::Value valTrue; // Then 分支保持不变
+                mlir::Value valFalse = eStore.valueToStore;
+
+                // 首先尝试查找已存在的 load 操作，避免创建新的 load
+                valTrue = findExistingLoadValue(ifOp, eStore.memref, eStore.indices);
+                
+                // 如果没有找到已存在的 load，才创建新的
+                if (!valTrue) {
+                    if (isa<affine::AffineStoreOp>(eStore.op)) {
+                        auto origStore = cast<affine::AffineStoreOp>(eStore.op);
+                        auto loadOp = builder.create<affine::AffineLoadOp>(
+                            ifOp.getLoc(), origStore.getMemref(),
+                            origStore.getAffineMap(), origStore.getMapOperands());
+                        valTrue = loadOp.getResult();
+                    } else {
+                        auto loadOp = builder.create<memref::LoadOp>(
+                            ifOp.getLoc(), eStore.memref, eStore.indices);
+                        valTrue = loadOp.getResult();
+                    }
+                }
+
+                // 创建 Select
+                auto selectOp = builder.create<mlir::arith::SelectOp>(
+                    ifOp.getLoc(), ifOp.getCondition(), valTrue, valFalse);
+
+                // 创建新的 Store
+                if (isa<affine::AffineStoreOp>(eStore.op)) {
+                    auto origStore = cast<affine::AffineStoreOp>(eStore.op);
+                    builder.create<affine::AffineStoreOp>(
+                        ifOp.getLoc(), selectOp.getResult(), origStore.getMemref(),
+                        origStore.getAffineMap(), origStore.getMapOperands());
+                } else {
+                    builder.create<memref::StoreOp>(
+                        ifOp.getLoc(), selectOp.getResult(), eStore.memref, eStore.indices);
+                }
+            }
+
+            // 2.3 移除原来的 If
+            ifOp.erase();
+        }
+    }
+}
 
 /**
  * 
@@ -1016,6 +1329,12 @@ std::string GetCMPTypeStr(mlir::Operation* op){
     else if(cmptype == "ule") return "ULE";
     else if(cmptype == "ugt") return "UGT";
     else if(cmptype == "uge") return "UGE";
+    //hjy
+    // 添加有符号整数比较的支持
+    else if(cmptype == "slt") return "SLT";
+    else if(cmptype == "sle") return "SLE";
+    else if(cmptype == "sgt") return "SGT";
+    else if(cmptype == "sge") return "SGE";
     else assert(0 && "Unsupported compare type.");
   }
   else if(isa<arith::CmpFOp>(op)){
@@ -1055,6 +1374,10 @@ bool ConvertGreaterToLess(LLVMCDFGNode* node){
   else if(node->getTypeName() == "FUGE") node->setTypeName("FULE");
   else if(node->getTypeName() == "FOGT") node->setTypeName("FOLT");
   else if(node->getTypeName() == "FOGE") node->setTypeName("FOLE");
+  //hjy
+  // 添加有符号整数比较的转换
+  else if(node->getTypeName() == "SGT") node->setTypeName("SLT");
+  else if(node->getTypeName() == "SGE") node->setTypeName("SLE");
   else return true;
 
   /// exchange operand idx
@@ -1065,9 +1388,7 @@ bool ConvertGreaterToLess(LLVMCDFGNode* node){
   auto input0 = node->getInputPort(0);
   auto input1 = node->getInputPort(1);
   node->setInputIdx(input0, 1);
-  node->setInputPort(input0, 1);
   node->setInputIdx(input1, 0);
-  node->setInputPort(input1, 0);
 
   return true;
 }
@@ -1459,16 +1780,15 @@ SmallVector<std::string, 3> GetACCInfoFromYieldNode(LLVMCDFGNode* yieldnode, Sma
   count_interval_repeat[1] = total_interval_str;
 
   // assert(SuccNode->outputNodes().size() == 1);
-  LLVMCDFGNode* NextYieldNode = nullptr;
+  LLVMCDFGNode* NextYieldNode;
   for(LLVMCDFGNode* nextnode : SuccNode->outputNodes()){
-    // nextnode->operation()->dump();
     if(!nextnode->isInputBackEdge(SuccNode)){
       /// backedge is a loop-carried variable
       NextYieldNode = nextnode;
       break;
     }
   }
-  if(NextYieldNode!=nullptr && NextYieldNode->getTypeName() == "yield"){
+  if(NextYieldNode->getTypeName() == "yield"){
     /// Get the yield index of this yielded value in the outer for level.
     // AffineYieldOp outeryieldop =  dyn_cast<AffineYieldOp>(outerFor.getBody()->getTerminator());
     // int OuterIndex = GetYieldIndexFromValue(dyn_cast<affine::YieldOp>(NextYieldNode->operation()), forop.getResults()[index]);
@@ -2010,33 +2330,19 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
 
       if(isa<ADORA::InterleaverOp>(vecop) || 
         isa<arith::AddIOp>(vecop) || isa<arith::AddFOp>(vecop)){
-        int vecnum = 1;
-        ArrayRef<int64_t> shape = dyn_cast<mlir::VectorType>(vecop->getResult(0).getType()).getShape();;
-        int dimLargerThanOne = -1;
-        for(int _ = 0; _ < shape.size(); _++){
-          int _dim = shape[_];
-          vecnum *= _dim;
-          if(_dim > 1) {
-            assert(dimLargerThanOne == -1); /// ensure only one dim is larger than 1
-            dimLargerThanOne = _;
-          }
+        int vecnum;
+        if(isa<ADORA::InterleaverOp>(vecop)){
+          /// get the input num of interleaver
+          int interleaverNum = dyn_cast<ADORA::InterleaverOp>(vecop).getInterleaveNumber();
+          vecnum = interleaverNum;
         }
-        assert(dimLargerThanOne != -1);
-        // if(isa<ADORA::InterleaverOp>(vecop)){
-        //   /// get the input num of interleaver
-        //   int interleaverNum = dyn_cast<ADORA::InterleaverOp>(vecop).getInterleaveNumber();
-        //   vecnum = interleaverNum;
-        // }
-        // else if(isa<arith::AddIOp>(vecop) || isa<arith::AddFOp>(vecop)){
-        //   shape = dyn_cast<mlir::VectorType>(vecop->getResult(0).getType()).getShape();
-        //   vecnum = 1;
-        //   for(auto _dim : shape){
-        //     vecnum *= _dim;
-        //   }
-        // }
-        // else{
-        //   assert(false && "Unsupported input of vector_store.");
-        // }
+        else if(isa<arith::AddIOp>(vecop) || isa<arith::AddFOp>(vecop)){
+          assert(dyn_cast<mlir::VectorType>(vecop->getResult(0).getType()).getShape().size() == 1);
+          vecnum = dyn_cast<mlir::VectorType>(vecop->getResult(0).getType()).getShape()[0];
+        }
+        else{
+          assert(false && "Unsupported input of vector_store.");
+        }
 
         /// fix linear access of extractop
         assert(node->isLSaffine() && node->getTypeName() == "Output");
@@ -2046,41 +2352,20 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
         std::string step, count;
 
         SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
-        ArrayRef<int64_t> memRefShape =  vecstoreop.getMemRefType().getShape();
-        int innermostStep = ElementBytes;
-        for(int dim = memRefShape.size() - 1; dim > dimLargerThanOne; dim--){
-          innermostStep *= memRefShape[memRefShape.size() - 1 - dim];
-        }        
-        newLinearAccess.push_back(std::pair(innermostStep, vecnum));
+        newLinearAccess.push_back(std::pair(ElementBytes, vecnum));
         // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
 
         int level = 0;
         while (std::getline(ss, step, ',')) {
           std::getline(ss, count, ',');
-          if(level == 0){
-            assert(std::stoi(step) % innermostStep == 0);
-            assert(std::stoi(count) % vecnum == 0);
-            int newstep = std::stoi(step) / innermostStep - newLinearAccess[0].first * (newLinearAccess[0].second - 1);
-            int newcount = std::stoi(count) / vecnum;
-            newLinearAccess.push_back(std::pair(newstep, newcount));   
+
+          if(level == 1){
+            int newstep = std::stoi(step) - ElementBytes * vecnum + ElementBytes;
+            newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
           }
-          else if(level == 1){
-            int newstep = std::stoi(step) 
-                          - newLinearAccess[1].first * (newLinearAccess[1].second - 1)
-                          - newLinearAccess[0].first * (newLinearAccess[0].second - 1) * (newLinearAccess[1].second);
-            int newcount = std::stoi(count);
-            newLinearAccess.push_back(std::pair(newstep, newcount));   
-          }
-          else {
+          else if(level != 0) {
             newLinearAccess.push_back(std::pair(std::stoi(step), std::stoi(count)));
           }
-          // if(level == 1){
-          //   int newstep = std::stoi(step) - ElementBytes * vecnum + ElementBytes;
-          //   newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
-          // }
-          // else if(level != 0) {
-          //   newLinearAccess.push_back(std::pair(std::stoi(step), std::stoi(count)));
-          // }
 
           level++;
         }
@@ -2102,27 +2387,18 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
 
       if(isa<ADORA::DeinterleaverOp>(userop) || 
         isa<arith::AddIOp>(userop) || isa<arith::AddFOp>(userop)){
-        int vecnum = 1;
-        ArrayRef<int64_t> shape = dyn_cast<mlir::VectorType>(op->getResult(0).getType()).getShape();
-        // if(isa<ADORA::DeinterleaverOp>(userop)){
-        //   /// get the input num of interleaver
-        //   int vecnum = dyn_cast<ADORA::DeinterleaverOp>(userop).getDeinterleaveNumber();
-        // }
-        // else if(isa<arith::AddIOp>(userop) || isa<arith::AddFOp>(userop)){
-        int dimLargerThanOne = -1;
-        for(int _ = 0; _ < shape.size(); _++){
-          int _dim = shape[_];
-          vecnum *= _dim;
-          if(_dim > 1) {
-            assert(dimLargerThanOne == -1); /// ensure only one dim is larger than 1
-            dimLargerThanOne = _;
-          }
+        int vecnum;
+        if(isa<ADORA::DeinterleaverOp>(userop)){
+          /// get the input num of interleaver
+          int vecnum = dyn_cast<ADORA::DeinterleaverOp>(userop).getDeinterleaveNumber();
         }
-        assert(dimLargerThanOne != -1);
-        // }
-        // else{
-        //   assert(false && "Unsupported input of vector_store.");
-        // }
+        else if(isa<arith::AddIOp>(userop) || isa<arith::AddFOp>(userop)){
+          assert(dyn_cast<mlir::VectorType>(userop->getResult(0).getType()).getShape().size() == 1);
+          vecnum = dyn_cast<mlir::VectorType>(userop->getResult(0).getType()).getShape()[0];
+        }
+        else{
+          assert(false && "Unsupported input of vector_store.");
+        }
 
         /// fix linear access of extractop
         assert(node->isLSaffine() && node->getTypeName() == "Input");
@@ -2132,32 +2408,18 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
         std::string step, count;
 
         SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
-        ArrayRef<int64_t> memRefShape =  vecloadop.getMemRefType().getShape();
-        int innermostStep = ElementBytes;
-        for(int dim = memRefShape.size() - 1; dim > dimLargerThanOne; dim--){
-          innermostStep *= memRefShape[memRefShape.size() - 1 - dim];
-        }
-        newLinearAccess.push_back(std::pair(innermostStep, vecnum));
+        newLinearAccess.push_back(std::pair(ElementBytes, vecnum));
         // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
 
         int level = 0;
         while (std::getline(ss, step, ',')) {
           std::getline(ss, count, ',');
-          if(level == 0){
-            assert(std::stoi(step) % innermostStep == 0);
-            assert(std::stoi(count) % vecnum == 0);
-            int newstep = std::stoi(step) / innermostStep - newLinearAccess[0].first * (newLinearAccess[0].second - 1);
-            int newcount = std::stoi(count) / vecnum;
-            newLinearAccess.push_back(std::pair(newstep, newcount));   
+
+          if(level == 1){
+            int newstep = std::stoi(step) - ElementBytes * vecnum + ElementBytes;
+            newLinearAccess.push_back(std::pair(newstep, std::stoi(count)));            
           }
-          else if(level == 1){
-            int newstep = std::stoi(step) 
-                          - newLinearAccess[1].first * (newLinearAccess[1].second - 1)
-                          - newLinearAccess[0].first * (newLinearAccess[0].second - 1) * (newLinearAccess[1].second);
-            int newcount = std::stoi(count);
-            newLinearAccess.push_back(std::pair(newstep, newcount));   
-          }
-          else {
+          else if(level != 0) {
             newLinearAccess.push_back(std::pair(std::stoi(step), std::stoi(count)));
           }
 
@@ -2221,9 +2483,7 @@ static void SpecifyFPNodePrecision(LLVMCDFG* CDFG, bool verbose){
         llvm::isa<mlir::arith::CmpFOp>(op)) 
     {
       mlir::Type resultTy;
-      if (llvm::isa<mlir::arith::CmpFOp>(op))
-        resultTy = op->getOperand(0).getType();
-      else if (op->getNumResults() > 0)
+      if (op->getNumResults() > 0)
         resultTy = op->getResult(0).getType();
       else
         continue;
@@ -2345,7 +2605,6 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
   level_total = level;
   // scf::ForOp scf_for;
   mlir::Operation* for_op;
-
 
 
   /*** Add Nodes ***/
@@ -2574,6 +2833,18 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
           // node->setTypeName(GetCMPTypeStr(op));
           // ConvertGreaterToLess(node);
         }
+        // // ... 前面的 affine.for 等判断保持不变 (hjy)...
+        // else if(op->getName().getStringRef() == "scf.if"){
+        //   // 将 scf.if 创建为 SEL 节点
+        //   LLVMCDFGNode* node = CDFG->addNode(op); 
+        //   node->setTypeName("SEL"); 
+        //   node->setLoopLevel(level);
+        // }
+        // else if(op->getName().getStringRef() == "scf.yield"){
+        //   // 忽略 scf.yield，不创建节点
+        //   return WalkResult::advance();
+        // }
+        
         else{
           LLVMCDFGNode* node = CDFG->addNode(op); 
           node->setLoopLevel(level);
@@ -2655,6 +2926,7 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
     mlir::Operation *op = SuccNode->operation();
     if(verbose) {errs() << nodepair.first << ".Node:";}
     if(verbose) {op->dump();}
+
     for (unsigned operand_idx = 0; operand_idx < op->getNumOperands(); operand_idx++)
     {
       LLVMCDFGNode *AnceNode = NULL;
@@ -2764,8 +3036,24 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
                 ||ance_op->getName().getStringRef() == "ADORA.LocalMemAlloc"){
             if(SuccNode->isLinearAccess())
               continue;
+            // hjy：允许 memref.load 和 memref.store 跳过基地址依赖检查
+            else if(SuccNode->operation()->getName().getStringRef() == "memref.load"
+                ||SuccNode->operation()->getName().getStringRef() == "memref.store")
+              continue;
             else 
-              assert(0); /// Todo: fix this
+              assert(0); /// Todo: fix this jhlou
+          }
+          //hjy
+          else if(ance_op->getName().getStringRef() == "memref.alloca"){
+            // memref.alloca 定义在 kernel 外部，用于 memref.load/store 的内存引用
+            // 对于 memref.load/store，内存引用不需要作为边添加到 DFG
+            continue;
+          }
+          else {
+            // 其他未处理的外部操作，跳过边的创建
+            LLVM_DEBUG(llvm::errs() << "[Warning] Skipping unhandled external operation: " 
+                       << ance_op->getName().getStringRef() << "\n");
+            continue;
           }
           //   /// Extract Accumulation Operations
           //   // assert(isa<Affine::YieldOp>(op));
@@ -2848,7 +3136,7 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
     for(auto &elem : nodes){
       // int node_id = elem.first;
       LLVMCDFGNode* node = elem.second;
-      if(node->getTypeName() == "bitcast"){
+      if(node->getTypeName() == "bitcast" || node->getTypeName() == "index_cast" ){
         assert(node->inputNodes().size() == 1);
         LLVMCDFGNode* AnceNode = node->getInputPort(0);
         for(int edgeid : node->outputEdges())
@@ -2939,8 +3227,22 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
 
 
 LLVMCDFG* mlir::ADORA::generateCDFGfromKernel(LLVMCDFG* &CDFG, ADORA::KernelOp kernel, bool verbose){
+  
+  
   /// remove truncf op
   RemoveConstantTruncF(kernel);
+
+  // hjy
+  // [Add] Start: 在这里调用 If-Conversion
+  // 先把控制流转换为数据流，这样后续的 DFG 生成就不需要处理复杂的 if 结构了
+  //lowerScfIfToSelect(kernel);
+  lowerSCFIfToSelect(kernel);
+  if(verbose) {
+    llvm::errs() << "[ADORA] Applied If-Conversion (scf.if -> arith.select).\n";
+    kernel.dump(); // 打印 IR 查看转换结果
+  }
+  // [Add] End
+
   ADORA::KernelOp kernel_clone = kernel.clone();
   // kernel_clone.dump();
   kernel.getOperation()->getBlock()->push_back(kernel_clone);
@@ -2950,6 +3252,8 @@ LLVMCDFG* mlir::ADORA::generateCDFGfromKernel(LLVMCDFG* &CDFG, ADORA::KernelOp k
   /// FIX: We should judge whether to use hoist
   HoistLoadStoreInKernelOp(kernel); 
   if(verbose) kernel.dump();
+
+  
 
   /// For every loop carried value, find their accumulation mode. Move initial value computing to outer most level.
   MoveLoopCarriedInitailValue(kernel);

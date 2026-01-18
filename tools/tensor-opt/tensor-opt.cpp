@@ -81,7 +81,6 @@ int main(int argc, char **argv) {
   mlir::ADORA::registerExtractAffineForToKernelPass();
   // mlir::ADORA::registerAdjustKernelMemoryFootprintPass();
   mlir::ADORA::registerExtractKernelToFuncPass();
-
   // mlir::ADORA::registerAutoDesignSpaceExplorePass();
   // mlir::ADORA::registerSimplifyAffineLoopLevelsPass();
   // mlir::ADORA::registerTestPrintOpNestingPass();
@@ -100,7 +99,6 @@ int main(int argc, char **argv) {
   mlir::ADORA::ADORATensor::registerLinalgToSystolicGEMMPass();
   mlir::ADORA::ADORATensor::registerADORATensorOpCdfgGenPassPass();
   mlir::ADORA::ADORATensor::registerADORAGemmOpStrategyDecisionPass();
-  mlir::ADORA::ADORATensor::registerADORATensorFunctionsToKernel() ;
 
   mlir::registerSCFForLoopCanonicalizationPass(); 
   

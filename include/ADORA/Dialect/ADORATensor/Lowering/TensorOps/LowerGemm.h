@@ -1,7 +1,6 @@
 #ifndef ADORA_TENSOR_GEMM_OP_LOWER_H
 #define ADORA_TENSOR_GEMM_OP_LOWER_H
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Builders.h"
 
@@ -67,26 +66,6 @@ mlir::affine::AffineForOp TiledOutputStationaryGemm(
   OpBuilder opbuilder, ADORATensor::GemmOp op, ArrayRef<int64_t> tilesize //(K_temporal_tile, M_temporal_tile, K_spatial_tile, N_spatial_tile)
 );
 
-/// Initialize output buffer `out` with values from `C` for a logical `{M, N}`
-/// GEMM result.
-///
-/// - If `out` and `C` have the same memref type, emits `memref.copy`.
-/// - Otherwise, generates nested loops over `(m, n)` and loads `C` with
-///   simple broadcast rules (scalar / vector / matrix / batch-1),
-///   then stores into `out`.
-///
-/// Assumes:
-/// - `outMN = {M, N}`
-/// - `out` is `{M,N}` or `{1,M,N}`
-/// - `C` follows common NN broadcast patterns.
-///
-/// Used in Output-Stationary GEMM lowering to initialize the accumulator.
-void initOutWithC2DLike(
-    OpBuilder &b, Location loc,
-    Value out, Value C,
-    ArrayRef<int64_t> outMN);
-
-
 /////////////////////////
 /// Tool functions
 /////////////////////////
@@ -111,24 +90,6 @@ static inline llvm::SmallVector<int64_t, 2> getShape(mlir::Value v) {
                                            shapedTy.getShape().end());
     }
   }
-  return {};
-}
-
-static inline llvm::SmallVector<int64_t, 2> get2DShape(mlir::Value v) {
-  llvm::SmallVector<int64_t, 4> shape = getShape(v);
-
-  // Case 1: already 2D
-  if (shape.size() == 2)
-    return {shape[0], shape[1]};
-
-  // Case 2: 3D and first dim is 1 → drop it
-  else if (shape.size() == 3 && shape[0] == 1)
-    return {shape[1], shape[2]};
-
-  else if (shape.size() == 1)
-    return {1, shape[0]};
-
-  // Otherwise: not a valid 2D shape
   return {};
 }
 

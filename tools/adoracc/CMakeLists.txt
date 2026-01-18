@@ -28,7 +28,7 @@ list(TRANSFORM ADORACC_TARGETS PREPEND ${PROJECT_BINARY_DIR}/bin/)
 
 
 # configure_file(adoracc/configure.py.in ${PROJECT_BINARY_DIR}/bin/adoracc/configure.py)
-# install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/adoracc/configure.py DESTINATION ${PYTHON_INSTALL_PATH}/adoracc)
+install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/adoracc/configure.py DESTINATION ${PYTHON_INSTALL_PATH}/adoracc)
 
 # Stuff our python into the build area:
 add_custom_target(adoracc.py ALL DEPENDS ${ADORACC_TARGETS})

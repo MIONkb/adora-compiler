@@ -116,7 +116,6 @@ public:
     friend class BaseEmitter;
     friend class CGRACallEmitter;
     friend class PytestEmitter;
-    friend class VitisSDKEmitter;
     
     void preestablishPlacementConstraints(DFGNode* dfgnode, std::vector<ADGNode*> adgnodes);
     std::vector<ADGNode*> getPlacementConstraints(DFGNode* dfgnode);

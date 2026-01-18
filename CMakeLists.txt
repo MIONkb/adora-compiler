@@ -47,9 +47,8 @@ add_definitions(${LLVM_DEFINITIONS})
 add_subdirectory(include/ADORA)
 add_subdirectory(lib)
 add_subdirectory(mapper)
-
+# add_subdirectory(test)
 add_subdirectory(tools)
-add_subdirectory(test)
 # add_subdirectory(cmake)
 
 ##############################
@@ -62,8 +61,7 @@ endif()
 
 install(
   TARGETS
-    MLIRADORAOps MLIRADORAKernelOp 
-    MLIRADORALowerings MLIRADORATransforms
+    MLIRADORAOps MLIRADORALowerings MLIRADORATransforms
     MLIRADORATransformsUtility MLIRADORALoopTransforms
     MLIRADORAKernelExtract GeneralCDFGGen
     ADORATensorInterface ADORATensorOps ADORATensorLower

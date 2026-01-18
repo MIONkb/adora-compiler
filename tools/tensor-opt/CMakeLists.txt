@@ -75,7 +75,6 @@ set(LIBS
   #ADORA
   MLIRADORAOps
   MLIRADORAKernelExtract
-  MLIRADORAKernelOp
   # MLIRADORALowerings
   # MLIRADORAMisc
   # MLIRADORATransforms

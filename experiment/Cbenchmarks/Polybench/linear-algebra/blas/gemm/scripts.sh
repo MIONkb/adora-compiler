@@ -42,13 +42,13 @@ cgra-opt \
 
     
 cgra-opt \
-    --adora-extract-affine-for-to-kernel \
-    --adora-simplify-loadstore \
-    --adora-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
+    --ADORA-extract-affine-for-to-kernel \
+    --ADORA-hoist-loadstore \
+    --ADORA-adjust-kernel-mem-footprint="cachesize=128 singlearraysize=8 disable-remainder-block explicit-datablock" \
     gesummv_kernel_0.mlir
 
 cgra-opt \
-    --adora-kernel-dfg-gen \
+    --ADORA-kernel-dfg-gen \
     /home/jhlou/CGRVOPT/cgra-opt/experiment/Cbenchmarks/Polybench/linear-algebra/kernels/bicg_small/1_kernels_opt/bicg_kernel_opt.mlir
 
 

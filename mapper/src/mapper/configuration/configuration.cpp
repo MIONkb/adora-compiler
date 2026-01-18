@@ -75,17 +75,6 @@ int Configuration::addAdditionalLatencyForAfterMERGEOutputOp(DFGNode* dfgNode, i
     return latency;
 }
 
-std::set<int> Configuration::getConfiguredTiles(){
-    std::set<int> results;
-    for(auto& elem : _mapping->getADG()->nodes()){
-        ADGNode* adgnode = elem.second;
-        if(_mapping->isMapped(adgnode)){
-            results.insert(adgnode->tile());
-        }
-    }
-
-    return results;
-}
 
 // get config data for GPE, return<LSB-location, CfgData>
 std::map<int, CfgData> Configuration::getGpeCfgData(GPENode* node){

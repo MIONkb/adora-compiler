@@ -2,7 +2,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-// #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"// <--- 确保这一行存在且未被注释
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Parser/Parser.h"
@@ -71,7 +71,11 @@ struct AffineForKernelCaptor: public ExtractAffineForToKernelBase<AffineForKerne
               /// arith
               op->getName().getStringRef()== mlir::arith::TruncFOp ::getOperationName() ||
               op->getName().getStringRef()== mlir::arith::TruncIOp ::getOperationName() ||
-              op->getName().getStringRef()== mlir::arith::UIToFPOp ::getOperationName() )
+              op->getName().getStringRef()== mlir::arith::UIToFPOp ::getOperationName() 
+              // || // === 新增：支持 scf 控制流 ===
+              // op->getName().getStringRef()== scf::IfOp::getOperationName() ||
+              // op->getName().getStringRef()== scf::YieldOp::getOperationName()
+            )
           {
             return WalkResult::advance();
           }

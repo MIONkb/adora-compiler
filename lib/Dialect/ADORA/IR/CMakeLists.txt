@@ -1,4 +1,3 @@
-add_subdirectory(KernelOp)
 add_mlir_dialect_library(MLIRADORAOps
   ADORADialect.cpp
   ADORAOps.cpp
@@ -16,9 +15,8 @@ add_mlir_dialect_library(MLIRADORAOps
 
   LINK_COMPONENTS
   Core
-  
+
   LINK_LIBS PUBLIC
-  MLIRADORAKernelOp
   MLIRSupport
   MLIRInferTypeOpInterface
   MLIRDialectUtils
@@ -26,4 +24,3 @@ add_mlir_dialect_library(MLIRADORAOps
   MLIRViewLikeInterface
   MLIRSideEffectInterfaces
   )
-

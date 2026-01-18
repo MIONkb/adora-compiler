@@ -19,10 +19,6 @@ std::string getEmitType(const mlir::Type valType){
     return std::string("float");
   else if (valType.isa<Float64Type>())
     return std::string("double");
-  else if (valType.isa<BFloat16Type>())
-    return std::string("bfloat");
-  else if (valType.isa<Float16Type>())
-    return std::string("float16");
 
   // Handle integer types.
   else if (valType.isa<IndexType>())
@@ -403,30 +399,6 @@ void BaseEmitter::preestablishPlacementConstraints(ADORA::KernelOp& kernel, Mapp
   });
 }
 
-void BaseEmitter::setTileEnsForKernel(ADORA::KernelOp kn){
-  Configuration config = KnToConfiguration[kn];
-  std::set<int> tiles = config.getConfiguredTiles();
-
-  BYTES_LIST bytes((getADG()->tileNum() + 7)/8);
-  for (int tile : tiles) {
-    if (tile < 0) {
-      assert(tiles.size() == 1);
-    }
-    else{
-      bytes.setBitTo(tile, true);
-    }
-  }
-
-  setTileEns(kn, bytes);
-}
-
-void BaseEmitter::setTileEnsForEachKernel(){
-  for(auto elem : this->KnToConfiguration){
-    ADORA::KernelOp kn = elem.first;
-    Configuration config = elem.second;
-    setTileEnsForKernel(kn);
-  }
-}
 
 /// @brief Get SPAD information (which bank to transfer data, data size...) for every data block load.
 ///        This information is store in _LoadToDfgIoInfos/_StoreToDfgIoInfo

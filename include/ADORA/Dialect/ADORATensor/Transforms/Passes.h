@@ -19,7 +19,6 @@ namespace ADORATensor{
 std::unique_ptr<OperationPass<ModuleOp>> createLinalgToSystolicGEMMPass();
 std::unique_ptr<OperationPass<ModuleOp>> createADORATensorOpCdfgGenPass();
 std::unique_ptr<OperationPass<ModuleOp>> createADORAGemmOpStrategyDecisionPass();
-std::unique_ptr<OperationPass<func::FuncOp>> createADORATensorFunctionsToKernelPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

@@ -35,8 +35,6 @@
 #include <thread>
 #include <mutex>
 #include <getopt.h>
-#include <atomic>
-#include <algorithm>
 
 #include "op/operations.h"
 #include "ir/adg_ir.h"
@@ -46,7 +44,6 @@
 #include "spdlog/cfg/argv.h"
 #include "emit/EmitCGRACall.h"
 #include "emit/EmitPytest.h"
-#include "emit/EmitVitisSDK.h"
 #include "tensorop/TensorOp.h"
 
 // #include "mlir/Dialect/Arith/Transforms/Passes.h"
@@ -157,9 +154,9 @@ int main(int argc, char **argv) {
   static cl::opt<std::string> emit_type(
     "output-type",
     cl::Required, 
-    cl::desc("emit the execution file type: c(defualt), pytest, sdk(vitis sdk)"), 
-    cl::value_desc("c/pytest/sdk"), 
-    cl::init("pytest"));
+    cl::desc("emit the execution file type: c(defualt), pytest"), 
+    cl::value_desc("c or pytest"), 
+    cl::init("c"));
 
   static cl::opt<std::string> outputFilename(
     "output", 
@@ -174,25 +171,12 @@ int main(int argc, char **argv) {
     cl::desc("Detail information"),
     cl::value_desc("bool"),
     cl::init(false));
-
-  static cl::opt<int> specifictilenum(
-    "tile",
-    cl::Optional, 
-    cl::desc("tile num to map"), 
-    cl::value_desc("int"), 
-    cl::init(9999999));
   // static cl::opt<int> nthreads(
   //   "j", 
   //   cl::Optional, 
   //   cl::desc("Allow N mapping jobs at once(default to be 1)"),
   //   cl::value_desc("[N]"),
   //   cl::init(1));
-  static cl::opt<int> parallel_cores(
-    "parallel-cores",
-    cl::Optional, 
-    cl::desc("Allow N mapping jobs at once within each func.func (default to be 1)"),
-    cl::value_desc("[N]"),
-    cl::init(1));
   // spdlog::cfg::helpers::load_levels("true");
 
   InitLLVM y(argc, argv);
@@ -279,27 +263,17 @@ int main(int argc, char **argv) {
   ADG* adg = adg_ir.getADG();
   int numGpeNodes = adg->numGpeNodes();
   int numFuNodes = numGpeNodes + adg->numIobNodes();
-  int numTiles = adg->tileNum();
-  std::cout << "numGpeNodes: " << numGpeNodes 
-            << ", numFuNodes(GPE+IOB): "  << numFuNodes 
-            << ", numTiles: "  << numTiles << std::endl;
+  std::cout << "numGpeNodes: " << numGpeNodes << ", numFuNodes(GPE+IOB): "  << numFuNodes << std::endl;
   std::vector<float>storePEusage;
   std::vector<float>storeFUusage;
   std::vector<int>bestLatency;
-
-  ADG* subadg = adg->inducedSubgraphByFirstNTiles(specifictilenum);
-  subadg->print();
+  // adg->print();
 
   //////////////////////////////////////////
   /// Pre-set mapping
   //////////////////////////////////////////
   CGRACallEmitter CEmitter(moduleop);
   PytestEmitter PyEmitter(moduleop);
-  VitisSDKEmitter SDKEmitter(moduleop);
-
-  CEmitter.setTotalTileNum(numTiles);
-  PyEmitter.setTotalTileNum(numTiles);
-  SDKEmitter.setTotalTileNum(numTiles);
   
   std::vector<MapperSA*>mapper_Vec;
   std::vector<DFGIR*>DFGIR_Vec;
@@ -318,8 +292,8 @@ int main(int argc, char **argv) {
   /////////////////////////
   /// Map ADORA Tensor
   /////////////////////////
-  MapAdoraTensorOp(&context, moduleop, tensor_mapper_Vec, &CEmitter, &PyEmitter, &SDKEmitter,
-    subadg, GeneralOpNameFile_str, timeout_ms, max_iters, objOpt, verbose);
+  MapAdoraTensorOp(&context, moduleop, tensor_mapper_Vec, &CEmitter, &PyEmitter,
+    adg, GeneralOpNameFile_str, timeout_ms, max_iters, objOpt, verbose);
   // if(emit_type == "pytest"){
   //   MapAdoraTensorOp(tensor_mapper_Vec)
   // }
@@ -348,40 +322,27 @@ int main(int argc, char **argv) {
   //   kernels.push_back(kernel);
   // });
 
-  std::atomic<int> kernel_cnt{0};
-  std::mutex mlir_mutex;
-  std::mutex emitter_mutex;
-  std::mutex vector_mutex;
-  int max_threads = std::max(1, parallel_cores.getValue());
-
-  auto map_kernel = [&](ADORA::KernelOp kernel) {
-    MapperSA* mapper = new MapperSA(subadg, timeout_ms, max_iters, objOpt);
-    {
-      std::lock_guard<std::mutex> lock(vector_mutex);
-      mapper_Vec.push_back(mapper);
-    }
+  int kernel_cnt = 0;
+  moduleop.walk([&](ADORA::KernelOp kernel) {
+    if(kernel->hasAttr("ADORAGemm"))
+      return WalkResult::advance();
+      
+    MapperSA* mapper = new MapperSA(adg, timeout_ms, max_iters, objOpt);
+    mapper_Vec.push_back(mapper);
     /// Generating DFG
-    std::string kernelName;
-    {
-      std::lock_guard<std::mutex> lock(mlir_mutex);
-      kernelName = kernel.getKernelName();
-    }
+    // std::string fileName = kernel.getKernelName();
+  
+    std::string kernelName = kernel.getKernelName();
     if(kernelName.empty()){
-      kernelName = "kernel_" + std::to_string(kernel_cnt.fetch_add(1));
+      kernelName = "kernel_" + std::to_string(kernel_cnt);
     }
     LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile_str);
-    {
-      std::lock_guard<std::mutex> lock(mlir_mutex);
-      generateCDFGfromKernel(CDFG, kernel, /*verbose=*/verbose);
-    }
+    generateCDFGfromKernel(CDFG, kernel, /*verbose=*/verbose);
     // CDFG->CDFGtoDOT(CDFG->name_str()+"_CDFG.dot");
 
     /// DFG Mapping to CGRA architecture
     DFGIR* dfg_ir = new DFGIR(CDFG);
-    {
-      std::lock_guard<std::mutex> lock(vector_mutex);
-      DFGIR_Vec.push_back(dfg_ir);
-    }
+    DFGIR_Vec.push_back(dfg_ir);
 
     DFG* dfg = dfg_ir->getDFG();
     int numNodes = dfg->nodes().size();
@@ -395,18 +356,13 @@ int main(int argc, char **argv) {
     mapper->setDFG(dfg);
 
     // some io nodes must be placed at some place
-    {
-      std::scoped_lock lock(mlir_mutex, emitter_mutex);
-      if(emit_type == "pytest"){
-        PyEmitter.preestablishPlacementConstraints(kernel, mapper);
-      }
-      else if(emit_type == "sdk"){
-        SDKEmitter.preestablishPlacementConstraints(kernel, mapper);
-      }
-      else{ /// default to be C
-        CEmitter.preestablishPlacementConstraints(kernel, mapper);
-      }
+    if(emit_type == "pytest"){
+      PyEmitter.preestablishPlacementConstraints(kernel, mapper);
     }
+    else{ /// default to be C
+      CEmitter.preestablishPlacementConstraints(kernel, mapper);
+    }
+
 
     std::filesystem::create_directory(kernelName + "_map_result");
     CDFG->CDFGtoDOT(kernelName + "_map_result/before_map_" + CDFG->name_str() + "_CDFG.dot");
@@ -416,60 +372,18 @@ int main(int argc, char **argv) {
     // bool succeed = mapper->execute(/*dumpCallFunc=*/false, /*dumpMappedViz*/true, /*resultDir=*/"map_result");
     if(succeed){
       // Mapping is successful, get all blockload and blockstore op and corresponding spad memory addresses.
-      std::scoped_lock lock(mlir_mutex, emitter_mutex);
       if(emit_type == "pytest"){
         PyEmitter.setMapResult(kernel, mapper);
         PyEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
-        PyEmitter.setTileEnsForKernel(kernel);
         PyEmitter.GenerateCGRAConfig(kernel, mapper);
-      }
-      else if(emit_type == "sdk"){
-        SDKEmitter.setMapResult(kernel, mapper);
-        SDKEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
-        SDKEmitter.setTileEnsForKernel(kernel);
-        SDKEmitter.GenerateCGRAConfig(kernel, mapper);
       }
       else{ /// default to be C
         CEmitter.setMapResult(kernel, mapper);
         CEmitter.DataBlockOperationsToSPADInfo(kernel, mapper);
-        CEmitter.setTileEnsForKernel(kernel);
         CEmitter.GenerateCGRAConfig(kernel, mapper);
       }
     }
-  };
-
-  moduleop.walk([&](func::FuncOp func) {
-    SmallVector<ADORA::KernelOp> kernels;
-    func.walk([&](ADORA::KernelOp kernel) {
-      if(kernel->hasAttr("ADORAGemm"))
-        return WalkResult::advance();
-      kernels.push_back(kernel);
-      return WalkResult::advance();
-    });
-
-    if(kernels.empty()){
-      return WalkResult::advance();
-    }
-
-    size_t num_workers = std::min<size_t>(max_threads, kernels.size());
-    std::atomic<size_t> next_index{0};
-    std::vector<std::thread> workers;
-    workers.reserve(num_workers);
-    for(size_t i = 0; i < num_workers; ++i){
-      workers.emplace_back([&]() {
-        while(true){
-          size_t idx = next_index.fetch_add(1);
-          if(idx >= kernels.size()){
-            break;
-          }
-          map_kernel(kernels[idx]);
-        }
-      });
-    }
-    for(auto& worker : workers){
-      worker.join();
-    }
-    return WalkResult::advance();
+    kernel_cnt++;
   });
 
   /// Emit module to a C source file
@@ -482,15 +396,6 @@ int main(int argc, char **argv) {
       std::error_code ec;
       llvm::raw_fd_ostream outputFile(outputFilename, ec, sys::fs::FA_Write);
       PyEmitter.emitPytest(outputFile);
-    }
-  }
-  else if(emit_type == "sdk"){
-    if(outputFilename == "-")
-      SDKEmitter.emitCGRACallFunction(llvm::errs());
-    else{
-      std::error_code ec;
-      llvm::raw_fd_ostream outputFile(outputFilename, ec, sys::fs::FA_Write);
-      SDKEmitter.emitCGRACallFunction(outputFile);
     }
   }
   else{ /// default to be C
@@ -512,8 +417,6 @@ int main(int argc, char **argv) {
     delete ir;
   for(auto mapper: tensor_mapper_Vec)
     delete mapper;
-
-  // delete adg;
 
   return 0; 
 }

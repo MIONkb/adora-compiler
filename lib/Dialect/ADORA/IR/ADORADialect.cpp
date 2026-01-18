@@ -19,11 +19,5 @@ void ADORADialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "ADORA/Dialect/ADORA/IR/ADORAOps.cpp.inc"
-  >();
-
-  addOperations<
-#define GET_OP_LIST
-#include "ADORA/Dialect/ADORA/IR/KernelOp/ADORAKernelOp.cpp.inc"
-  >();
-
+      >();
 }

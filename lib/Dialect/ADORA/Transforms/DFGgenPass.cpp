@@ -83,7 +83,7 @@ void ADORALoopCdfgGenPass::runOnOperation()
         kernelName = "kernel_" + std::to_string(kernel_cnt);
       }
       LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile_str);
-      generateCDFGfromKernel(CDFG, kernel, /*verbose=*/false);
+      generateCDFGfromKernel(CDFG, kernel, /*verbose=*/true);
       CDFG->CDFGtoDOT(kernelName + "_CDFG.dot");
       kernel_cnt++;
     });   

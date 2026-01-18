@@ -987,7 +987,7 @@ int AdjustMemoryFootprintPass::ExplicitKernelDataBLockLoadStore(ADORA::KernelOp 
     if(findElement(VisitedOperations, loadop.getOperation()) != -1)
       return WalkResult::advance();
 
-    LLVM_DEBUG(llvm::errs() << "[debug] loadop: "; loadop.dump(););
+    llvm::errs() << "[debug] loadop: "; loadop.dump();
     if(succeeded(memrefRegion.compute(loadop, 
                 /*loopDepth=*/getNestingDepth(Kernel.getOperation())))){ /// Bind loadop and memrefRegion through compute()
       memref = memrefRegion.memref; /// original memref Op of this loadOP
@@ -1015,9 +1015,9 @@ int AdjustMemoryFootprintPass::ExplicitKernelDataBLockLoadStore(ADORA::KernelOp 
       // }
 
       /// For different dim of original memref
-      LLVM_DEBUG(for(auto &iv : IVs){
+      for(auto &iv : IVs){
         llvm::errs() << "iv:" << iv << "\n";
-      });
+      }
 
       for (unsigned r = 0; r < rank; r++) {
         AffineExpr lbExpr_minspace, ubExpr_minspace;
@@ -1030,7 +1030,7 @@ int AdjustMemoryFootprintPass::ExplicitKernelDataBLockLoadStore(ADORA::KernelOp 
         memrefRegion.getLowerAndUpperBound(r, lbMap, ubMap);
         assert(lbMap.getNumDims() == IVs.size() && ubMap.getNumDims() == IVs.size()\
               && " Num of bound's dim should be the same with num of IVs!");
-        LLVM_DEBUG(llvm::errs() << "[debug] lbMap: " << lbMap << " , ubMap: "<< ubMap << "\n";);
+        llvm::errs() << "[debug] lbMap: " << lbMap << " , ubMap: "<< ubMap << "\n";
         int64_t min_space = -1;
 
         for(AffineExpr lbExpr : lbMap.getResults()){ 

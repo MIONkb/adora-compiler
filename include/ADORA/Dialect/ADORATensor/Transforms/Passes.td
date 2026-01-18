@@ -66,21 +66,6 @@ let options = [
 
 }
 
-def ADORATensorFunctionsToKernel : Pass<"adora-extract-kernels-in-tensor-function", "func::FuncOp"> {
-  let summary = "Extract kernels in a FuncOp converted from onnx model";
-  let constructor = "mlir::ADORA::ADORATensor::createADORATensorFunctionsToKernelPass()";
-  let dependentDialects = [
-    "::mlir::ADORA::ADORADialect",
-    "::mlir::ADORA::ADORATensor::ADORATensorDialect"
-    // "arith::AffineDialect"
-  ];
-  let options = [
-    //  Option<"FunctionName", "function-name", "std::string",
-    //        /*default=*/"\"-\"",
-    //        "Specify the functions to search for loops, separated by commas (,). Default to be all functions. Example: --function-name=foo0,foo1">,
-  ];
-}
-
 def ADORATensorOpCdfgGenPass : Pass<"adora-gen-tensor-op-cdfg", "ModuleOp"> {
   let summary = "Generate cdfg of ADORA from a ADORA tensor op";
   let constructor = "createADORATensorOpCdfgGenPass()";

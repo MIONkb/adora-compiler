@@ -149,10 +149,6 @@ public:
     void getPingpongCfgData(std::vector<CfgDataPacket>& cfg_ping, std::vector<CfgDataPacket>& cfg_pong);
     std::map<int, CfgData> getIobPingpongCfgData(IOBNode* node, bool en_pingpong = 0, int pingpong_phase = 0);
     
-    /// get the related tiles of the configuration
-    std::set<int> getConfiguredTiles();
-
-
     //// static tool functions
     static void addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, uint32_t data);
     static void addCfgData(std::map<int, CfgData> &cfg, const CfgDataLoc &loc, uint64_t data);

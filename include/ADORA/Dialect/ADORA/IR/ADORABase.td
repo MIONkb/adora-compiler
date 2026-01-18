@@ -32,10 +32,4 @@ def ADORA_Dialect : Dialect {
   // let hasOperationAttrVerify = 1;
 }
 
-//===----------------------------------------------------------------------===//
-// ADORA Dialect operations.
-//===----------------------------------------------------------------------===//
-class ADORA_Op<string mnemonic, list<Trait> traits = []> :
-    Op<ADORA_Dialect, mnemonic, traits>;
-    
 #endif // ADORA_BASE

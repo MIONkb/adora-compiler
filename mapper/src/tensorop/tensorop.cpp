@@ -12,11 +12,7 @@ namespace ADORA{
 
 void MapAdoraTensorOp(MLIRContext* context, mlir::ModuleOp moduleop, 
                     std::vector<ADORA_TENSOR_MAPPER*> mappers,
-
-                    CGRACallEmitter* CEmitter, 
-                    PytestEmitter* PyEmitter,
-                    VitisSDKEmitter* SdkEmitter,
-                    
+                    CGRACallEmitter* CEmitter, PytestEmitter* PyEmitter,
                     ADG* adg, std::string& OpNameFile_str,
                     int timeout_ms, int max_iters, bool objOpt,
                     bool verbose){
@@ -25,7 +21,6 @@ void MapAdoraTensorOp(MLIRContext* context, mlir::ModuleOp moduleop,
   engine.setEmitter(PyEmitter);
   engine.setMappingArgs(adg, OpNameFile_str, timeout_ms, max_iters, objOpt);
   engine.setVerbose(verbose);
-  moduleop.dump();
   moduleop.walk([&](mlir::Operation* op) {
     if(engine.dispatchVisitor(op)){
       if(verbose) {moduleop.dump();}

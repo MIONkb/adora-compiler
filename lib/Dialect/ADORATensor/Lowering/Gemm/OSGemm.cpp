@@ -153,13 +153,12 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
           /// generate interleaver for C
           SmallVector<int64_t, 4> shape;
           shape.push_back(4);
-          shape.push_back(1);
           
           SmallVector<mlir::Value> ToInterleaver; 
           for(int i = 0; i < 4;i++){
             ToInterleaver.push_back(inner.getResult(col * tile_row_size + row * 4 + i));
           }     
-          ADORA::InterleaverOp interleaver = builder.create<ADORA::InterleaverOp>(loc, ToInterleaver, shape);
+          ADORA::InterleaverOp interleaver = builder.create<ADORA::InterleaverOp>(loc, ToInterleaver);
           
           /// generate vector input for C
           SmallVector<AffineExpr, 2> Exprs;
@@ -185,13 +184,12 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
         /// generate interleaver for C
         SmallVector<int64_t, 4> shape;
         shape.push_back(tile_row_size % 4);
-        shape.push_back(1);
         
         SmallVector<mlir::Value> ToInterleaver; 
         for(int i = 0; i < tile_row_size % 4; i++){
           ToInterleaver.push_back(inner.getResult(col * tile_row_size + row * 4 + i));
         }     
-        ADORA::InterleaverOp interleaver = builder.create<ADORA::InterleaverOp>(loc, ToInterleaver, shape);
+        ADORA::InterleaverOp interleaver = builder.create<ADORA::InterleaverOp>(loc, ToInterleaver);
         
         /// generate vector input for C
         SmallVector<AffineExpr, 2> Exprs;
@@ -211,7 +209,7 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
             loc, vecadd, C_out[col * ((tile_row_size + 3) / 4) + row], memIVmap, j_it);
         setPingpongAttr(vecStoreC);
       }   
-      else if(tile_row_size % 4 == 1) {        
+      else if(tile_col_size % 4 == 1) {        
         /// generate vector input for C
         SmallVector<AffineExpr, 2> Exprs;
         Exprs.push_back(builder.getAffineConstantExpr(4*row)); // last dim's affine expr
@@ -230,7 +228,7 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
         setPingpongAttr(StoreC);
       }  
     }
-
+    
     builder.create<affine::AffineYieldOp>(loc);
   };
 }
@@ -437,7 +435,7 @@ StationaryBodyBuilderFn TileofOutputStationary(
         MemRefType newMemRef = MemRefType::get(shape, dtype);
 
         ADORA::DataBlockLoadOp BlockLoad = builder.create<ADORA::DataBlockLoadOp>\
-                  (loc, C, memIVmap, ValueRange({vi, vj}), newMemRef);
+                  (loc, A, memIVmap, ValueRange({vi, vj}), newMemRef);
 
         BlockLoad.setKernelName("GEMMOS");
         BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
@@ -517,9 +515,9 @@ AffineForOp TiledOutputStationaryGemm(
 ){
   assert(tilesize.size() == 2 || tilesize.size() == 3 ||  tilesize.size() == 4);
 
-  llvm::SmallVector<int64_t, 2> ShapeA = get2DShape(op.getA());
-  llvm::SmallVector<int64_t, 2> ShapeB = get2DShape(op.getB());
-  llvm::SmallVector<int64_t, 2> ShapeO = get2DShape(op.getO());
+  llvm::SmallVector<int64_t, 2> ShapeA = getShape(op.getA());
+  llvm::SmallVector<int64_t, 2> ShapeB = getShape(op.getB());
+  llvm::SmallVector<int64_t, 2> ShapeC = getShape(op.getC());
 
   //////////////////////////////////////
   /// Get tiled matmul micro-kernel parameter, which is also the tile of B matrix 
@@ -538,13 +536,13 @@ AffineForOp TiledOutputStationaryGemm(
   }
   else{
     N_temporal_tile = 1;
-    K_temporal_tile = ShapeB[0];    
+    K_temporal_tile = ShapeB[1];    
   }
 
   // make sure matmul is legal
-  assert(ShapeA.size() == 2 && ShapeB.size() == 2 && ShapeO.size() == 2);
-  assert(ShapeA[0] == ShapeO[0] && ShapeA[1] == ShapeB[0] && ShapeB[1] == ShapeO[1]);
-  assert(ShapeO[1] % (tilecol * N_temporal_tile) == 0 
+  assert(ShapeA.size() == 2 && ShapeB.size() == 2 && ShapeC.size() == 2);
+  assert(ShapeA[0] == ShapeC[0] && ShapeA[1] == ShapeB[0] && ShapeB[1] == ShapeC[1]);
+  assert(ShapeC[1] % (tilecol * N_temporal_tile) == 0 
       && ShapeA[0] % tilerow == 0 
       && ShapeB[0] % K_temporal_tile == 0);
   
@@ -561,23 +559,7 @@ AffineForOp TiledOutputStationaryGemm(
   N_step = (N_temporal_tile * tilecol);
   K_step = K_temporal_tile;
 
-  //==========================================================
-  // Allocate output buffer (type comes from GEMM output, NOT C)
-  //==========================================================
-  Location loc = op.getLoc();
 
-  auto outTy = op.getO().getType().dyn_cast<MemRefType>();
-  assert(outTy && "Expected GemmOp to return memref as output in lowering.");
-
-  opbuilder.setInsertionPointAfter(op.getOperation());
-  Value out = opbuilder.create<memref::AllocOp>(loc, outTy);
-
-  //==========================================================
-  // Initialize out with C (copy if same shape, else broadcast init)
-  //==========================================================
-  initOutWithC2DLike(opbuilder, loc, out, op.getC(), ArrayRef<int64_t>({ShapeA[0], ShapeA[1]}));
-
-  op.getOperation()->getBlock()->dump();
   //////////////////////////////////////
   /// Generate systolic gemm
   //////////////////////////////////////
@@ -588,12 +570,12 @@ AffineForOp TiledOutputStationaryGemm(
       /*upper bounds*/{ShapeA[0], ShapeB[1], ShapeB[0]}, //// M -> N -> K 
       /*steps*/{M_step, N_step, K_step}, //// M -> N -> K 
       /*InnerMostBodyBuilder*/TileofOutputStationary(
-        op.getA(), op.getB(), out, N_temporal_tile, K_temporal_tile, tilerow, tilecol
+        op.getA(), op.getB(), op.getC(), N_temporal_tile, K_temporal_tile, tilerow, tilecol
       )
     );
   
-  // op.getOperation()->getBlock()->push_back(loop);
-  loop.getOperation()->moveAfter(out.getDefiningOp());
+  op.getOperation()->getBlock()->push_back(loop);
+  loop.getOperation()->moveAfter(op);
   // } 
   // else{
   //   loop = GenerateTiledNestedLoopWithoutLoopCarry(
@@ -612,8 +594,6 @@ AffineForOp TiledOutputStationaryGemm(
     op->setAttr("ADORAGemm", UnitAttr::get(loop.getContext()));
   });
 
-  op.getO().replaceAllUsesWith(out);
-  
   loop.dump();
 
   return loop;

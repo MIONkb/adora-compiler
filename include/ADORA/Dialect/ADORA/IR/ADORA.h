@@ -1,8 +1,8 @@
 //===- Test.h - Test dialect --------------------------------------*- C++ -*-===//
 //===----------------------------------------------------------------------===//
 
-#ifndef CGRAOPT_DIALECT_ADORA_IR_H_
-#define CGRAOPT_DIALECT_ADORA_IR_H_
+#ifndef CGRAOPT_DIALECT_ADORA_IR_Test_H_
+#define CGRAOPT_DIALECT_ADORA_IR_Test_H_
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -27,17 +27,12 @@
 
 // #include "llvm/ADT/SmallSet.h" /// use std::unordered_set instead of std::list
 #include<set>
-
-#ifndef INCLUDE_DEFINE_ADORA_DIALECT
-#define INCLUDE_DEFINE_ADORA_DIALECT
 #include "ADORA/Dialect/ADORA/IR/ADORAOpsDialect.h.inc"
-#endif
 
 #define GET_OP_CLASSES
 #include "ADORA/Dialect/ADORA/IR/ADORAOps.h.inc"
-#include "ADORA/Dialect/ADORA/IR/ADORAOpsTypes.h.inc"
 
-#include "ADORA/Dialect/ADORA/IR/KernelOp/ADORAKernelOp.h"
+#include "ADORA/Dialect/ADORA/IR/ADORAOpsTypes.h.inc"
 //===----------------------------------------------------------------------===//
 // ADORA Dialect Helpers
 //===----------------------------------------------------------------------===//
@@ -72,4 +67,4 @@ inline mlir::Value findElement(const ValueRange vec, const mlir::Value& elem) {
 } // namespace ADORA
 } // namespace mlir
 
-#endif //CGRAOPT_DIALECT_ADORA_IR_H_
+#endif //CGRAOPT_DIALECT_ADORA_IR_Test_H_

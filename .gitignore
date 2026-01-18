@@ -1,0 +1,18 @@
+# C++ 编译垃圾
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+
+# 包含几百个文件的 build 文件夹
+build/
+experiment/
+
+# VS Code 产生的配置文件夹
+.vscode/
+
+# 临时文件
+*.log
+.DS_Store

@@ -31,6 +31,94 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 
 // include "mlir/Dialect/MemRef/IR/MemRefOps.td"
 // #include "mlir/Dialect/Func/IR/FuncOps.h"
+//===----------------------------------------------------------------------===//
+// ADORA Dialect operations.
+//===----------------------------------------------------------------------===//
+class ADORA_Op<string mnemonic, list<Trait> traits = []> :
+    Op<ADORA_Dialect, mnemonic, traits>;
+
+
+//===----------------------------------------------------------------------===//
+// kernel Operations for offload HW code
+//===----------------------------------------------------------------------===//
+
+def ADORA_KernelOp : ADORA_Op<"kernel">,
+    Arguments<(ins)>,
+    Results<(outs)> {
+  let summary = "ADORA KernelOp contains a kernel";
+
+  let description = [{
+    ADORA.kernel define a region that the body of the rigion
+    is a kernel which generated from a affine.for/scf.for/linalg.generic
+  }];
+
+  let regions = (region AnyRegion:$body);
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+    OpBuilder<(ins)>,
+    OpBuilder<(ins "std::string":$KernelName)>
+  ];
+  
+  let extraClassDeclaration = [{
+
+    /// The number of launch configuration operands, placed at the leading
+    /// positions of the operand list.
+    /// Legacy from copying GPU dialect.
+    static constexpr unsigned kNumConfigOperands = 0;
+
+    /// The number of region attributes containing the launch configuration,
+    /// placed in the leading positions of the argument list.
+    /// Legacy from copying GPU dialect.
+    static constexpr unsigned kNumConfigRegionAttributes = 0;
+    // unsigned kernel_Count = 0;
+
+    static StringRef getKernelNameAttrStr() { return "KernelName"; }
+    void setKernelName(std::string s) {
+      StringAttr KernelNameAttr = StringAttr::get(getOperation()->getContext(),s);
+      getOperation()->setAttr(getKernelNameAttrStr(), KernelNameAttr);
+    }
+
+    bool hasKernelName(){
+      return getOperation()->hasAttr("KernelName");
+    }
+
+    std::string getKernelName(){
+      return hasKernelName()? 
+        getOperation()->getAttr("KernelName").cast<StringAttr>().str() :
+        "";
+    }
+
+    ::mlir::affine::AffineForOp getTopAffineFopInKernel(){
+      SmallVector<::mlir::affine::AffineForOp> topforops;
+      for(::mlir::affine::AffineForOp forop: getOps<::mlir::affine::AffineForOp>()){
+        topforops.push_back(forop);
+      }
+      assert(topforops.size() == 1);
+      return topforops[0];
+    }
+
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+
+
+def ADORA_TerminatorOp : ADORA_Op<"terminator", [HasParent<"KernelOp">,
+                                              Terminator]>,
+    Arguments<(ins)>, Results<(outs)> {
+  let summary = "Terminator for ADORA_KernelOp regions.";
+  let description = [{
+    A terminator operation for regions that appear in the body of ADORA_KernelOp
+    operation.  These regions are not expected to return any value so the
+    terminator takes no operands.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
 
 
 //===----------------------------------------------------------------------===//
@@ -526,8 +614,7 @@ def InterleaverOp : ADORA_Op<"interleaver">{
   }];
 
   let builders = [
-    OpBuilder<(ins "ValueRange":$inputs)>,
-    OpBuilder<(ins "ValueRange":$inputs, "ArrayRef<int64_t>": $outShape)>
+    OpBuilder<(ins "ValueRange":$inputs)>
   ];
 
  // Define inputs as a variadic argument.

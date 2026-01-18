@@ -5,7 +5,6 @@ add_mlir_dialect_library(ADORATensorTransforms
   LinalgToSystolicGEMM.cpp
   TensorCDFGGenPass.cpp
   GemmOpStrategyDecision.cpp
-  GetKernelsInTensorFunctions.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${PROJ_INCLUDE_DIR}/ADORA/Dialect/ADORATensor/IR

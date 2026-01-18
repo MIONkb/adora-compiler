@@ -29,7 +29,6 @@ namespace ADORA {
 
 class PytestEmitter : public BaseEmitter{
 public:
-  using BaseEmitter::BaseEmitter;
   /////////////////////////////////
   // The following functions must be implemented in your derived class.
   // These functions are defined as pure virtual functions in the base class
@@ -56,7 +55,7 @@ public:
 
   std::string lookupVarConfigName(const std::string);
 
-  // PytestEmitter(mlir::ModuleOp m): BaseEmitter(m){}
+  PytestEmitter(mlir::ModuleOp m): BaseEmitter(m){}
   ~PytestEmitter(){};
 
   friend class PyOpEmitter;

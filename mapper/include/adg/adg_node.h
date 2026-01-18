@@ -6,7 +6,6 @@
 #include <vector>
 #include <set>
 #include <assert.h>
-#include <memory>
 #include "graph/graph_node.h"
 
 // configuration data location
@@ -22,7 +21,6 @@ class ADGNode : public GraphNode
 {
 private:
     int _cfgBlkIdx;
-    int _tile = -1;
     int _x;
     int _y;
     // int _cfgBitLen;
@@ -39,15 +37,12 @@ public:
     ~ADGNode(){} // cannot delete _subADG here because of pre-declare class; 
 
     int cfgBlkIdx(){ return _cfgBlkIdx; }
-    int tile(){ return _tile; }
     int x(){ return _x; }
     int y(){ return _y; }
     // int cfgBitLen(){ return _cfgBitLen; }
     void setCfgBlkIdx(int cfgBlkIdx){ _cfgBlkIdx = cfgBlkIdx; }
-    void setTile(int t){ _tile = t; }
     void setX(int x){ _x = x; }
     void setY(int y){ _y = y; }
-
     // void setCfgBitLen(int cfgBitLen){ _cfgBitLen = cfgBitLen; }
     ADG* subADG(){ return _subADG; }
     void setSubADG(ADG* subADG){ _subADG = subADG; }

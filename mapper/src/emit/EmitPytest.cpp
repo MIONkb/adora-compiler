@@ -349,19 +349,17 @@ public:
           indent() << "\toptrs=optrs, odata=odata, olen =olen,\n";
           indent() << "\tpingpong=pingpong\n";
           indent() <<")\n\n";
-          indent() <<"configs.clear()\n";
           indent() <<"iptrs.clear(), idata.clear()\n";
           indent() <<"optrs.clear(), odata.clear(), olen.clear()\n\n";
           indent() <<"pingpong = not pingpong\n";
         }
         else{
-          // indent() << "stream = runtime.create_stream()\n\n";
+          indent() << "stream = runtime.create_stream()\n\n";
           indent() << "await aux_stream(\n";
           indent() << "\tstream=stream, config=configs,\n";
           indent() << "\tiptrs=iptrs, idata=idata,\n";
           indent() << "\toptrs=optrs, odata=odata, olen =olen,\n";
           indent() <<")\n\n";
-          indent() <<"configs.clear()\n";
           indent() <<"iptrs.clear(), idata.clear()\n";
           indent() <<"optrs.clear(), odata.clear(), olen.clear()\n\n";     
         }
@@ -499,13 +497,12 @@ public:
         indent() <<"pingpong = not pingpong\n";
       }
       else{
-        // indent() << "stream = runtime.create_stream()\n\n";
+        indent() << "stream = runtime.create_stream()\n\n";
         indent() << "await aux_stream(\n";
         indent() << "\tstream=stream, config=configs,\n";
         indent() << "\tiptrs=iptrs, idata=idata,\n";
         indent() << "\toptrs=optrs, odata=odata, olen =olen,\n";
         indent() <<")\n\n";
-        indent() <<"configs.clear()\n";
         indent() <<"iptrs.clear(), idata.clear()\n";
         indent() <<"optrs.clear(), odata.clear(), olen.clear()\n\n";     
       }
@@ -669,18 +666,12 @@ public:
         */
 
         ///// get iob_ens:
-        BYTES_LIST iob_ens = _pytestemitter->getIobEns(kernel);
-        BYTES_LIST tile_ens = _pytestemitter->getTileEns(kernel);
-        std::stringstream iobens_ss, tileens_ss;
+        BYTES_LIST iob_ens = _pytestemitter->getIobens(kernel);
+        std::stringstream iobens_ss;
         for(int _ = 0; _ < iob_ens.size(); _++){
           iobens_ss << iob_ens.getByte(_);
           if(_ != iob_ens.size() - 1)
             iobens_ss << "," ;
-        }
-        for(int _ = 0; _ < tile_ens.size(); _++){
-          tileens_ss << tile_ens.getByte(_);
-          if(_ != tile_ens.size() - 1)
-            tileens_ss << "," ;
         }
 
         indent() << "pingpong = False" << "\n";
@@ -689,19 +680,16 @@ public:
         indent() << "config_" << knName << " = DeviceConfig("
                 << "config_values=" << "cfgbit_" << knName << ", "
                 << "iob_en=[" << iobens_ss.str() << "], "
-                << "tile_en=[" << tileens_ss.str() << "], "
                 << "data_ptr=data_ptr)\n";
         
         indent() << "config_" << knName << "_ping" << " = DeviceConfig("
                 << "config_values=" << "cfgbit_" << knName << "_ping" << ", "
                 << "iob_en=[" << iobens_ss.str() << "], "
-                << "tile_en=[" << tileens_ss.str() << "], "
                 << "data_ptr=ptrs_ping)\n";
 
         indent() << "config_" << knName << "_pong" << " = DeviceConfig("
                 << "config_values=" << "cfgbit_" << knName << "_pong" << ", "
                 << "iob_en=[" << iobens_ss.str() << "], "
-                << "tile_en=[" << tileens_ss.str() << "], "
                 << "data_ptr=ptrs_pong)\n";
 
         indent() << "await aux_stream_pingpong_init(stream, ["
@@ -762,7 +750,7 @@ public:
     mlir::Type t = mt.getElementType();
 
     std::string type = getEmitType(t);
-    indent() << EmitNewValueAndGetName(op.getResult(), type) << "= 0\n";
+    indent() << EmitNewValueAndGetName(op.getResult(), type) << "\n";
 
     return true; 
   }
@@ -836,32 +824,11 @@ public:
     else{
       std::string value = _pytestemitter->lookupName(op.getValue());
       // assert("Unsupported!\n");
-      if(value == "")
-        value = ConstOpToValueStr[op.getValue()];
     }
 
-    // assert(op.getMemref().getType().cast<MemRefType>().getShape().size() == 0
-    //     || (op.getMemref().getType().cast<MemRefType>() == 1 && op.getMemref().getType().cast<MemRefType>().isDynamicDim()));
+    assert(op.getMemref().getType().cast<MemRefType>().getShape().size() == 0);
     std::string memref = _pytestemitter->lookupName(op.getMemref());
-    if(op.getMemref().getType().cast<MemRefType>().getShape().size() == 0){
-      indent() << memref << " = " << value << "\n";
-    }
-    else{
-      //// affine index operand is simplified
-      std::stringstream ss;
-      ss << memref << "[";
-      ::mlir::Operation::operand_range indices = op.getIndices();
-      for(int i = 0; i < indices.size(); i++){
-        mlir::Value operand = indices[i];
-        ss << _pytestemitter->lookupName(operand);  
-        if(i != indices.size() - 1){
-          ss <<",";
-        }   
-      }
-
-      ss << "]" << " = " << value;
-      indent() << ss.str() << "\n";
-    }
+    indent() << memref << " = " << value << "\n";
     return true;
     // return emitter.emitAffineStore(op), true; 
   }
@@ -916,18 +883,6 @@ public:
         // _os << "double " << name_c << " = " << std::to_string(value) << ";\n";
       } 
       else if(floatattr.getType().isF32()){
-        double value = floatattr.getValueAsDouble();
-        ConstOpToValueStr[op.getResult()] = std::to_string(value);  
-        // std::string name_c = EmitNewValueAndGetName(op.getResult(), "float");
-        // _os << "float " << name_c << " = " << std::to_string(value) << ";\n";
-      }
-      else if(floatattr.getType().isBF16()){
-        double value = floatattr.getValueAsDouble();
-        ConstOpToValueStr[op.getResult()] = std::to_string(value);  
-        // std::string name_c = EmitNewValueAndGetName(op.getResult(), "float");
-        // _os << "float " << name_c << " = " << std::to_string(value) << ";\n";
-      }
-      else if(floatattr.getType().isF16()){
         double value = floatattr.getValueAsDouble();
         ConstOpToValueStr[op.getResult()] = std::to_string(value);  
         // std::string name_c = EmitNewValueAndGetName(op.getResult(), "float");
@@ -1151,8 +1106,7 @@ void PytestEmitter::emitFunctionHead(func::FuncOp &funcop, llvm::raw_ostream &os
 
   ostr << "    iptrs, idata = [],[]\n" 
        << "    optrs, odata, olen = [],[],[]\n" 
-       << "    configs, data_ptr = [],[]\n"
-       << "    stream = runtime.create_stream()\n";
+       << "    configs, data_ptr = [],[]\n";
 
   os << ostr.str();
 }
@@ -1265,14 +1219,14 @@ async def aux_stream(
     # 3. Execute on device
     # ------------------------------
     await stream.execution_start()
-    # await stream.execution_finish()
+    await stream.execution_finish()
     # ------------------------------
     # 4. Device → Host transfer
     # ------------------------------
     for i in range(len(optrs)):
         await stream.memcpyDeviceToHost(d_data=optrs[i], h_data=odata[i], size=olen[i])
 
-    await stream.release()
+    ## await stream.release()
     return
 
 def DeviceData_Pong(ptr : DeviceData) -> DeviceData:
@@ -1607,7 +1561,6 @@ void PytestEmitter::GenerateCGRACFGAndEXE(
   int cfgBaseAddrCtrl = cfgBaseAddr / cfgSpadDataByte; // config base address the controller access
   
   BYTES_LIST iob_ens = _kernel_to_iob_ens[kernel];
-  BYTES_LIST tile_ens = _kernel_to_tile_ens[kernel];
 
   CFGandEXE << "data_ptr.append(iptrs)\n";
   // CFGandEXE << "data_ptr.append(optrs)\n\n";
@@ -1621,15 +1574,6 @@ void PytestEmitter::GenerateCGRACFGAndEXE(
       CFGandEXE << "," ;
   }
   CFGandEXE << "],\n" ;
-
-  CFGandEXE << "\ttile_en=[" ;
-  for(int _ = 0; _ < tile_ens.size(); _++){
-    CFGandEXE << tile_ens.getByte(_);
-    if(_ != tile_ens.size() - 1)
-      CFGandEXE << "," ;
-  }
-  CFGandEXE << "],\n" ;
-
   CFGandEXE << "\tdata_ptr=data_ptr\n";
   CFGandEXE << ")\n" ;
 

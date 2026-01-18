@@ -73,7 +73,7 @@ mlir::Operation* mlir::ADORA::eraseKernel(func::FuncOp& TopFunc, ADORA::KernelOp
             mlir::Operation* newop = (*op_itr).clone();
             blk_itr->push_back(newop);
             newop->moveBefore(op);
-            op->replaceAllUsesWith(newop);
+
             /// return the 1st newop
             if(IsFirstOp){
               return_op = newop;

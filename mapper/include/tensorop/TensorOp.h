@@ -7,7 +7,6 @@
 
 #include "emit/EmitCGRACall.h"
 #include "emit/EmitPytest.h"
-#include "emit/EmitVitisSDK.h"
 #include "mapper/mapper_sa.h"
 #include "TensorOpVisitor.h"
 
@@ -24,11 +23,7 @@ inline int tensorOpCnt = 0;
 
 void MapAdoraTensorOp(MLIRContext* context, mlir::ModuleOp module, 
                     std::vector<ADORA_TENSOR_MAPPER*> mappers,
-                    
-                    CGRACallEmitter* CEmitter, 
-                    PytestEmitter* PyEmitter, 
-                    VitisSDKEmitter * SdkEmitter,
-
+                    CGRACallEmitter* CEmitter, PytestEmitter* PyEmitter,
                     ADG* adg, std::string& OpNameFile_str,
                     int timeout_ms, int max_iters, bool objOpt,
                     bool verbose = false);
@@ -40,7 +35,6 @@ public:
   OpBuilder opbuilder;
   CGRACallEmitter* cEmitter;
   PytestEmitter* pyEmitter;
-  VitisSDKEmitter* sdkEmitter;
 
   bool _verbose = false;
   void setVerbose(bool _) {_verbose = _;}
@@ -74,7 +68,6 @@ public:
     mlir::Operation* forOrKernel, std::string& OpNameFile_str);
   void setEmitter(CGRACallEmitter* _) {cEmitter = _;}
   void setEmitter(PytestEmitter* _) {pyEmitter = _;}
-  void setEmitter(VitisSDKEmitter* _) {sdkEmitter = _;}
 
   bool visitOp(ADORATensor::GemmOp op);
 

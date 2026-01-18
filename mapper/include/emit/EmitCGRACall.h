@@ -31,7 +31,6 @@ namespace ADORA {
 
 class CGRACallEmitter : public BaseEmitter {
 public:
-  using BaseEmitter::BaseEmitter;
   /////////////////////////////////
   // The following functions must be implemented in your derived class.
   // These functions are defined as pure virtual functions in the base class
@@ -57,7 +56,7 @@ public:
 
   std::string lookupVarConfigName(const std::string);
 
-  // CGRACallEmitter(mlir::ModuleOp m): BaseEmitter(m){}
+  CGRACallEmitter(mlir::ModuleOp m): BaseEmitter(m){}
   ~CGRACallEmitter(){};
   // unsigned getIndent(){return _currentIndent;}
 

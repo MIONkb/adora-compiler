@@ -74,9 +74,9 @@ void FUNode::addOperandInputs(int opeIdx, int inputIdx){
 // delete input port connected to this operand
 void FUNode::delOperandInputs(int opeIdx, int inputIdx){
     assert(_operandInputs.size() > opeIdx);
-    // if(inputs().count(inputIdx)){
-    _operandInputs[opeIdx].erase(inputIdx);
-    // }
+    if(inputs().count(inputIdx)){
+        _operandInputs[opeIdx].erase(inputIdx);
+    }
 }
 
 

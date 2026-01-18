@@ -5,10 +5,10 @@
 set -e
 
 ### set LLVM_SRC_DIR to your own path
-LLVM_SRC_DIR=~/CGRVOPT/llvm-project-onnx
+LLVM_SRC_DIR=~/CGRVOPT/onnx-mlir/third_party/llvm-project-onnx/
 
-build_dir=$LLVM_SRC_DIR/build
-install_dir=$LLVM_SRC_DIR/build
+build_dir=$LLVM_SRC_DIR/dynamicbuild
+install_dir=$LLVM_SRC_DIR/dynamicbuild
 
 echo "Using LLVM source dir: $LLVM_SRC_DIR"
 
@@ -54,4 +54,4 @@ cmake -GNinja \
  # -DLLVM_OPTIMIZED_TABLEGEN=ON -DLLVM_ENABLE_OCAMLDOC=OFF -DLLVM_ENABLE_BINDINGS=OFF 
 
 cmake --build "$build_dir" --target opt mlir-opt mlir-translate mlir-cpu-runner clang install
-ninja -j 72 install 
+ninja -j 16 install 
