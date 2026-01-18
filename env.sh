@@ -20,7 +20,30 @@ export GeneralOpNameFile="$ADORA_PROJECT_PATH/lib/DFG/Documents/GeneralOpName.tx
 
 export PATH=${ADORA_PROJECT_PATH}/build/bin:$PATH
 export PATH=${ADORA_PROJECT_PATH}/frontend/adora-onnx-mlir/build/bin:$PATH
+
 ####### CONDA IN CHIPYARD
 export CHIPYARD_SOURCE_ENV="$CHIPYARD_DIR/env.sh"
 source $CHIPYARD_SOURCE_ENV
 conda activate $CHIPYARD_DIR/.conda-env
+
+export LLVM_PROJ_BUILD="/home/jhlou/CGRVOPT/llvm-project-onnx/build"
+
+# 动态定位到复制过来的 protobuf build 目录
+export PROTOBUF_BUILD_DIR="${ADORA_PROJECT_PATH}/frontend/adora-onnx-mlir/third_party/protobuf/build"
+
+if [ -d "$PROTOBUF_BUILD_DIR" ]; then
+    export PATH="${PROTOBUF_BUILD_DIR}/bin:$PATH"
+    export LD_LIBRARY_PATH="${PROTOBUF_BUILD_DIR}/lib:$LD_LIBRARY_PATH"
+else
+    echo "[Env] Warning: Local Protobuf not found at $PROTOBUF_BUILD_DIR"
+fi
+
+if [ -d "/home/share/llvm-project-Polygeist/build/bin" ]; then
+    export PATH="/home/share/llvm-project-Polygeist/build/bin:$PATH"
+fi
+
+export PATH="/opt/cmake-3.31.1/bin:$PATH"
+export CC=/usr/bin/gcc
+export CXX=/usr/bin/g++
+
+export PATH=$PATH:/home/ykchen/.local/bin
