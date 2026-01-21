@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
   /// ADORATensor
   mlir::ADORA::ADORATensor::registerLinalgToSystolicGEMMPass();
   mlir::ADORA::ADORATensor::registerADORATensorOpCdfgGenPassPass();
-  mlir::ADORA::ADORATensor::registerADORAGemmOpStrategyDecisionPass();
+  mlir::ADORA::ADORATensor::registerADORAOpStrategyDecisionPass();
   mlir::ADORA::ADORATensor::registerADORATensorFunctionsToKernel() ;
 
   mlir::registerSCFForLoopCanonicalizationPass(); 

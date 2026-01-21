@@ -23,7 +23,7 @@ def LinalgToSystolicGEMMPass : Pass<"adora-convert-linalg-to-systolic-gemm", "Mo
     "affine::AffineDialect", "linalg::LinalgDialect", "memref::MemRefDialect", "ADORA::ADORADialect", "ADORA::ADORATensor::ADORATensorDialect"];
 }
 
-def ADORAGemmOpStrategyDecisionPass
+def ADORAOpStrategyDecisionPass
     : Pass<"adora-gemm-op-strategy-decision", "mlir::ModuleOp"> {
   let summary = "Decide dataflow strategy for ADORA GEMM ops and annotate / rewrite CDFG";
   let description = [{
@@ -31,7 +31,7 @@ def ADORAGemmOpStrategyDecisionPass
     (e.g., IS/WS/OS), and materializes the decision by annotating ops or
     rewriting into a Control-Data Flow Graph (CDFG) form.
   }];
-  let constructor = "createADORAGemmOpStrategyDecisionPass()";
+  let constructor = "createADORAOpStrategyDecisionPass()";
 
   let dependentDialects = [
     "mlir::ADORA::ADORADialect",
