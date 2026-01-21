@@ -99,7 +99,7 @@ std::vector<std::pair<int,int>> findFeasibleSpatialMap(
 
 }
 
-bool legalRowCol(MatMulStrategy stationarykind, std::pair <int, int> sa, int num_pe, int num_io){
+bool legalRowCol(DataflowStrategy stationarykind, std::pair <int, int> sa, int num_pe, int num_io){
   /////// check PE limits and IO 
   int row = sa.first;
   int col = sa.second;
@@ -107,21 +107,21 @@ bool legalRowCol(MatMulStrategy stationarykind, std::pair <int, int> sa, int num
   bool legal = false;
   switch (stationarykind)
   {
-  case MatMulStrategy::InputStationary :
+  case DataflowStrategy::InputStationary :
     io_cost = row*col / 4 + col + 2 * row;
     if(row * (2 + col) <= num_pe 
       && io_cost <= num_io){
       legal = true;
     }
     break;
-  case MatMulStrategy::WeightStationary :
+  case DataflowStrategy::WeightStationary :
     io_cost = row*col / 4 + col * 2 + row;
     if(col * (2 + row) <= num_pe 
       && io_cost <= num_io){
       legal = true;
     }
     break;
-  case MatMulStrategy::OutputStationary :
+  case DataflowStrategy::OutputStationary :
     io_cost = 2 * row*col / 4  + col + row;
     if(col * (2 + row) <= num_pe 
       && io_cost <= num_io){
@@ -129,7 +129,7 @@ bool legalRowCol(MatMulStrategy stationarykind, std::pair <int, int> sa, int num
     }
     break;  
   default:
-    assert(false && "No defined MatMulStrategy");
+    assert(false && "No defined DataflowStrategy");
     break;
   }
   return legal;
@@ -151,13 +151,13 @@ int64_t largestDivisorLE(int64_t x, int64_t bound) {
 
 // choose which dims map to (row,col) under each strategy (heuristic)
 struct MapDims { int64_t Rmap, Cmap, innermostNonStationary, T0_dimension; };
-MapDims mappingFor(MatMulStrategy s, int64_t M, int64_t N, int64_t K) {
+MapDims mappingFor(DataflowStrategy s, int64_t M, int64_t N, int64_t K) {
   switch (s) {
-    case MatMulStrategy::InputStationary: // A is MxK; stream along N; K reduced inside
+    case DataflowStrategy::InputStationary: // A is MxK; stream along N; K reduced inside
       return { /*Rmap=*/M, /*Cmap=*/K, /*innermostNonStationary=*/N, /*T0_dimension=*/M };
-    case MatMulStrategy::WeightStationary: // B is KxN; stream along M
+    case DataflowStrategy::WeightStationary: // B is KxN; stream along M
       return { /*Rmap=*/K, /*Cmap=*/N, /*innermostNonStationary=*/M, /*T0_dimension=*/K };
-    case MatMulStrategy::OutputStationary: // keep C; reduce K while streaming both A/B
+    case DataflowStrategy::OutputStationary: // keep C; reduce K while streaming both A/B
       return { /*Rmap=*/M, /*Cmap=*/N, /*innermostNonStationary=*/K, /*T0_dimension=*/N };
     default:
       return { M, N, K };
@@ -265,7 +265,7 @@ inline int64_t pipeFill(int64_t row, int64_t col) {
 }
 
 // EC cycles with reconfig amortization
-int64_t execCycles(MatMulStrategy s, int64_t M, int64_t N, int64_t K,
+int64_t execCycles(DataflowStrategy s, int64_t M, int64_t N, int64_t K,
                      int64_t row, int64_t col, int64_t T0, int64_t T1,
                      int numPEs, int numIOBs) {
 
@@ -276,15 +276,15 @@ int64_t execCycles(MatMulStrategy s, int64_t M, int64_t N, int64_t K,
 
   long double reconfig = 3*row + col + S; // follow paper's IS derivation style
   switch (s) {
-    case MatMulStrategy::InputStationary: {
+    case DataflowStrategy::InputStationary: {
       reconfig = (long double)(3*row + col + S);
       break;
     }
-    case MatMulStrategy::WeightStationary:{
+    case DataflowStrategy::WeightStationary:{
       reconfig = (long double)(3*col + row + S);
       break;
     }
-    case MatMulStrategy::OutputStationary:{
+    case DataflowStrategy::OutputStationary:{
       reconfig = (long double)(3*col + row + S);
       break;
     }
@@ -298,18 +298,18 @@ int64_t execCycles(MatMulStrategy s, int64_t M, int64_t N, int64_t K,
 }
 
 // Transfer volume (bytes). IS uses your analytic; others fallback to one-pass baseline.
-int64_t transferVolumn(MatMulStrategy s, int64_t M, int64_t N, int64_t K,
+int64_t transferVolumn(DataflowStrategy s, int64_t M, int64_t N, int64_t K,
                         int64_t row, int64_t col) {
   switch (s) {
-    case MatMulStrategy::InputStationary: {
+    case DataflowStrategy::InputStationary: {
       long double tv_elems = (long double)M*K*N * (1.0/N + 1.0/M + 1.0/col);
       return (int64_t)tv_elems;
     }
-    case MatMulStrategy::WeightStationary:{
+    case DataflowStrategy::WeightStationary:{
       long double tv_elems = (long double)M*K*N * (1.0/col + 1.0/M + 1.0/K);
       return (int64_t)tv_elems;
     }
-    case MatMulStrategy::OutputStationary:{
+    case DataflowStrategy::OutputStationary:{
       long double tv_elems = (long double)M*K*N * (1.0/N + 1.0/row + 1.0/K);
       return (int64_t)tv_elems;
     }
@@ -322,18 +322,18 @@ int64_t transferVolumn(MatMulStrategy s, int64_t M, int64_t N, int64_t K,
   }
 }
 
-bool CheckTileDivided(MatMulStrategy s, int64_t M, int64_t N, int64_t K,
+bool CheckTileDivided(DataflowStrategy s, int64_t M, int64_t N, int64_t K,
                         int64_t row, int64_t col, int64_t T0, int64_t T1) {
   switch (s) {
-    case MatMulStrategy::InputStationary: {
+    case DataflowStrategy::InputStationary: {
       bool divided = M%(T0*row) == 0 && N%(T1) == 0 && K%(col) == 0;
       return divided;
     }
-    case MatMulStrategy::WeightStationary:{
+    case DataflowStrategy::WeightStationary:{
       bool divided = M%(T1) == 0 && N%(col) == 0 && K%(T0*row) == 0;
       return divided;
     }
-    case MatMulStrategy::OutputStationary:{
+    case DataflowStrategy::OutputStationary:{
       bool divided = M%(row) == 0 && N%(T0*col) == 0 && K%(T1) == 0;
       return divided;
     }
@@ -372,7 +372,7 @@ getAllDivisor(int64_t n) {
 void AutoSetDataflowStrategy(
     mlir::ADORA::ADORATensor::GemmOp gemmop, 
     int num_pe, int num_iob, int bank_byte, int BandByteWidth, 
-    MatMulStrategy _strategy = MatMulStrategy::Undefine
+    DataflowStrategy _strategy = DataflowStrategy::Undefine
   ){
   // Get the input tensors
   auto A = gemmop.getA();
@@ -403,13 +403,13 @@ void AutoSetDataflowStrategy(
 
   // Prepare candidates
   struct Cand { 
-    MatMulStrategy stationaryKind;
+    DataflowStrategy stationaryKind;
     int64_t T0, T1, row, col; 
     int64_t EC, TX, LAT; 
     // double util; 
     void dump() const{
       llvm::errs() << "[Cand] strategy=" 
-        << getMethodStrRef(stationaryKind)
+        << getDataflowStrategyStrRef(stationaryKind)
         << " T0=" << T0 << " T1=" << T1
         << " row=" << row << " col=" << col
         << " | EC=" << EC << " TX=" << TX
@@ -423,18 +423,18 @@ void AutoSetDataflowStrategy(
 
   auto pairs = findFeasibleSpatialMap(num_pe, num_iob, /*limit=*/30000);
 
-  std::vector<MatMulStrategy> strategies;
-  if(_strategy == MatMulStrategy::Undefine){
-    strategies.push_back(MatMulStrategy::InputStationary);
-    strategies.push_back(MatMulStrategy::OutputStationary);
-    strategies.push_back(MatMulStrategy::WeightStationary);
+  std::vector<DataflowStrategy> strategies;
+  if(_strategy == DataflowStrategy::Undefine){
+    strategies.push_back(DataflowStrategy::InputStationary);
+    strategies.push_back(DataflowStrategy::OutputStationary);
+    strategies.push_back(DataflowStrategy::WeightStationary);
   }
   else{
     strategies.push_back(_strategy);
   }
 
   //// scan every(K, row, col)
-  for(MatMulStrategy stationarykind : strategies){
+  for(DataflowStrategy stationarykind : strategies){
     auto map = mappingFor(stationarykind, M, N, K);
     for (auto [rRaw,cRaw] : pairs) {
       // Basic feasibility: do not exceed mapped dims too much; allow <= mapped dim
@@ -523,19 +523,19 @@ void ADORAGemmOpStrategyDecisionPass::runOnOperation()
     bankBytes = _sram_bank_kb_size * 1024;
   }
 
-  MatMulStrategy stationary_kind = MatMulStrategy::Undefine;
+  DataflowStrategy stationary_kind = DataflowStrategy::Undefine;
 
   m.walk([&](mlir::ADORA::ADORATensor::GemmOp op) {
     ///// choose stationry kind
     if(_stationary_kind != "-"){
       if(_stationary_kind == "inputstationary"){
-        stationary_kind = MatMulStrategy::InputStationary;
+        stationary_kind = DataflowStrategy::InputStationary;
       }
       else if(_stationary_kind == "weightstationary"){
-        stationary_kind = MatMulStrategy::WeightStationary;
+        stationary_kind = DataflowStrategy::WeightStationary;
       }
       else if(_stationary_kind == "outputstationary"){
-        stationary_kind = MatMulStrategy::OutputStationary;
+        stationary_kind = DataflowStrategy::OutputStationary;
       }
       else{
         op.emitError() << "No this kind of stationary strategy."

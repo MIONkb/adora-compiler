@@ -20,22 +20,49 @@
 #include "mlir/IR/OpDefinition.h"
 
 /// Include the auto-generated declarations.
-namespace mlir{
-namespace ADORA{
-namespace ADORATensor{
+namespace mlir
+{
+  namespace ADORA
+  {
+    namespace ADORATensor
+    {
+      enum class ComputeAlgorithm
+      {
+        GEMM_Standard,
+        Conv_Direct,
+        Conv_Im2Col,
+        Conv_Winograd,
+        Undefine
+      };
 
-enum class MatMulStrategy {
-  WeightStationary,
-  InputStationary,
-  OutputStationary,
-  Undefine
-};
-StringRef getMethodStrRef(MatMulStrategy method);
+      enum class DataflowStrategy
+      {
+        WeightStationary,
+        InputStationary,
+        OutputStationary,
 
+        Undefine
+      };
 
+      struct SystolicConfig
+      {
+        ComputeAlgorithm algorithm;
+        DataflowStrategy dataflow;
 
-}
-}
+        // DSE data
+        SmallVector<int64_t> loopOrder;
+        SmallVector<int64_t> tileSizes;
+      };
+
+      SystolicConfig parseSystolicConfig(Operation *op);
+      StringRef getComputeAlgorithmStrRef(ComputeAlgorithm algorithm);
+      ComputeAlgorithm parseAlgorithmStr(StringRef str);
+
+      StringRef getDataflowStrategyStrRef(DataflowStrategy strategy);
+      DataflowStrategy parseDataflowStr(StringRef str);
+
+    }
+  }
 }
 
 #include "ADORA/Dialect/ADORATensor/Interface/SystolicImplInterface.h.inc"
