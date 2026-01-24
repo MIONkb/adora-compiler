@@ -140,15 +140,15 @@ void TensorDataflowGen::MapNestedForOrKernel(
 bool TensorDataflowGen::visitOp(ADORATensor::GemmOp op){
   SystolicImplInterface SystolicPara(op);
   ArrayRef<int64_t> tilesize = SystolicPara.getTileSize();
-  StringRef stragegy = SystolicPara.getStationaryKind();
+  StringRef strategy = SystolicPara.getStationaryKind();
   AffineForOp newfor;
-  if(stragegy == getMethodStrRef(MatMulStrategy::WeightStationary)){
+  if(strategy == getDataflowStrategyStrRef(DataflowStrategy::WeightStationary)){
     newfor = TiledWeightStationaryGemm(opbuilder, op, tilesize); 
   }
-  else if(stragegy == getMethodStrRef(MatMulStrategy::InputStationary)){
+  else if(strategy == getDataflowStrategyStrRef(DataflowStrategy::InputStationary)){
     newfor = TiledInputStationaryGemm(opbuilder, op, tilesize); 
   }
-  else if(stragegy == getMethodStrRef(MatMulStrategy::OutputStationary)){
+  else if(strategy == getDataflowStrategyStrRef(DataflowStrategy::OutputStationary)){
     newfor = TiledOutputStationaryGemm(opbuilder, op, tilesize); 
   }
   

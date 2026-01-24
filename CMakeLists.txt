@@ -67,7 +67,7 @@ install(
     MLIRADORATransformsUtility MLIRADORALoopTransforms
     MLIRADORAKernelExtract GeneralCDFGGen
     ADORATensorInterface ADORATensorOps ADORATensorLower
-    ADORATensorTransforms ADORATensorUtility ADORATensorOpGemmLower
+    ADORATensorTransforms ADORATensorUtility ADORATensorOpGemmLower ADORATensorOpConvLower
   EXPORT ADORATargets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}       
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}      
