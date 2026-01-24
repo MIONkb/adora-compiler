@@ -52,22 +52,7 @@ struct ADORAAffineLoopUnrollPass : public ADORAAffineLoopUnrollBase<ADORAAffineL
   // ADORAAffineLoopUnrollPass() = default;
   unsigned NumGPE = 0;
   unsigned NumIOB = 0; 
-  explicit ADORAAffineLoopUnrollPass() {
-    ////////////
-    /// get hardware info
-    ///////////
-    if(CGRAadg == "notdefined" || CGRAadg == ""){
-      LLVM_DEBUG(llvm::errs() << "CGRAadg not defined.\n");
-      NumGPE = 32;
-      NumIOB = 16;
-    }
-    else{
-      NumGPE = getInstanceNumFromADG(CGRAadg, "GPE");
-      NumIOB = getInstanceNumFromADG(CGRAadg, "IOB");
-    }
-    // if (unrollJamFactor)
-    //   this->unrollJamFactor = *unrollJamFactor;
-  }
+  explicit ADORAAffineLoopUnrollPass() { }
   /* Function define */
 
   SmallVector<DesignPoint> ConstructTilingUnrollSpace(SmallVector<ADORA::ForNode> ForNodes);
@@ -536,6 +521,21 @@ LogicalResult ADORAAffineLoopUnrollPass::
 
 /// @brief 
 void ADORAAffineLoopUnrollPass::runOnOperation(){
+  ////////////
+  /// get hardware info
+  ///////////
+  if(CGRAadg == "notdefined" || CGRAadg == ""){
+    LLVM_DEBUG(llvm::errs() << "CGRAadg not defined.\n");
+    NumGPE = 32;
+    NumIOB = 16;
+  }
+  else{
+    NumGPE = getInstanceNumFromADG(CGRAadg, "GPE");
+    NumIOB = getInstanceNumFromADG(CGRAadg, "IOB");
+  }
+  // if (unrollJamFactor)
+  //   this->unrollJamFactor = *unrollJamFactor;
+
   ModuleOp topmodule = getOperation();
   // MLIRContext* context = topmodule.getContext();
   // auto originmodule = topmodule.getOperation()->clone();

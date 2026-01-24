@@ -1,0 +1,9 @@
+Digraph G {
+Input0[opcode = "Input", ref_name="IntVecAdd:0", size="80", offset="0,0", pattern="4,20", color = black];
+Input1[opcode = "Input", ref_name="IntVecAdd:1", size="80", offset="0,0", pattern="4,20", color = black];
+ADD2[opcode = "ADD", color = black];
+Output3[opcode = "Output", ref_name="IntVecAdd:2", size="80", offset="0,0", pattern="4,20", color = black];
+Input0 -> ADD2[color = black, style = bold, operand = 0, label = "Op=0"];
+Input1 -> ADD2[color = black, style = bold, operand = 1, label = "Op=1"];
+ADD2 -> Output3[color = black, style = bold, operand = 0, label = "Op=0"];
+}
