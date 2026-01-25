@@ -591,11 +591,36 @@ public:
     indent() << "#######################################\n";
     indent() << "### Emit GemmOp: " << gemmop << "\n";
     indent() << "#######################################\n";
-    indent() << "pingpong = False" << "\n";
+    indent() << "pingpong = False" << "\n\n";
     _pingpong = true;
     mlir::Operation* op = gemmop.getOperation()->getNextNode();
-    
-    while (1)
+
+    while (1) //// skip previous nodes such as memref.alloc and initialization process
+    {
+      if(op->hasAttr("ADORAGemm")){
+        break;
+      }
+      else if(isa<mlir::affine::AffineForOp>(op)){
+        visitOp(dyn_cast<mlir::affine::AffineForOp>(op));
+      }
+      else if(isa<mlir::memref::CopyOp>(op)){
+        indent() << "### Pingpong DataBlockLoadOp: " << *op << "\n";
+        visitOp(dyn_cast<mlir::memref::CopyOp>(op));
+      }
+      else if(isa<mlir::memref::AllocOp>(op)){
+        indent() << "### Pingpong DataBlockLoadOp: " << *op << "\n";
+        visitOp(dyn_cast<mlir::memref::AllocOp>(op));
+      }
+      else{
+        assert(false && "Unsupported Op type in adraotensor.gemmop lower.");
+      }
+
+      setEmitSkipAttr(op);
+      op = op->getNextNode();
+    }
+
+    indent() << "\n";
+    while (1)  //// start to emit gemm computing related node 
     {
       if(isa<mlir::affine::AffineForOp>(op) && op->hasAttr("ADORAGemm")){
         mlir::affine::AffineForOp gemmFor = dyn_cast<mlir::affine::AffineForOp>(op);
@@ -723,6 +748,10 @@ public:
             && op->hasAttr("ADORAGemm")){
         visitOp(dyn_cast<mlir::ADORA::LocalMemAllocOp>(op));
       }
+      else if(isa<mlir::ADORA::LocalMemAllocOp>(op)
+            && op->hasAttr("ADORAGemm")){
+        visitOp(dyn_cast<mlir::ADORA::LocalMemAllocOp>(op));
+      }
       else{
         break;
       }
@@ -756,6 +785,125 @@ public:
 
   /// Function operations.
   // bool visitOp(func::CallOp op) { return emitter.emitCall(op), true; }
+  bool visitOp(memref::AllocOp op) {
+    // Emit a host-side buffer allocation in Python.
+    // We use NumPy arrays as a lightweight representation for memref buffers.
+    // Notes:
+    //  - Only supports static-shaped memrefs for now.
+    //  - For rank-0 memref, we emit a scalar placeholder (0).
+    //  - Dynamic dims require runtime values, which are not handled here.
+    if (op.getOperation()->hasAttr("EmitSkip"))
+      return true;
+
+    mlir::MemRefType mt = op.getType();
+    ArrayRef<int64_t> shape = mt.getShape();
+
+    // Rank-0 memref: treat as a scalar slot.
+    if (shape.size() == 0) {
+      std::string elemType = getEmitType(mt.getElementType());
+      indent() << EmitNewValueAndGetName(op.getResult(), elemType) << " = 0\n";
+      return true;
+    }
+
+    // Reject dynamic shapes for now to avoid incorrect Python.
+    for (int64_t d : shape) {
+      if (d == mlir::ShapedType::kDynamic) {
+        op.emitError("memref.alloc with dynamic shape is not supported in PyEmitter yet.");
+        return false;
+      }
+    }
+
+    // Emit: v = np.zeros((d0, d1, ...), dtype=np.<type>)
+    // Keep it simple: we only create a buffer, and let subsequent stores fill it.
+    std::string name = EmitNewValueAndGetName(op.getResult(), "ndarray");
+
+    // Map element type to a NumPy dtype string.
+    // Keep conservative defaults; adjust if you already have a helper elsewhere.
+    auto et = mt.getElementType();
+    std::string npDType = "np.float32";
+    if (et.isF64())
+      npDType = "np.float64";
+    else if (et.isF32())
+      npDType = "np.float32";
+    else if (et.isF16())
+      npDType = "np.float16";
+    else if (et.isBF16())
+      npDType = "np.float16"; // NumPy has no native bf16; use fp16 as placeholder.
+    else if (et.isInteger(1))
+      npDType = "np.bool_";
+    else if (et.isInteger(8))
+      npDType = "np.int8";
+    else if (et.isInteger(16))
+      npDType = "np.int16";
+    else if (et.isInteger(32))
+      npDType = "np.int32";
+    else if (et.isInteger(64))
+      npDType = "np.int64";
+    else if (et.isUnsignedInteger(8))
+      npDType = "np.uint8";
+    else if (et.isUnsignedInteger(16))
+      npDType = "np.uint16";
+    else if (et.isUnsignedInteger(32))
+      npDType = "np.uint32";
+    else if (et.isUnsignedInteger(64))
+      npDType = "np.uint64";
+    else {
+      op.emitError("unsupported element type for memref.alloc in PyEmitter.");
+      return false;
+    }
+
+    // Emit the Python allocation line.
+    indent() << name << " = np.empty((";
+    for (size_t i = 0; i < shape.size(); ++i) {
+      indent();
+      _os << shape[i];
+      if (i + 1 != shape.size())
+        _os << ", ";
+    }
+    _os << "), dtype=" << npDType << ")\n";
+    return true;
+  }
+
+  bool visitOp(memref::CopyOp op) {
+    // Emit a Python-level copy between two memrefs.
+    // For rank-N buffers: dst[...] = src[...]
+    // For rank-0 memrefs: dst = src
+    if (op.getOperation()->hasAttr("EmitSkip"))
+      return true;
+
+    mlir::Value srcV = op.getSource();
+    mlir::Value dstV = op.getTarget();
+
+    std::string src = _pytestemitter->lookupName(srcV);
+    if (src.empty())
+      src = ConstOpToValueStr[srcV];
+
+    std::string dst = _pytestemitter->lookupName(dstV);
+    if (dst.empty())
+      dst = ConstOpToValueStr[dstV];
+
+    if (src.empty() || dst.empty()) {
+      op.emitError("memref.copy: failed to resolve source/target names.");
+      return false;
+    }
+
+    auto srcTy = srcV.getType().dyn_cast<mlir::MemRefType>();
+    auto dstTy = dstV.getType().dyn_cast<mlir::MemRefType>();
+    if (!srcTy || !dstTy) {
+      op.emitError("memref.copy: source/target must be memref types.");
+      return false;
+    }
+
+    // Rank-0: treat as scalar assignment.
+    if (srcTy.getRank() == 0 && dstTy.getRank() == 0) {
+      indent() << dst << " = " << src << "\n";
+      return true;
+    }
+
+    // For higher rank: use full-slice assignment.
+    indent() << dst << "[...] = " << src << "[...]\n";
+    return true;
+  }
   bool visitOp(memref::AllocaOp op) { 
     mlir::MemRefType mt = op.getType();
     assert(mt.getShape().size() == 0);
@@ -1226,6 +1374,7 @@ Automatically generated file for pytest/cocotb based CGRA call function from ADO
 from test_runif import DeviceData, DeviceConfig, DeviceStream, DeviceRuntime
 from typing import List
 from numpy import ndarray
+import numpy as np
 
 async def aux_stream(
     stream: DeviceStream, config: List[DeviceConfig], 
