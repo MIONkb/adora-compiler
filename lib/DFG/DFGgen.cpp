@@ -2347,7 +2347,6 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
   mlir::Operation* for_op;
 
 
-
   /*** Add Nodes ***/
   mlir::SmallVector<mlir::Operation*> AddedOps;
   for (level = 0; level < level_total; level++)
