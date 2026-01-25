@@ -2,15 +2,12 @@
 // RUN:   --adora-gemm-op-strategy-decision="adg-fn=%S/../spec/cgra_adg.json bus-bandwidth=16" \
 // RUN:   %s | %FileCheck %s
 
-// tensor-opt --adora-gen-tensor-op-cdfg gemm_optimal.mlir > dfg.mlir
-
 // CHECK: module {
 // CHECK:   func.func @matmul_0(%arg0: memref<8x3072xbf16>, %arg1: memref<3072x768xbf16>, %arg2: memref<8x768xbf16>) -> memref<8x768xbf16> {
 // CHECK:     %0 = "ADORATensor.Gemm"(%arg0, %arg1, %arg2) {stationary_kind = "InputStationary", tile_size = array<i64: 2, 768, 4, 12>} : (memref<8x3072xbf16>, memref<3072x768xbf16>, memref<8x768xbf16>) -> memref<8x768xbf16>
 // CHECK:     return %0 : memref<8x768xbf16>
 // CHECK:   }
 // CHECK: }
-
 
 func.func @matmul_0(%arg0: memref<8x3072xbf16>, %arg1: memref<3072x768xbf16>, %arg2: memref<8x768xbf16>) -> memref<8x768xbf16> {
   %0 = "ADORATensor.Gemm"(%arg0, %arg1, %arg2) : (memref<8x3072xbf16>, memref<3072x768xbf16>, memref<8x768xbf16>) -> memref<8x768xbf16>
