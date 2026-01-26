@@ -1,6 +1,6 @@
 //===----------------------------------------------------------------------===//
 //
-// This file implements automatic dataflow strategy decision for ADORA Tensor GemmOp
+// This file implements automatic dataflow strategy decision for ADORA Tensor
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,6 +18,9 @@
 #include <string>
 #include <bit>
 #include <math.h>
+#include <vector>
+#include <algorithm>
+#include <optional>
 
 // #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/MLIRContext.h"
@@ -31,8 +34,6 @@
 #include "ADORA/Dialect/ADORA/Utility/Utility.h"
 #include "ADORA/Dialect/ADORATensor/IR/ADORATensor.h"
 #include "PassDetail.h"
-// lower tensor op
-// #include "../../../../mapper/include/tensorop/TensorOp.h"
 
 using namespace mlir;
 using namespace mlir::affine;
@@ -58,49 +59,100 @@ namespace mlir
         return std::make_unique<ADORAOpStrategyDecisionPass>();
       }
 
+      // ==============================================================================
+      // 1. Helper Functions
+      // ==============================================================================
+
       // ceiling division
       inline int64_t ceilDiv(int64_t a, int64_t b) { return (a + b - 1) / b; }
 
       // element bytes from MLIR type (int/float); fallback 4B
-      int64_t elemBytes(mlir::Type t)
+      static int64_t getDataBytes(mlir::Type t)
       {
-        if (auto it = t.dyn_cast<mlir::IntegerType>())
-          return it.getWidth() / 8;
-        if (auto ft = t.dyn_cast<mlir::FloatType>())
-          return ft.getWidth() / 8;
+        if (isa<mlir::MemRefType>(t))
+          return t.cast<mlir::MemRefType>().getElementTypeBitWidth() / 8;
+        if (isa<mlir::RankedTensorType>(t))
+          return t.cast<mlir::RankedTensorType>().getElementTypeBitWidth() / 8;
         return 4;
       }
 
-      std::vector<std::pair<int, int>> findFeasibleSpatialMap(
-          int num_pe, int num_iob, int limit = 80)
+      static ArrayRef<int64_t> getShape(mlir::Type t)
+      {
+        if (isa<mlir::MemRefType>(t))
+          return t.cast<mlir::MemRefType>().getShape();
+        if (isa<mlir::RankedTensorType>(t))
+          return t.cast<mlir::RankedTensorType>().getShape();
+        return {};
+      }
+
+      static inline llvm::SmallVector<int64_t, 2> trimTo2D(llvm::ArrayRef<int64_t> shape)
+      {
+        llvm::SmallVector<int64_t, 2> result;
+        if (shape.size() >= 2)
+        {
+          result.push_back(shape[shape.size() - 2]);
+          result.push_back(shape[shape.size() - 1]);
+        }
+        else if (shape.size() == 1)
+        {
+          // Handle [N] -> [1, N] to maintain 2D invariant
+          result.push_back(1);
+          result.push_back(shape[0]);
+        }
+        else
+        {
+          result.push_back(1);
+          result.push_back(1);
+        }
+        return result;
+      }
+
+      static inline llvm::SmallVector<int64_t, 32> getAllDivisor(int64_t n)
+      {
+        llvm::SmallVector<int64_t, 32> divs;
+        if (n <= 0)
+          n = std::abs(n);
+        if (n == 0)
+        {
+          divs.push_back(1);
+          return divs;
+        }
+
+        int64_t r = static_cast<int64_t>(std::sqrt(static_cast<long double>(n)));
+        for (int64_t d = 1; d <= r; ++d)
+        {
+          if (n % d == 0)
+          {
+            divs.push_back(d);
+            if (n / d != d)
+              divs.push_back(n / d);
+          }
+        }
+        llvm::sort(divs.begin(), divs.end());
+        return divs;
+      }
+
+      std::vector<std::pair<int, int>> findFeasibleSpatialMap(int num_pe, int num_iob, int limit = 80)
       {
         std::vector<std::pair<int, int>> cand;
         for (int r = 1; r <= num_iob; ++r)
         {
           for (int c = 1; c <= num_iob; ++c)
           {
-            if (r * c < num_pe &&
-                (r + 2 * c <= num_iob || 2 * r + c <= num_iob))
+            // Basic check: total PEs and boundary constraints
+            if (r * c < num_pe && (r + 2 * c <= num_iob || 2 * r + c <= num_iob))
             {
               cand.emplace_back(r, c);
             }
           }
         }
-
-        // also include a few "near-factor" pairs by shaving columns
-        // int num_pe = std::max(1, num_pe / std::max(1, (int)std::sqrt(num_pe)));
-        // for (int r = 1; r <= num_iob; ++r) {
-        //   int c = num_pe / r;
-        //   cand.emplace_back(r, c);
-        // }
-        // uniq + clamp size
-        std::sort(cand.begin(), cand.end());
-        cand.erase(std::unique(cand.begin(), cand.end()), cand.end());
+        // Sort by area (utilization)
         std::sort(cand.begin(), cand.end(), [](auto a, auto b)
-                  {
-    double sa = a.first * a.second;
-    double sb = a.first * a.second;
-    return sa < sb; });
+                  { 
+                    double sa = a.first * a.second;
+                    double sb = b.first * b.second;
+                    return sa < sb; });
+
         if ((int)cand.size() > limit)
           cand.resize(limit);
         return cand;
@@ -111,8 +163,9 @@ namespace mlir
         /////// check PE limits and IO
         int row = sa.first;
         int col = sa.second;
-        int io_cost;
+        int io_cost = 0;
         bool legal = false;
+
         switch (stationarykind)
         {
         case DataflowStrategy::InputStationary:
@@ -143,229 +196,24 @@ namespace mlir
         return legal;
       }
 
-      // largest divisor of x that is <= bound (returns >=1)
-      int64_t largestDivisorLE(int64_t x, int64_t bound)
-      {
-        bound = std::max<int64_t>(1, std::min(x, bound));
-        for (int64_t d = bound; d >= 1; --d)
-          if (x % d == 0)
-            return d;
-        return 1;
-      }
-
-      // // simple utilization score: how well (row,col) fits (Rmapped,Cmapped)
-      // double utilScore(int64_t row, int64_t col, int64_t Rmap, int64_t Cmap) {
-      //   double ur = std::min<double>(1.0, (double)Rmap / std::max<int64_t>(1,row));
-      //   double uc = std::min<double>(1.0, (double)Cmap / std::max<int64_t>(1,col));
-      //   return 0.5*ur + 0.5*uc;
-      // }
-
-      // choose which dims map to (row,col) under each strategy (heuristic)
+      // choose which dims map to (row,col) under each strategy
       struct MapDims
       {
         int64_t Rmap, Cmap, innermostNonStationary, T0_dimension;
       };
+
       MapDims mappingFor(DataflowStrategy s, int64_t M, int64_t N, int64_t K)
       {
         switch (s)
         {
-        case DataflowStrategy::InputStationary: // A is MxK; stream along N; K reduced inside
-          return {/*Rmap=*/M, /*Cmap=*/K, /*innermostNonStationary=*/N, /*T0_dimension=*/M};
+        case DataflowStrategy::InputStationary: // A is MxK; stream along N
+          return {M, K, N, M};
         case DataflowStrategy::WeightStationary: // B is KxN; stream along M
-          return {/*Rmap=*/K, /*Cmap=*/N, /*innermostNonStationary=*/M, /*T0_dimension=*/K};
-        case DataflowStrategy::OutputStationary: // keep C; reduce K while streaming both A/B
-          return {/*Rmap=*/M, /*Cmap=*/N, /*innermostNonStationary=*/K, /*T0_dimension=*/N};
+          return {K, N, M, K};
+        case DataflowStrategy::OutputStationary: // C is MxN; stream along K
+          return {M, N, K, N};
         default:
-          return {M, N, K};
-        }
-      }
-
-      /// @brief A utility function to check if a block access operation can be simplified
-      /// @param op The candidate operation, either a datablockload or datablockstore
-      /// @return True if the operation is simplified, otherwise false
-      int64_t getByteSizeFromMemref(mlir::MemRefType memref)
-      {
-        mlir::Type elementType = memref.getElementType();
-
-        if (!elementType.isIntOrFloat())
-        {
-          llvm::errs() << "Unsupported element type in MemRef: " << elementType << "\n";
-          return -1;
-        }
-        unsigned elemBitWidth = elementType.getIntOrFloatBitWidth();
-
-        int64_t numElements = 1;
-        for (int64_t dim : memref.getShape())
-        {
-          if (dim == mlir::ShapedType::kDynamic)
-          {
-            llvm::errs() << "Dynamic dimension found in MemRef: " << memref << "\n";
-            assert(false);
-          }
-          numElements *= dim;
-        }
-
-        int64_t totalBytes = (elemBitWidth / 8) * numElements;
-        return totalBytes;
-      }
-
-      int64_t getByteSizeFromMemref(mlir::TypedValue<mlir::MemRefType> memref)
-      {
-        return getByteSizeFromMemref(memref.getType());
-      }
-
-      static int64_t getDataBytes(mlir::Type t)
-      {
-        if (isa<mlir::MemRefType>(t))
-        {
-          return t.cast<mlir::MemRefType>().getElementTypeBitWidth() / 8;
-        }
-        else if (isa<mlir::RankedTensorType>(t))
-        {
-          return t.cast<mlir::RankedTensorType>().getElementTypeBitWidth() / 8;
-        }
-        else
-        {
-          assert(false && "Unsupported type.");
-        }
-      }
-
-      static ArrayRef<int64_t> getShape(mlir::Type t)
-      {
-        if (isa<mlir::MemRefType>(t))
-        {
-          return t.cast<mlir::MemRefType>().getShape();
-        }
-        else if (isa<mlir::RankedTensorType>(t))
-        {
-          return t.cast<mlir::RankedTensorType>().getShape();
-        }
-        else
-        {
-          assert(false && "Unsupported type.");
-        }
-      }
-
-      /// Trim a shape to 2D if possible.
-      /// - If shape is [1, M, N] (or [0, M, N]), drop the leading dimension
-      /// - If shape is already 2D, keep it
-      /// - Otherwise, return the original shape (or assert, depending on policy)
-      static inline llvm::SmallVector<int64_t, 2>
-      trimTo2D(llvm::ArrayRef<int64_t> shape)
-      {
-        llvm::SmallVector<int64_t, 2> result;
-
-        if (shape.size() == 3 && (shape[0] == 1 || shape[0] == 0))
-        {
-          // [1, M, N] -> [M, N]
-          result.push_back(shape[1]);
-          result.push_back(shape[2]);
-          return result;
-        }
-
-        else if (shape.size() == 2)
-        {
-          // [M, N] -> [M, N]
-          result.push_back(shape[0]);
-          result.push_back(shape[1]);
-          return result;
-        }
-
-        else if (shape.size() == 1)
-        {
-          result.push_back(shape[0]);
-          return result;
-        }
-
-        // Fallback policy (choose ONE):
-        // 1) Be permissive: take the last two dims
-        if (shape.size() > 2)
-        {
-          result.push_back(shape[shape.size() - 2]);
-          result.push_back(shape[shape.size() - 1]);
-          return result;
-        }
-
-        // 2) Or be strict:
-        // assert(false && "trimTo2D: unsupported shape rank");
-
-        return result;
-      }
-
-      // pipeline fill estimate for a rowxcol systolic array
-      inline int64_t pipeFill(int64_t row, int64_t col)
-      {
-
-        return std::max<int64_t>(0, (int)lround(2.0 * sqrt((double)row * col)));
-      }
-
-      // EC cycles with reconfig amortization
-      int64_t execCycles(DataflowStrategy s, int64_t M, int64_t N, int64_t K,
-                         int64_t row, int64_t col, int64_t T0, int64_t T1,
-                         int numPEs, int numIOBs)
-      {
-
-        int64_t mac = (M * N * K) / std::max<int64_t>(1, row * col);
-        int cgra_col = numIOBs / 2;
-        int cgra_row = numPEs / cgra_col;
-        int64_t S = pipeFill(cgra_row, cgra_col);
-
-        long double reconfig = 3 * row + col + S; // follow paper's IS derivation style
-        switch (s)
-        {
-        case DataflowStrategy::InputStationary:
-        {
-          reconfig = (long double)(3 * row + col + S);
-          break;
-        }
-        case DataflowStrategy::WeightStationary:
-        {
-          reconfig = (long double)(3 * col + row + S);
-          break;
-        }
-        case DataflowStrategy::OutputStationary:
-        {
-          reconfig = (long double)(3 * col + row + S);
-          break;
-        }
-        default:
-        {
-          reconfig = (long double)(3 * row + col + S);
-          break;
-        }
-        }
-        // amortize by T0*T1
-        return mac * (1 + (reconfig) / ((long double)(T0 * T1)));
-      }
-
-      // Transfer volume (bytes). IS uses your analytic; others fallback to one-pass baseline.
-      int64_t transferVolumn(DataflowStrategy s, int64_t M, int64_t N, int64_t K,
-                             int64_t row, int64_t col)
-      {
-        switch (s)
-        {
-        case DataflowStrategy::InputStationary:
-        {
-          long double tv_elems = (long double)M * K * N * (1.0 / N + 1.0 / M + 1.0 / col);
-          return (int64_t)tv_elems;
-        }
-        case DataflowStrategy::WeightStationary:
-        {
-          long double tv_elems = (long double)M * K * N * (1.0 / col + 1.0 / M + 1.0 / K);
-          return (int64_t)tv_elems;
-        }
-        case DataflowStrategy::OutputStationary:
-        {
-          long double tv_elems = (long double)M * K * N * (1.0 / N + 1.0 / row + 1.0 / K);
-          return (int64_t)tv_elems;
-        }
-        default:
-        {
-          // Baseline: one-time host-device transfers of A,B,C
-          // long double tv_elems = (long double)M*K + (long double)K*N + (long double)M*N;
-          // weight by respective element sizes
-          return M * K + K * N + M * N;
-        }
+          return {M, N, K, M};
         }
       }
 
@@ -375,76 +223,245 @@ namespace mlir
         switch (s)
         {
         case DataflowStrategy::InputStationary:
-        {
-          bool divided = M % (T0 * row) == 0 && N % (T1) == 0 && K % (col) == 0;
-          return divided;
-        }
+          return M % (T0 * row) == 0 && N % T1 == 0 && K % col == 0;
         case DataflowStrategy::WeightStationary:
-        {
-          bool divided = M % (T1) == 0 && N % (col) == 0 && K % (T0 * row) == 0;
-          return divided;
-        }
+          return M % T1 == 0 && N % col == 0 && K % (T0 * row) == 0;
         case DataflowStrategy::OutputStationary:
-        {
-          bool divided = M % (row) == 0 && N % (T0 * col) == 0 && K % (T1) == 0;
-          return divided;
-        }
+          return M % row == 0 && N % (T0 * col) == 0 && K % T1 == 0;
         default:
-        {
-          // Baseline: one-time host-device transfers of A,B,C
-          // long double tv_elems = (long double)M*K + (long double)K*N + (long double)M*N;
-          // weight by respective element sizes
           abort();
         }
+      }
+
+      // ==============================================================================
+      // 2. Cost Models
+      // ==============================================================================
+
+      // pipeline fill estimate
+      inline int64_t pipeFill(int64_t row, int64_t col)
+      {
+        return std::max<int64_t>(0, (int)lround(2.0 * sqrt((double)row * col)));
+      }
+
+      // EC cycles with reconfig amortization
+      int64_t execCycles(DataflowStrategy s, int64_t M, int64_t N, int64_t K,
+                         int64_t row, int64_t col, int64_t T0, int64_t T1,
+                         int numPEs, int numIOBs)
+      {
+        int64_t mac = (M * N * K) / std::max<int64_t>(1, row * col);
+        int cgra_col = numIOBs / 2;
+        int cgra_row = numPEs / std::max(1, cgra_col);
+        int64_t S = pipeFill(cgra_row, cgra_col);
+
+        long double reconfig = 3 * row + col + S;
+        switch (s)
+        {
+        case DataflowStrategy::InputStationary:
+          reconfig = 3 * row + col + S;
+          break;
+        case DataflowStrategy::WeightStationary:
+          reconfig = 3 * col + row + S;
+          break;
+        case DataflowStrategy::OutputStationary:
+          reconfig = 3 * col + row + S;
+          break;
+        default:
+          reconfig = 3 * row + col + S;
+          break;
+        }
+        // amortize by T0*T1
+        return mac * (1 + (reconfig) / ((long double)(T0 * T1)));
+      }
+
+      // [Standard GEMM / Im2Col] Transfer Volume
+      int64_t transferVolumn(DataflowStrategy s, int64_t M, int64_t N, int64_t K, int64_t row, int64_t col)
+      {
+        switch (s)
+        {
+        case DataflowStrategy::InputStationary:
+          // Input(MK) + Weight(NK) + PartialSum
+          return (int64_t)((long double)M * K * N * (1.0 / N + 1.0 / M + 1.0 / col));
+        case DataflowStrategy::WeightStationary:
+          return (int64_t)((long double)M * K * N * (1.0 / col + 1.0 / M + 1.0 / K));
+        case DataflowStrategy::OutputStationary:
+          return (int64_t)((long double)M * K * N * (1.0 / N + 1.0 / row + 1.0 / K));
+        default:
+          return M * K + K * N + M * N;
         }
       }
 
-      static inline llvm::SmallVector<int64_t, 32>
-      getAllDivisor(int64_t n)
+      // Reduce input transfer volume by kernel_size factor
+      int64_t transferVolumnDirectConv(DataflowStrategy s, int64_t M, int64_t N, int64_t K,
+                                       int64_t row, int64_t col, int64_t KH, int64_t KW)
       {
-        llvm::SmallVector<int64_t, 32> divs;
-        if (n == 0)
-        {
-          divs.push_back(1);
-          return divs;
-        }
-        if (n < 0)
-          n = -n;
+        double kernel_size = (double)(KH * KW);
+        if (kernel_size < 1.0)
+          kernel_size = 1.0;
 
-        int64_t r = static_cast<int64_t>(std::sqrt(static_cast<long double>(n)));
-        for (int64_t d = 1; d <= r; ++d)
+        switch (s)
         {
-          if (n % d == 0)
+        case DataflowStrategy::InputStationary:
+          // IS Formula: MNK(1/N + 1/M + 1/col)
+          // 1/N term corresponds to Input Matrix (MK). Scale by 1/kernel_size
+          return (int64_t)((long double)M * K * N * (1.0 / N / kernel_size + 1.0 / M + 1.0 / col));
+
+        case DataflowStrategy::WeightStationary:
+          // WS Formula: MNK(1/col + 1/M + 1/K)
+          // 1/col term corresponds to Input Streaming. Scale by 1/kernel_size
+          return (int64_t)((long double)M * K * N * (1.0 / col / kernel_size + 1.0 / M + 1.0 / K));
+
+        case DataflowStrategy::OutputStationary:
+          // OS Formula: MNK(1/N + 1/row + 1/K)
+          // 1/N term corresponds to Input Matrix (MK). Scale by 1/kernel_size
+          return (int64_t)((long double)M * K * N * (1.0 / N / kernel_size + 1.0 / row + 1.0 / K));
+
+        default:
+          return transferVolumn(s, M, N, K, row, col);
+        }
+      }
+
+      // ==============================================================================
+      // 3. Search Solvers
+      // ==============================================================================
+
+      struct Cand
+      {
+        ComputeAlgorithm algorithm;
+        DataflowStrategy stationaryKind;
+        int64_t T0, T1, row, col;
+        int64_t EC, TX, LAT;
+
+        void dump() const
+        {
+          llvm::errs() << "[Cand] Algo=" << getComputeAlgorithmStrRef(algorithm)
+                       << " Strategy=" << getDataflowStrategyStrRef(stationaryKind)
+                       << " T0=" << T0 << " T1=" << T1
+                       << " row=" << row << " col=" << col
+                       << " | EC=" << EC << " TX=" << TX
+                       << " LAT=" << LAT << "\n";
+        }
+      };
+
+      // Generic DSE Solver (Shared by GEMM and Conv)
+      static std::optional<Cand> solveDSE(
+          int64_t M, int64_t N, int64_t K, int64_t dByte,
+          int num_pe, int num_iob, int bank_byte, int BandByteWidth,
+          DataflowStrategy selected_strategy,
+          ComputeAlgorithm selected_algo,
+          int64_t KH = 0, int64_t KW = 0)
+      {
+        std::optional<Cand> best;
+        auto pairs = findFeasibleSpatialMap(num_pe, num_iob, 30000);
+
+        std::vector<DataflowStrategy> strategies;
+        if (selected_strategy == DataflowStrategy::Undefine)
+        {
+          strategies.push_back(DataflowStrategy::InputStationary);
+          strategies.push_back(DataflowStrategy::OutputStationary);
+          strategies.push_back(DataflowStrategy::WeightStationary);
+        }
+        else
+        {
+          strategies.push_back(selected_strategy);
+        }
+
+        for (DataflowStrategy stationarykind : strategies)
+        {
+          auto map = mappingFor(stationarykind, M, N, K);
+          for (auto [rRaw, cRaw] : pairs)
           {
-            divs.push_back(d);
-            int64_t other = n / d;
-            if (other != d)
-              divs.push_back(other);
+            int64_t row = std::min<int64_t>(rRaw, map.Rmap);
+            int64_t col = std::min<int64_t>(cRaw, map.Cmap);
+
+            // Check hardware constraints
+            if (row <= 0 || col <= 0 || !legalRowCol(stationarykind, std::make_pair(row, col), num_pe, num_iob))
+              continue;
+
+            auto T1_cands = getAllDivisor(map.innermostNonStationary);
+            for (int T1 : T1_cands)
+            {
+              for (int T0 = 1; T0 <= map.T0_dimension; T0++)
+              {
+                // Memory check
+                if (T0 * T1 * dByte > bank_byte / 2)
+                  break;
+                // Tiling divisibility check
+                if (!CheckTileDivided(stationarykind, M, N, K, row, col, T0, T1))
+                  continue;
+
+                // Compute Metrics
+                int64_t EC = execCycles(stationarykind, M, N, K, row, col, T0, T1, num_pe, num_iob);
+
+                int64_t TV = 0;
+                if (selected_algo == ComputeAlgorithm::Conv_Direct && KH > 0 && KW > 0)
+                {
+                  // Apply reduced TV model for Direct Conv
+                  TV = transferVolumnDirectConv(stationarykind, M, N, K, row, col, KH, KW) * dByte;
+                }
+                else if (selected_algo == ComputeAlgorithm::Conv_Im2Col || selected_algo == ComputeAlgorithm::GEMM_Standard)
+                {
+                  // Standard GEMM / Im2Col
+                  TV = transferVolumn(stationarykind, M, N, K, row, col) * dByte;
+                }
+                else if (selected_algo == ComputeAlgorithm::Conv_Winograd)
+                {
+                  // TODO: Winograd TV model
+                  llvm::errs() << "[AutoSetConvStrategy] Winograd TV model not implemented.";
+                }
+
+                int64_t TX = ceilDiv(TV, std::max(1, BandByteWidth));
+                int64_t LAT = std::max<int64_t>(EC, TX);
+
+                Cand cand{selected_algo, stationarykind, T0, T1, row, col, EC, TX, LAT};
+
+                // Smart Selector logic
+                auto better = [&](const Cand &a, const Cand &b)
+                {
+                  // 1. Latency dominant (allow 4% margin)
+                  if ((double)abs(b.LAT - a.LAT) / (double)b.LAT <= 0.04)
+                  {
+                    // 2. If latency is similar, prefer larger T1 (better for inner loops)
+                    return a.T1 >= b.T1;
+                  }
+                  // 3. Absolute Latency
+                  if (a.LAT != b.LAT)
+                    return a.LAT < b.LAT;
+                  // 4. Transfer Time
+                  if (a.TX != b.TX)
+                    return a.TX < b.TX;
+                  // 5. Compute Cycles
+                  return a.EC < b.EC;
+                };
+
+                if (!best || better(cand, *best))
+                  best = cand;
+              }
+            }
           }
         }
-
-        llvm::sort(divs.begin(), divs.end());
-        divs.erase(std::unique(divs.begin(), divs.end()), divs.end());
-        return divs;
+        return best;
       }
 
-      void AutoSetDataflowStrategy(
+      // ==============================================================================
+      // 4. Strategy Setting Functions
+      // ==============================================================================
+
+      void AutoSetGemmStrategy(
           mlir::ADORA::ADORATensor::GemmOp gemmop,
           int num_pe, int num_iob, int bank_byte, int BandByteWidth,
           DataflowStrategy _strategy = DataflowStrategy::Undefine)
       {
-        // Get the input tensors
         auto A = gemmop.getA();
         auto B = gemmop.getB();
+        // C is needed for shape check in original code, though unused in logic
         auto C = gemmop.getC();
 
         int dByte = getDataBytes(A.getType());
-
-        // Get shape info
         auto shapeA = trimTo2D(getShape(A.getType()));
         auto shapeB = trimTo2D(getShape(B.getType()));
         auto shapeC = trimTo2D(getShape(C.getType()));
 
+        // Original shape sanity check logic
         if (shapeC.size() == 1)
         {
           llvm::SmallVector<int64_t, 2> newShapeC;
@@ -453,174 +470,245 @@ namespace mlir
           shapeC = newShapeC;
         }
 
-        // Extract M, N, K (assuming standard GEMM layout)
         int64_t M = shapeA[0];
         int64_t K = shapeA[1];
         int64_t N = shapeB[1];
-        // sanity: C should be [M, N]
         assert(shapeC[0] == M && shapeC[1] == N && "C shape mismatch with A/B");
 
-        // Prepare candidates
-        struct Cand
+        // GEMM defaults to Standard algorithm
+        auto best = solveDSE(M, N, K, dByte, num_pe, num_iob, bank_byte, BandByteWidth,
+                             _strategy, ComputeAlgorithm::GEMM_Standard);
+
+        if (best)
         {
-          DataflowStrategy stationaryKind;
-          int64_t T0, T1, row, col;
-          int64_t EC, TX, LAT;
-          // double util;
-          void dump() const
-          {
-            llvm::errs() << "[Cand] strategy="
-                         << getDataflowStrategyStrRef(stationaryKind)
-                         << " T0=" << T0 << " T1=" << T1
-                         << " row=" << row << " col=" << col
-                         << " | EC=" << EC << " TX=" << TX
-                         << " LAT=" << LAT << "\n";
-          }
-        };
-
-        std::optional<Cand> best;
-
-        // Map rule for strategy (which dims correspond to row/col; which is innermost non-stationary)
-
-        auto pairs = findFeasibleSpatialMap(num_pe, num_iob, /*limit=*/30000);
-
-        std::vector<DataflowStrategy> strategies;
-        if (_strategy == DataflowStrategy::Undefine)
-        {
-          strategies.push_back(DataflowStrategy::InputStationary);
-          strategies.push_back(DataflowStrategy::OutputStationary);
-          strategies.push_back(DataflowStrategy::WeightStationary);
+          const auto &ch = *best;
+          ADORATensor::SystolicImplInterface Sinterface(gemmop);
+          Sinterface.setAlgorithm(ch.algorithm);
+          Sinterface.setStationaryKind(ch.stationaryKind);
+          Sinterface.setTileSize(ArrayRef<int64_t>({ch.T0, ch.T1, ch.row, ch.col}));
+          llvm::errs() << "Best GEMM strategy: ";
+          ch.dump();
         }
         else
         {
-          strategies.push_back(_strategy);
+          gemmop.emitError() << "[AutoSetGemmStrategy] No strategy found.";
+        }
+      }
+
+      void AutoSetConvStrategy(
+          mlir::ADORA::ADORATensor::ConvOp convOp,
+          int num_pe, int num_iob, int bank_byte, int BandByteWidth,
+          DataflowStrategy _strategy = DataflowStrategy::Undefine,
+          ComputeAlgorithm _force_algo = ComputeAlgorithm::Undefine)
+      {
+        auto inputVal = convOp.getX();
+        auto weightVal = convOp.getW();
+
+        int dByte = getDataBytes(inputVal.getType());
+
+        auto inputShape = getShape(inputVal.getType());   // [N, IC, H, W]
+        auto weightShape = getShape(weightVal.getType()); // [OC, IC, KH, KW]
+
+        if (inputShape.size() < 4 || weightShape.size() < 4)
+        {
+          convOp.emitError() << "[AutoSetConvStrategy] Expected 4D input/weight, got rank "
+                             << inputShape.size() << " and " << weightShape.size();
+          return;
         }
 
-        //// scan every(K, row, col)
-        for (DataflowStrategy stationarykind : strategies)
+        int64_t N_batch = inputShape[0];
+        int64_t IC = inputShape[1];
+        int64_t H = inputShape[2];
+        int64_t W = inputShape[3];
+
+        int64_t OC = weightShape[0];
+        int64_t KH = weightShape[2];
+        int64_t KW = weightShape[3];
+
+        int64_t stride_h = 1, stride_w = 1;
+        int64_t pad_h_total = 0, pad_w_total = 0; // total = top + bottom / left + right
+        int64_t dilation_h = 1, dilation_w = 1;
+
+        // 解析 Strides
+        if (auto stridesAttr = convOp.getStridesAttr())
         {
-          auto map = mappingFor(stationarykind, M, N, K);
-          for (auto [rRaw, cRaw] : pairs)
+          auto vals = stridesAttr.getValue();
+          if (vals.size() >= 2)
           {
-            // Basic feasibility: do not exceed mapped dims too much; allow <= mapped dim
-            int64_t row = std::min<int64_t>(rRaw, map.Rmap);
-            int64_t col = std::min<int64_t>(cRaw, map.Cmap);
-            if (row <= 0 || col <= 0 || !legalRowCol(stationarykind, std::make_pair(row, col), num_pe, num_iob))
-              continue;
+            stride_h = vals[0].cast<IntegerAttr>().getInt();
+            stride_w = vals[1].cast<IntegerAttr>().getInt();
+          }
+        }
 
-            /// scan T0 T1 under memory bound
-            auto T1_cands = getAllDivisor(map.innermostNonStationary);
-            for (int T1 : T1_cands)
+        // 解析 Dilations
+        if (auto dilationsAttr = convOp.getDilationsAttr())
+        {
+          auto vals = dilationsAttr.getValue();
+          if (vals.size() >= 2)
+          {
+            dilation_h = vals[0].cast<IntegerAttr>().getInt();
+            dilation_w = vals[1].cast<IntegerAttr>().getInt();
+          }
+        }
+
+        // 解析 Pads (ONNX format: [top, left, bottom, right])
+        if (auto padsAttr = convOp.getPadsAttr())
+        {
+          auto vals = padsAttr.getValue();
+          if (vals.size() == 4)
+          {
+            int64_t top = vals[0].cast<IntegerAttr>().getInt();
+            int64_t left = vals[1].cast<IntegerAttr>().getInt();
+            int64_t bottom = vals[2].cast<IntegerAttr>().getInt();
+            int64_t right = vals[3].cast<IntegerAttr>().getInt();
+            pad_h_total = top + bottom;
+            pad_w_total = left + right;
+          }
+        }
+
+        // 计算 Output Height / Width
+        // Formula: OH = (H + pad_h_total - dilation * (KH - 1) - 1) / stride + 1
+        int64_t effective_KH = dilation_h * (KH - 1) + 1;
+        int64_t effective_KW = dilation_w * (KW - 1) + 1;
+
+        int64_t OH = (H + pad_h_total - effective_KH) / stride_h + 1;
+        int64_t OW = (W + pad_w_total - effective_KW) / stride_w + 1;
+
+        // 映射到 GEMM 维度 (用于 Im2Col 估算)
+        // M: 输出的像素点总数 (Batch * H * W)
+        // K: 卷积核的体积 (IC * KH * KW)
+        // N: 输出通道数 (OC)
+        int64_t M_gemm = N_batch * OH * OW;
+        int64_t K_gemm = IC * KH * KW;
+        int64_t N_gemm = OC;
+
+        std::vector<ComputeAlgorithm> algos;
+        if (_force_algo != ComputeAlgorithm::Undefine)
+        {
+          algos.push_back(_force_algo);
+        }
+        else
+        {
+          algos.push_back(ComputeAlgorithm::Conv_Direct);
+          algos.push_back(ComputeAlgorithm::Conv_Im2Col);
+          // Winograd (特定条件优化)
+          if (KH == 3 && KW == 3 && stride_h == 1 && stride_w == 1 &&
+              dilation_h == 1 && dilation_w == 1)
+          {
+            algos.push_back(ComputeAlgorithm::Conv_Winograd);
+          }
+        }
+
+        std::optional<Cand> bestGlobal;
+
+        for (auto algo : algos)
+        {
+          // 只有 Direct Conv 且非 1x1 时传入 KH/KW 以触发 Input Reuse 优化
+          int64_t pass_KH = (algo == ComputeAlgorithm::Conv_Direct) ? KH : 0;
+          int64_t pass_KW = (algo == ComputeAlgorithm::Conv_Direct) ? KW : 0;
+
+          auto res = solveDSE(M_gemm, N_gemm, K_gemm, dByte,
+                              num_pe, num_iob, bank_byte, BandByteWidth,
+                              _strategy, algo, pass_KH, pass_KW);
+
+          if (res)
+          {
+            auto betterGlobal = [&](const Cand &a, const Cand &b)
             {
-              for (int T0 = 1; T0 <= map.T0_dimension; T0++)
-              {
-                if (T0 * T1 * dByte > bank_byte / 2)
-                  break;
+              if ((double)abs(b.LAT - a.LAT) / (double)b.LAT <= 0.04)
+                return a.T1 >= b.T1;
+              if (a.LAT != b.LAT)
+                return a.LAT < b.LAT;
+              return a.EC < b.EC;
+            };
 
-                if (!CheckTileDivided(stationarykind, M, N, K, row, col, T0, T1))
-                  continue;
-
-                // Compute EC (cycles)
-                int64_t EC = execCycles(stationarykind, M, N, K, row, col, T0, T1, num_pe, num_iob);
-
-                // Transfer volume (bytes) and time (cycles)
-                int64_t TV = transferVolumn(stationarykind, M, N, K, row, col) * dByte;
-
-                int64_t TX = ceilDiv(TV, std::max(1, BandByteWidth));
-                int64_t LAT = std::max<int64_t>(EC, TX);
-
-                Cand cand{stationarykind, T0, T1, row, col, EC, TX, LAT};
-
-                // Tie-break: smaller LAT; then smaller TV; then better alignment (higher util)
-                auto better = [&](const Cand &a, const Cand &b)
-                {
-                  if ((double)abs(b.LAT - a.LAT) / (double)b.LAT <= (double)0.04)
-                  {
-                    return a.T1 >= b.T1;
-                  }
-                  if (a.LAT != b.LAT)
-                    return a.LAT < b.LAT;
-                  if (a.TX != b.TX)
-                    return a.TX < b.TX;
-                  return a.EC < b.EC;
-                };
-                cand.dump();
-                if (!best || better(cand, *best))
-                  best = cand;
-              }
+            if (!bestGlobal || betterGlobal(*res, *bestGlobal))
+            {
+              bestGlobal = res;
             }
           }
         }
 
-        if (!best)
+        if (bestGlobal)
         {
-          gemmop.emitError() << "[AutoSetDataflowStrategy] no feasible tiling found under "
-                             << "PE/IOB/memory constraints.";
-          return;
+          const auto &ch = *bestGlobal;
+          ADORATensor::SystolicImplInterface Sinterface(convOp);
+          Sinterface.setAlgorithm(ch.algorithm);
+          Sinterface.setStationaryKind(ch.stationaryKind);
+          Sinterface.setTileSize(ArrayRef<int64_t>({ch.T0, ch.T1, ch.row, ch.col}));
+
+          llvm::errs() << "Best Conv strategy: ";
+          ch.dump();
         }
-
-        // ===== Attach the decision to the op =====
-        const auto &ch = *best;
-        ADORATensor::SystolicImplInterface Sinterface(gemmop);
-        Sinterface.setStationaryKind(ch.stationaryKind);
-        Sinterface.setTileSize(ArrayRef<int64_t>({ch.T0, ch.T1, ch.row, ch.col}));
-
-        llvm::errs() << "Best strategy:";
-        ch.dump();
+        else
+        {
+          convOp.emitError() << "[AutoSetConvStrategy] No feasible strategy found."
+                             << " M=" << M_gemm << " N=" << N_gemm << " K=" << K_gemm
+                             << " PE=" << num_pe << " IOB=" << num_iob
+                             << " SRAM=" << bank_byte;
+        }
       }
 
-    }
-  }
-} // namespace
+      // ==============================================================================
+      // 5. Pass Entry
+      // ==============================================================================
 
-void ADORAOpStrategyDecisionPass::runOnOperation()
-{
-  mlir::ModuleOp m = getOperation();
-  unsigned NumGPE = 0;
-  unsigned NumIOB = 0;
-  unsigned bankBytes = 0;
-  unsigned bandByteWidth = _bus_byte_band_width;
+      void ADORAOpStrategyDecisionPass::runOnOperation()
+      {
+        mlir::ModuleOp m = getOperation();
+        unsigned NumGPE = 0, NumIOB = 0, bankBytes = 0;
+        unsigned bandByteWidth = _bus_byte_band_width;
 
-  if (_adg_fn != "-")
-  {
-    NumGPE = getInstanceNumFromADG(_adg_fn, "GPE");
-    NumIOB = getInstanceNumFromADG(_adg_fn, "IOB");
-    bankBytes = getIntegerAttrFromADG(_adg_fn, "iob_spad_bank_size");
-  }
-  else
-  {
-    NumGPE = _n_pes;
-    NumIOB = _n_iobs;
-    bankBytes = _sram_bank_kb_size * 1024;
-  }
+        if (_adg_fn != "-")
+        {
+          NumGPE = getInstanceNumFromADG(_adg_fn, "GPE");
+          NumIOB = getInstanceNumFromADG(_adg_fn, "IOB");
+          bankBytes = getIntegerAttrFromADG(_adg_fn, "iob_spad_bank_size");
+        }
+        else
+        {
+          NumGPE = _n_pes;
+          NumIOB = _n_iobs;
+          bankBytes = _sram_bank_kb_size * 1024;
+        }
 
-  DataflowStrategy stationary_kind = DataflowStrategy::Undefine;
+        // Parse command line algorithm choice
+        ComputeAlgorithm algorithm_kind = ComputeAlgorithm::Undefine;
+        if (_algorithm_kind == "conv_direct")
+          algorithm_kind = ComputeAlgorithm::Conv_Direct;
+        else if (_algorithm_kind == "conv_im2col")
+          algorithm_kind = ComputeAlgorithm::Conv_Im2Col;
+        else if (_algorithm_kind == "conv_winograd")
+          algorithm_kind = ComputeAlgorithm::Conv_Winograd;
+        else if (_algorithm_kind == "gemm_standard")
+          algorithm_kind = ComputeAlgorithm::GEMM_Standard;
+        else if (_algorithm_kind != "undefine")
+        {
+          llvm::errs() << "[ADORAOpStrategyDecisionPass] Warning: Unknown algorithm kind '"
+                       << _algorithm_kind << "'. Using automatic selection.\n";
+        }
 
-  m.walk([&](mlir::ADORA::ADORATensor::GemmOp op)
-         {
-           ///// choose stationry kind
-           if (_stationary_kind != "-")
-           {
-             if (_stationary_kind == "inputstationary")
-             {
-               stationary_kind = DataflowStrategy::InputStationary;
-             }
-             else if (_stationary_kind == "weightstationary")
-             {
-               stationary_kind = DataflowStrategy::WeightStationary;
-             }
-             else if (_stationary_kind == "outputstationary")
-             {
-               stationary_kind = DataflowStrategy::OutputStationary;
-             }
-             else
-             {
-               op.emitError() << "No this kind of stationary strategy."
-                              << "Please choose among \"inputstationary, weightstationary, outputstationary\".";
-               return;
-             }
-           }
+        // Parse command line stationary choice
+        DataflowStrategy stationary_kind = DataflowStrategy::Undefine;
+        if (_stationary_kind == "inputstationary")
+          stationary_kind = DataflowStrategy::InputStationary;
+        else if (_stationary_kind == "weightstationary")
+          stationary_kind = DataflowStrategy::WeightStationary;
+        else if (_stationary_kind == "outputstationary")
+          stationary_kind = DataflowStrategy::OutputStationary;
+        else if (_stationary_kind != "undefine")
+        {
+          llvm::errs() << "[ADORAOpStrategyDecisionPass] Warning: Unknown stationary kind '"
+                       << _stationary_kind << "'. Using automatic selection.\n";
+        }
 
-           /// Automatic set tile
-           AutoSetDataflowStrategy(op, NumGPE, NumIOB, bankBytes, bandByteWidth, stationary_kind); });
-}
+        m.walk([&](mlir::ADORA::ADORATensor::GemmOp op)
+               { AutoSetGemmStrategy(op, NumGPE, NumIOB, bankBytes, bandByteWidth, stationary_kind); });
+
+        m.walk([&](mlir::ADORA::ADORATensor::ConvOp op)
+               { AutoSetConvStrategy(op, NumGPE, NumIOB, bankBytes, bandByteWidth, stationary_kind, algorithm_kind); });
+      }
+
+    } // namespace ADORATensor
+  } // namespace ADORA
+} // namespace mlir
