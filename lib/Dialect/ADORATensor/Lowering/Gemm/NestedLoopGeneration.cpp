@@ -85,7 +85,7 @@ mlir::Operation* genArithMulOpAccordingToDataType(OpBuilder &builder, Location l
 }
 
 
-void initOutWithC2DLike(
+mlir::Operation* initOutWithC2DLike(
     OpBuilder &b, Location loc,
     Value out, Value C,
     ArrayRef<int64_t> outMN /*{M,N}*/) {
@@ -97,8 +97,7 @@ void initOutWithC2DLike(
 
   // Fast path: exactly same memref type => memref.copy
   if (outTy == cTy) {
-    b.create<memref::CopyOp>(loc, C, out);
-    return;
+    return b.create<memref::CopyOp>(loc, C, out).getOperation();
   }
 
   int64_t M = outMN[0];
@@ -161,6 +160,7 @@ void initOutWithC2DLike(
   // nb.create<affine::AffineYieldOp>(loc);
   mb.setInsertionPointAfter(nFor);
   // mb.create<affine::AffineYieldOp>(loc);
+  return nFor.getOperation();
 }
 
 /// @brief Generate a nested affine.for loop on device(data transfer is already done).

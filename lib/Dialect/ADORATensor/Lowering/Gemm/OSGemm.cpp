@@ -575,7 +575,7 @@ AffineForOp TiledOutputStationaryGemm(
   //==========================================================
   // Initialize out with C (copy if same shape, else broadcast init)
   //==========================================================
-  initOutWithC2DLike(opbuilder, loc, out, op.getC(), ArrayRef<int64_t>({ShapeA[0], ShapeA[1]}));
+  mlir::Operation* InitializationOp = initOutWithC2DLike(opbuilder, loc, out, op.getC(), ArrayRef<int64_t>({ShapeA[0], ShapeA[1]}));
 
   op.getOperation()->getBlock()->dump();
   //////////////////////////////////////
@@ -593,7 +593,7 @@ AffineForOp TiledOutputStationaryGemm(
     );
   
   // op.getOperation()->getBlock()->push_back(loop);
-  loop.getOperation()->moveAfter(out.getDefiningOp());
+  loop.getOperation()->moveAfter(InitializationOp);
   // } 
   // else{
   //   loop = GenerateTiledNestedLoopWithoutLoopCarry(

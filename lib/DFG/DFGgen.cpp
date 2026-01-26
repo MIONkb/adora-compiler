@@ -2049,7 +2049,7 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
         ArrayRef<int64_t> memRefShape =  vecstoreop.getMemRefType().getShape();
         int innermostStep = ElementBytes;
         for(int dim = memRefShape.size() - 1; dim > dimLargerThanOne; dim--){
-          innermostStep *= memRefShape[memRefShape.size() - 1 - dim];
+          innermostStep *= memRefShape[dim];
         }        
         newLinearAccess.push_back(std::pair(innermostStep, vecnum));
         // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
@@ -2135,7 +2135,7 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
         ArrayRef<int64_t> memRefShape =  vecloadop.getMemRefType().getShape();
         int innermostStep = ElementBytes;
         for(int dim = memRefShape.size() - 1; dim > dimLargerThanOne; dim--){
-          innermostStep *= memRefShape[memRefShape.size() - 1 - dim];
+          innermostStep *= memRefShape[dim];
         }
         newLinearAccess.push_back(std::pair(innermostStep, vecnum));
         // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
@@ -2345,7 +2345,6 @@ bool generateCDFGfromKernelAfterOptimization(LLVMCDFG* CDFG, ADORA::KernelOp ker
   level_total = level;
   // scf::ForOp scf_for;
   mlir::Operation* for_op;
-
 
 
   /*** Add Nodes ***/

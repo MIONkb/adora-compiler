@@ -81,7 +81,7 @@ mlir::affine::AffineForOp TiledOutputStationaryGemm(
 /// - `C` follows common NN broadcast patterns.
 ///
 /// Used in Output-Stationary GEMM lowering to initialize the accumulator.
-void initOutWithC2DLike(
+mlir::Operation* initOutWithC2DLike(
     OpBuilder &b, Location loc,
     Value out, Value C,
     ArrayRef<int64_t> outMN);

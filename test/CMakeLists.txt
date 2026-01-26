@@ -25,6 +25,7 @@ configure_lit_site_cfg(
 add_lit_testsuite(check-adora "Running the ADORA regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS cgra-opt FileCheck
+  DEPENDS tensor-opt FileCheck
 )
 
 

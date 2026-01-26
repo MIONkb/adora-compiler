@@ -114,7 +114,7 @@ void ADORATensorOpCdfgGenPass::runOnOperation()
       }
       LLVMCDFG *CDFG = new LLVMCDFG(kernelName, GeneralOpNameFile_str);
       generateCDFGfromKernel(CDFG, kernel, /*verbose=*/false);
-      CDFG->CDFGtoDOT(funcname + kernelName + "_CDFG.dot");
+      CDFG->CDFGtoDOT(funcname + "_" + kernelName + "_CDFG.dot");
       kernel_cnt++;
     });   
 

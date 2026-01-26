@@ -61,10 +61,10 @@ public:
             // vector::BroadcastOp,
 
             // // Memref statements.
-            // memref::AllocOp, 
+            ::mlir::memref::AllocOp, ::mlir::memref::CopyOp,
             ::mlir::memref::AllocaOp, 
             // memref::LoadOp, memref::StoreOp,
-            // memref::DeallocOp, memref::CopyOp,
+            // memref::DeallocOp, 
 
             // // Unary expressions.
             // math::AbsIOp, math::AbsFOp, math::CeilOp, math::CosOp, math::SinOp,
@@ -166,12 +166,12 @@ public:
   // HANDLE(vector::BroadcastOp);
 
   // // Memref statements.
-  // HANDLE(memref::AllocOp);
-  // HANDLE(memref::AllocaOp);
+  HANDLE(memref::AllocOp);
+  HANDLE(memref::AllocaOp);
   // HANDLE(memref::LoadOp);
   // HANDLE(memref::StoreOp);
   // HANDLE(memref::DeallocOp);
-  // HANDLE(memref::CopyOp);
+  HANDLE(memref::CopyOp);
 
   // Unary expressions.
   // HANDLE(math::AbsIOp);

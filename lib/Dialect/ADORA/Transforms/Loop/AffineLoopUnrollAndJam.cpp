@@ -385,19 +385,7 @@ struct ADORALoopUnrollAndJam
     : public ADORALoopUnrollAndJamBase<ADORALoopUnrollAndJam> {
   unsigned NumGPE = 0;
   unsigned NumIOB = 0; 
-  explicit ADORALoopUnrollAndJam() {
-    if(CGRAadg == "notdefined" || CGRAadg == ""){
-      LLVM_DEBUG(llvm::errs() << "CGRAadg not defined.\n");
-      NumGPE = 32;
-      NumIOB = 16;
-    }
-    else{
-      NumGPE = getInstanceNumFromADG(CGRAadg, "GPE");
-      NumIOB = getInstanceNumFromADG(CGRAadg, "IOB");
-    }
-    // if (unrollJamFactor)
-    //   this->unrollJamFactor = *unrollJamFactor;
-  }
+  explicit ADORALoopUnrollAndJam() {}
   LogicalResult KernelUnrollAndJamWithResourceLimits(ADORA::KernelOp kernel, mlir::ModuleOp m);
   void runOnOperation() override;
 };
@@ -539,6 +527,18 @@ std::unique_ptr<OperationPass<mlir::ModuleOp>>
 
 
 void ADORALoopUnrollAndJam::runOnOperation() {
+  if(CGRAadg == "notdefined" || CGRAadg == ""){
+    LLVM_DEBUG(llvm::errs() << "CGRAadg not defined.\n");
+    NumGPE = 32;
+    NumIOB = 16;
+  }
+  else{
+    NumGPE = getInstanceNumFromADG(CGRAadg, "GPE");
+    NumIOB = getInstanceNumFromADG(CGRAadg, "IOB");
+  }
+  // if (unrollJamFactor)
+  //   this->unrollJamFactor = *unrollJamFactor;
+  
   // if (getOperation().isExternal())
   //   return;
   auto m = getOperation();
