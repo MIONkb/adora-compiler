@@ -92,7 +92,8 @@ def ADORATensorOpCdfgGenPass : Pass<"adora-gen-tensor-op-cdfg", "ModuleOp"> {
     "arith::ArithDialect",
     "::mlir::ADORA::ADORADialect",
     "::mlir::scf::SCFDialect",
-    "::mlir::affine::AffineDialect"
+    "::mlir::affine::AffineDialect",
+    "::mlir::memref::MemRefDialect"
   ];
 }
 #endif 
