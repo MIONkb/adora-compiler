@@ -23,15 +23,15 @@ def LinalgToSystolicGEMMPass : Pass<"adora-convert-linalg-to-systolic-gemm", "Mo
     "affine::AffineDialect", "linalg::LinalgDialect", "memref::MemRefDialect", "ADORA::ADORADialect", "ADORA::ADORATensor::ADORATensorDialect"];
 }
 
-def ADORAGemmOpStrategyDecisionPass
-    : Pass<"adora-gemm-op-strategy-decision", "mlir::ModuleOp"> {
-  let summary = "Decide dataflow strategy for ADORA GEMM ops and annotate / rewrite CDFG";
+def ADORAOpStrategyDecisionPass
+    : Pass<"adora-tensor-op-strategy-decision", "mlir::ModuleOp"> {
+  let summary = "Decide dataflow strategy for ADORA GEMM-like ops and annotate / rewrite CDFG";
   let description = [{
     This pass analyzes ADORA GEMM-like tensor ops, selects a dataflow strategy
     (e.g., IS/WS/OS), and materializes the decision by annotating ops or
     rewriting into a Control-Data Flow Graph (CDFG) form.
   }];
-  let constructor = "createADORAGemmOpStrategyDecisionPass()";
+  let constructor = "createADORAOpStrategyDecisionPass()";
 
   let dependentDialects = [
     "mlir::ADORA::ADORADialect",
@@ -62,6 +62,10 @@ let options = [
     Option<"_stationary_kind", "stationary-tensor", "std::string",
            /*default=*/"\"-\"",
            "Manually set stationary kind (inputstationary/weightstationary/outputstationary, default: automatic exploration)">,
+
+    Option<"_algorithm_kind", "algorithm-kind", "std::string",
+           /*default=*/"\"-\"",
+           "Manually set algorithm kind (gemm_standard/conv_direct/conv_im2col/conv_winograd, default: automatic exploration)">
 ];
 
 }

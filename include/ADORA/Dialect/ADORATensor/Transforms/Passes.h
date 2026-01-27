@@ -18,7 +18,7 @@ namespace ADORATensor{
 /// Lower some operators in Linalg dialect to 
 std::unique_ptr<OperationPass<ModuleOp>> createLinalgToSystolicGEMMPass();
 std::unique_ptr<OperationPass<ModuleOp>> createADORATensorOpCdfgGenPass();
-std::unique_ptr<OperationPass<ModuleOp>> createADORAGemmOpStrategyDecisionPass();
+std::unique_ptr<OperationPass<ModuleOp>> createADORAOpStrategyDecisionPass();
 std::unique_ptr<OperationPass<func::FuncOp>> createADORATensorFunctionsToKernelPass();
 
 //===----------------------------------------------------------------------===//
