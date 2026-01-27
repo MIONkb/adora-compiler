@@ -28,7 +28,7 @@ conda activate $CHIPYARD_DIR/.conda-env
 
 export LLVM_PROJ_BUILD="/home/jhlou/CGRVOPT/llvm-project-onnx/build"
 
-# 动态定位到复制过来的 protobuf build 目录
+# Dynamically locate the copied protobuf build directory
 export PROTOBUF_BUILD_DIR="${ADORA_PROJECT_PATH}/frontend/adora-onnx-mlir/third_party/protobuf/build"
 
 if [ -d "$PROTOBUF_BUILD_DIR" ]; then

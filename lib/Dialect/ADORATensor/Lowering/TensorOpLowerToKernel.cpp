@@ -60,29 +60,29 @@ namespace mlir
 
       bool TensorOpCDFGVisitor::visitOp(ADORATensor::ConvOp op)
       {
-        // 1. 统一解析配置
-        // 这一步屏蔽了复杂的 Attribute 读取细节
+        // 1. Parse configuration in a unified way
+        // This step hides the complex Attribute parsing details
         SystolicConfig config = parseSystolicConfig(op);
 
         AffineForOp newfor;
 
-        // 2. 根据算法一级分发
+        // 2. Dispatch by algorithm
         switch (config.algorithm)
         {
         case ComputeAlgorithm::Conv_Direct:
-          // 调用 Direct Conv 生成器
-          // 这里的 LowerGenericDirectConv 会读取 config.loopOrder
-          // 来决定是生成 OS (P,Q在外) 还是 WS (R,S在外)
+          // Invoke the Direct Conv generator
+          // LowerGenericDirectConv reads config.loopOrder to decide whether
+          // to generate OS (P,Q outer) or WS (R,S outer)
           newfor = LowerGenericDirectConv(opbuilder, op, config);
           break;
 
         case ComputeAlgorithm::Conv_Im2Col:
-          // Im2Col 通常涉及先 Transform 再 GEMM
+          // Im2Col usually involves Transform then GEMM
           // newfor = LowerIm2ColConv(opbuilder, op, config);
           break;
 
         case ComputeAlgorithm::Conv_Winograd:
-          // Winograd 变换 -> 矩阵乘 -> 逆变换
+          // Winograd transform -> matrix multiply -> inverse transform
           // newfor = LowerWinogradConv(opbuilder, op, config);
           break;
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 指定文件夹路径
+# Specify the folder path
 rootfolder=$(pwd)
 asmfolder="$rootfolder/4_asms"
 tarfolder="/home/jhlou/chipyard/generators/fdra/software/tests/bareMetalC"
@@ -32,7 +32,7 @@ fi
 # sed -i -E 's/^(\s*)(\.file|\.loc)/\1#&/' $asmfolder/"$top_call_name.s"
 
 # for file in ${asm_files[@]}; do
-#     # 检查文件是否为普通文件
+#     # Check whether the file is a regular file
 #     filename=$(basename "$file" .s)
 #     echo "$filename"
 #     if [[ -f "$file" ]]; then

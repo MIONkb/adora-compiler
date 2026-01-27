@@ -1619,7 +1619,7 @@ int Mapping::evaluateII(){
         int srclat = dfgNodeAttr(srcId).lat;  //
         int routeLat = _dfgEdgeAttr[elem.first].lat ; // latNoDelay
         int iterDist = std::max(edge->iterDist(), 1); // >= 1
-        int newII = (srclat + routeLat - dstInportLat + iterDist -1) / iterDist;//向上取整
+        int newII = (srclat + routeLat - dstInportLat + iterDist -1) / iterDist; // round up
         II = std::max(newII, II);
     }
     auto& _backEdgeLoops = _dfg->backEdgeLoops();
@@ -1634,7 +1634,7 @@ int Mapping::evaluateII(){
         int srclat = dfgNodeAttr(srcId).lat;
         int routeLat = _dfgEdgeAttr[elem].lat ; // latNoDelay
         int iterDist = std::max(edge->iterDist(), 1); // >= 1
-        int newII = (srclat + routeLat - dstInportLat + iterDist -1) / iterDist;//向上取整
+        int newII = (srclat + routeLat - dstInportLat + iterDist -1) / iterDist; // round up
         II = std::max(newII, II);
 
     }
