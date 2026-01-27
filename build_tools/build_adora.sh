@@ -1,8 +1,8 @@
 #!/bin/bash
-# 获取当前脚本所在目录的上一级，即项目根目录
+# Get the parent directory of this script, i.e. the project root
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# 使用 env.sh 中定义的变量，如果没定义则报错
+# Use variables defined in env.sh; error out if not defined
 if [ -z "$LLVM_PROJ_BUILD" ]; then
   echo "Error: LLVM_PROJ_BUILD is not set. Please source env.sh first."
   exit 1
@@ -11,7 +11,7 @@ fi
 LLVM_INSTALL_DIR="${LLVM_PROJ_BUILD}"
 BUILD_DIR="${PROJECT_ROOT}/build"
 
-# 进入项目根目录
+# Enter the project root directory
 cd "${PROJECT_ROOT}"
 
 if [ ! -d "$BUILD_DIR" ]; then
@@ -33,5 +33,5 @@ else
     echo "Using existing build directory for incremental build..."
     cd "$BUILD_DIR"
 fi
-# 编译并运行测试
+# Build and run tests
 ninja -j 32 install check-adora

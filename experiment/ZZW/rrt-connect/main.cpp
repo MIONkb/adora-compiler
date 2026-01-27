@@ -3,7 +3,7 @@
 #include <math.h>
 
 const int kOBSTACLE_NUM = 2;
-const int kSAMPLE_NUM = 4; // 每个iter采样数目
+const int kSAMPLE_NUM = 4; // samples per iteration
 const int kMAX_ITER = 200;
 const int kMAX_NODE_NUM = kMAX_ITER * kSAMPLE_NUM + 10;
 using dtype = float;
@@ -12,7 +12,7 @@ using std::endl;
 
 void sampler(dtype &x, dtype &y)
 {
-    // 限定地图范围
+    // constrain map bounds
     const dtype lb_x = -2, rb_x = 12, lb_y = -2, rb_y = 12;
     x = lb_x + ((dtype)rand() / (dtype)RAND_MAX) * (rb_x - lb_x);
     y = lb_y + ((dtype)rand() / (dtype)RAND_MAX) * (rb_y - lb_y);
@@ -39,16 +39,16 @@ inline dtype cross_product(dtype x1, dtype y1, dtype x2, dtype y2, dtype x3, dty
     return (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
 }
 
-// (p1p2)(p3p4)两条线段,返回True表示相交
+// (p1p2)(p3p4) are two line segments; return True when they intersect
 bool Segment_Overlap_Checker(dtype p1_x, dtype p1_y, dtype p2_x, dtype p2_y,
                              dtype p3_x, dtype p3_y, dtype p4_x, dtype p4_y)
 {
-    dtype d1 = cross_product(p3_x, p3_y, p4_x, p4_y, p1_x, p1_y); // P1相对于线段P3P4
-    dtype d2 = cross_product(p3_x, p3_y, p4_x, p4_y, p2_x, p2_y); // P2相对于线段P3P4
-    dtype d3 = cross_product(p1_x, p1_y, p2_x, p2_y, p3_x, p3_y); // P3相对于线段P1P2
-    dtype d4 = cross_product(p1_x, p1_y, p2_x, p2_y, p4_x, p4_y); // P4相对于线段P1P2
+    dtype d1 = cross_product(p3_x, p3_y, p4_x, p4_y, p1_x, p1_y); // P1 relative to segment P3P4
+    dtype d2 = cross_product(p3_x, p3_y, p4_x, p4_y, p2_x, p2_y); // P2 relative to segment P3P4
+    dtype d3 = cross_product(p1_x, p1_y, p2_x, p2_y, p3_x, p3_y); // P3 relative to segment P1P2
+    dtype d4 = cross_product(p1_x, p1_y, p2_x, p2_y, p4_x, p4_y); // P4 relative to segment P1P2
 
-    // 检查严格相交
+    // check strict intersection
     if (((d1 > 0.0 && d2 < 0.0) || (d1 < 0.0 && d2 > 0.0)) &&
         ((d3 > 0.0 && d4 < 0.0) || (d3 < 0.0 && d4 > 0.0)))
     {
@@ -58,7 +58,7 @@ bool Segment_Overlap_Checker(dtype p1_x, dtype p1_y, dtype p2_x, dtype p2_y,
     return false;
 }
 
-// result==0表示无冲突
+// result==0 means no conflict
 bool Collision_Checker(dtype *obs_x1, dtype *obs_x2, dtype *obs_y1, dtype *obs_y2,
                        dtype p_x1, dtype p_x2, dtype p_y1, dtype p_y2)
 {
@@ -112,23 +112,23 @@ void Aux_Kernel_Collision_Checker(dtype *obs_x1, dtype *obs_x2, dtype *obs_y1, d
     }
 }
 
-// 根据sample点更新对应的树
+// update the corresponding tree based on the sample point
 void Update_Tree(dtype *obs_x1, dtype *obs_x2, dtype *obs_y1, dtype *obs_y2,
                  dtype *sample_x, dtype *sample_y, bool *result, dtype step,
                  dtype *tree_x, dtype *tree_y, int *f_tree, int &tree_num)
 {
-    // 用于存储最近节点
+    // used to store the nearest node
     int *nearest_node = new int[kSAMPLE_NUM];
     dtype *nearest_length = new dtype[kSAMPLE_NUM];
     dtype *t_x = new dtype[kSAMPLE_NUM];
     dtype *t_y = new dtype[kSAMPLE_NUM];
 
-    // 寻找最近tree上的点
+    // find the nearest point on the tree
     Aux_Kernel_Get_Nearest_Node(sample_x, sample_y,
                                 tree_x, tree_y, tree_num,
                                 nearest_node, nearest_length);
 
-    // 根据step调整长度，会修改sample，但这是期望的
+    // adjust length by step; this modifies sample as intended
     for (int j = 0; j < kSAMPLE_NUM; j++)
     {
         int i = nearest_node[j];
@@ -142,11 +142,11 @@ void Update_Tree(dtype *obs_x1, dtype *obs_x2, dtype *obs_y1, dtype *obs_y2,
         t_y[j] = tree_y[i];
     }
 
-    // result=1表示有冲突
+    // result=1 means there is a conflict
     Aux_Kernel_Collision_Checker(obs_x1, obs_x2, obs_y1, obs_y2,
                                  sample_x, t_x, sample_y, t_y, result);
 
-    // 若无冲突则更新树
+    // update the tree if there is no conflict
     for (int i = 0; i < kSAMPLE_NUM; i++)
     {
         if (result[i])
@@ -163,7 +163,7 @@ void Update_Tree(dtype *obs_x1, dtype *obs_x2, dtype *obs_y1, dtype *obs_y2,
     delete[] t_y;
 }
 
-// 根据sample点看是否与树直接连通,否则更新tree
+// check whether the sample connects directly to the tree; otherwise update the tree
 bool Has_Connect(dtype *obs_x1, dtype *obs_x2, dtype *obs_y1, dtype *obs_y2,
                  dtype *sample_x, dtype *sample_y, bool *result_sample, dtype step,
                  dtype *tree_x, dtype *tree_y, int *f_tree, int &tree_num,
@@ -174,18 +174,18 @@ bool Has_Connect(dtype *obs_x1, dtype *obs_x2, dtype *obs_y1, dtype *obs_y2,
     dtype *tmp_sample_x = new dtype[kSAMPLE_NUM];
     dtype *tmp_sample_y = new dtype[kSAMPLE_NUM];
 
-    // 用于存储最近节点
+    // used to store the nearest node
     int *nearest_node = new int[kSAMPLE_NUM];
     dtype *nearest_length = new dtype[kSAMPLE_NUM];
     dtype *t_x = new dtype[kSAMPLE_NUM];
     dtype *t_y = new dtype[kSAMPLE_NUM];
 
-    // 寻找最近tree上的点
+    // find the nearest point on the tree
     Aux_Kernel_Get_Nearest_Node(sample_x, sample_y,
                                 tree_x, tree_y, tree_num,
                                 nearest_node, nearest_length);
 
-    // 根据step调整长度
+    // adjust length by step
     for (int j = 0; j < kSAMPLE_NUM; j++)
     {
         int i = nearest_node[j];
@@ -202,7 +202,7 @@ bool Has_Connect(dtype *obs_x1, dtype *obs_x2, dtype *obs_y1, dtype *obs_y2,
         t_y[j] = tree_y[i];
     }
 
-    // result=1表示有冲突
+    // result=1 means there is a conflict
     Aux_Kernel_Collision_Checker(obs_x1, obs_x2, obs_y1, obs_y2,
                                  tmp_sample_x, t_x, tmp_sample_y, t_y, tmp_result_update);
 
@@ -216,7 +216,7 @@ bool Has_Connect(dtype *obs_x1, dtype *obs_x2, dtype *obs_y1, dtype *obs_y2,
             continue;
         if (tmp_result_near[i] && !result_sample[i])
         {
-            // 直接联通
+            // connect directly
             count = new_count - 1;
             tree_node = nearest_node[i];
             ret = true;
@@ -281,17 +281,17 @@ void Get_Answer_Array(dtype *&answer_x, dtype *&answer_y, int &answer_num,
     delete[] aux_node_stack;
 }
 
-// return 1,成功找到路径
+// return 1, path found successfully
 bool RRT_Connect_Search(dtype src_x, dtype src_y, dtype dst_x, dtype dst_y,
                         dtype *obs_x1, dtype *obs_x2, dtype *obs_y1, dtype *obs_y2,
                         dtype *&answer_x, dtype *&answer_y, int &answer_num)
 {
-    dtype step = 1; // 可以改用动态步长
+    dtype step = 1; // can be switched to a dynamic step size
 
     bool ret = false;
     int leaf_src, leaf_dst;
 
-    // 存放树
+    // store the tree
     dtype *src_tree_x = new dtype[kMAX_NODE_NUM];
     dtype *src_tree_y = new dtype[kMAX_NODE_NUM];
     dtype *dst_tree_x = new dtype[kMAX_NODE_NUM];
@@ -318,7 +318,7 @@ bool RRT_Connect_Search(dtype src_x, dtype src_y, dtype dst_x, dtype dst_y,
     int iter;
     for (iter = 0; iter < kMAX_ITER; iter++)
     {
-        // 空间随机采样
+        // random sampling in space
         for (int i = 0; i < kSAMPLE_NUM; i++)
         {
             sampler(sample_x[i], sample_y[i]);
@@ -326,7 +326,7 @@ bool RRT_Connect_Search(dtype src_x, dtype src_y, dtype dst_x, dtype dst_y,
         if (src_tree_num <= dst_tree_num)
         {
             int pre_tree_num = src_tree_num;
-            // 扩展src_tree
+            // expand src_tree
             Update_Tree(obs_x1, obs_x2, obs_y1, obs_y2,
                         sample_x, sample_y, sample_result, step,
                         src_tree_x, src_tree_y, f_src_tree, src_tree_num);
@@ -345,7 +345,7 @@ bool RRT_Connect_Search(dtype src_x, dtype src_y, dtype dst_x, dtype dst_y,
         else
         {
             int pre_tree_num = dst_tree_num;
-            // 扩展dst_tree
+            // expand dst_tree
             Update_Tree(obs_x1, obs_x2, obs_y1, obs_y2,
                         sample_x, sample_y, sample_result, step,
                         dst_tree_x, dst_tree_y, f_dst_tree, dst_tree_num);
@@ -403,7 +403,7 @@ int main()
     dtype *obs_x2 = new dtype[kOBSTACLE_NUM];
     dtype *obs_y1 = new dtype[kOBSTACLE_NUM];
     dtype *obs_y2 = new dtype[kOBSTACLE_NUM];
-    // 一组(obs_x1[n],obs_y1[n])(obs_x2[n],obs_y2[n])表示一条线段
+    // a pair (obs_x1[n],obs_y1[n]) and (obs_x2[n],obs_y2[n]) represents a line segment
     // for (int i = 0; i < kOBSTACLE_NUM; i++)
     // {
     //     obs_x1[i] = 5;

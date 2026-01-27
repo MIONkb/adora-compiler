@@ -1,5 +1,5 @@
 #!/bin/bash
-# 获取项目根目录
+# Get the project root directory
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [ -z "$LLVM_PROJ_BUILD" ]; then
@@ -7,7 +7,7 @@ if [ -z "$LLVM_PROJ_BUILD" ]; then
   exit 1
 fi
 
-# 路径定义
+# Path definitions
 ONNX_PROJ_DIR="${PROJECT_ROOT}/frontend/adora-onnx-mlir"
 MLIR_DIR="${LLVM_PROJ_BUILD}/lib/cmake/mlir"
 ADORA_INSTALL_DIR="${PROJECT_ROOT}/build"
