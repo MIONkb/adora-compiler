@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 指定文件夹路径
+# Specify the folder path
 rootfolder=$(pwd)
 IRfolder="IR"
 srcfolder="$rootfolder/$IRfolder/3_cgra_exes"

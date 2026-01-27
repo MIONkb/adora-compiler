@@ -529,7 +529,7 @@ namespace mlir
         int64_t pad_h_total = 0, pad_w_total = 0; // total = top + bottom / left + right
         int64_t dilation_h = 1, dilation_w = 1;
 
-        // 解析 Strides
+        // Parse Strides
         if (auto stridesAttr = convOp.getStridesAttr())
         {
           auto vals = stridesAttr.getValue();
@@ -540,7 +540,7 @@ namespace mlir
           }
         }
 
-        // 解析 Dilations
+        // Parse Dilations
         if (auto dilationsAttr = convOp.getDilationsAttr())
         {
           auto vals = dilationsAttr.getValue();
@@ -551,7 +551,7 @@ namespace mlir
           }
         }
 
-        // 解析 Pads (ONNX format: [top, left, bottom, right])
+        // Parse Pads (ONNX format: [top, left, bottom, right])
         if (auto padsAttr = convOp.getPadsAttr())
         {
           auto vals = padsAttr.getValue();
@@ -566,7 +566,7 @@ namespace mlir
           }
         }
 
-        // 计算 Output Height / Width
+        // Compute Output Height / Width
         // Formula: OH = (H + pad_h_total - dilation * (KH - 1) - 1) / stride + 1
         int64_t effective_KH = dilation_h * (KH - 1) + 1;
         int64_t effective_KW = dilation_w * (KW - 1) + 1;
@@ -574,10 +574,10 @@ namespace mlir
         int64_t OH = (H + pad_h_total - effective_KH) / stride_h + 1;
         int64_t OW = (W + pad_w_total - effective_KW) / stride_w + 1;
 
-        // 映射到 GEMM 维度 (用于 Im2Col 估算)
-        // M: 输出的像素点总数 (Batch * H * W)
-        // K: 卷积核的体积 (IC * KH * KW)
-        // N: 输出通道数 (OC)
+        // Map to GEMM dimensions (for Im2Col estimation)
+        // M: total number of output pixels (Batch * H * W)
+        // K: kernel volume (IC * KH * KW)
+        // N: output channels (OC)
         int64_t M_gemm = N_batch * OH * OW;
         int64_t K_gemm = IC * KH * KW;
         int64_t N_gemm = OC;
@@ -591,7 +591,7 @@ namespace mlir
         {
           algos.push_back(ComputeAlgorithm::Conv_Direct);
           algos.push_back(ComputeAlgorithm::Conv_Im2Col);
-          // Winograd (特定条件优化)
+          // Winograd (optimized for specific conditions)
           if (KH == 3 && KW == 3 && stride_h == 1 && stride_w == 1 &&
               dilation_h == 1 && dilation_w == 1)
           {
@@ -603,7 +603,7 @@ namespace mlir
 
         for (auto algo : algos)
         {
-          // 只有 Direct Conv 且非 1x1 时传入 KH/KW 以触发 Input Reuse 优化
+          // Pass KH/KW only for Direct Conv and non-1x1 to trigger input reuse optimization
           int64_t pass_KH = (algo == ComputeAlgorithm::Conv_Direct) ? KH : 0;
           int64_t pass_KW = (algo == ComputeAlgorithm::Conv_Direct) ? KW : 0;
 

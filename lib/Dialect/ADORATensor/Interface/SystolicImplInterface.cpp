@@ -88,12 +88,12 @@ namespace mlir
       {
         SystolicConfig config;
 
-        // 1. 检查 Interface 实现
+        // 1. Check the Interface implementation
         auto systolicOp = dyn_cast<ADORATensor::SystolicImplInterface>(op);
         assert(systolicOp && "Op must implement SystolicImplInterface");
 
-        // 2. 解析 Algorithm
-        // 优先从 Attribute 获取，如果为空，则根据 Op 类型推断默认值
+        // 2. Parse Algorithm
+        // Prefer Attribute; if empty, infer defaults from Op type
         StringRef algoStr = systolicOp.getAlgorithm();
         if (algoStr.empty())
         {
@@ -103,7 +103,7 @@ namespace mlir
           }
           else if (isa<ADORATensor::ConvOp>(op))
           {
-            // Conv 默认使用 Direct
+            // Conv defaults to Direct
             config.algorithm = ComputeAlgorithm::Conv_Direct;
           }
           else
@@ -116,20 +116,20 @@ namespace mlir
           config.algorithm = parseAlgorithmStr(algoStr);
         }
 
-        // 3. 解析 Dataflow (Stationary Kind)
+        // 3. Parse Dataflow (Stationary Kind)
         StringRef dfStr = systolicOp.getStationaryKind();
         config.dataflow = parseDataflowStr(dfStr);
-        // 如果未定义，对于 GEMM 默认 WS (根据需求调整)
+        // If undefined, default to WS for GEMM (adjust as needed)
         if (config.dataflow == DataflowStrategy::Undefine)
         {
           config.dataflow = DataflowStrategy::WeightStationary;
         }
 
-        // 4. 解析 TileSize
+        // 4. Parse TileSize
         auto tiles = systolicOp.getTileSize();
         config.tileSizes.assign(tiles.begin(), tiles.end());
 
-        // 5. 解析 LoopOrder
+        // 5. Parse LoopOrder
         auto order = systolicOp.getLoopOrder();
         if (!order.empty())
         {
@@ -137,7 +137,7 @@ namespace mlir
         }
         else
         {
-          // 提供默认 LoopOrder
+          // Provide default LoopOrder
           if (config.algorithm == ComputeAlgorithm::Conv_Direct)
           {
             // Default N, K, P, Q, C, R, S -> 0,1,2,3,4,5,6
