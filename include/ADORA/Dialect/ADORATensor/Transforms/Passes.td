@@ -24,7 +24,7 @@ def LinalgToSystolicGEMMPass : Pass<"adora-convert-linalg-to-systolic-gemm", "Mo
 }
 
 def ADORAOpStrategyDecisionPass
-    : Pass<"adora-gemm-op-strategy-decision", "mlir::ModuleOp"> {
+    : Pass<"adora-tensor-op-strategy-decision", "mlir::ModuleOp"> {
   let summary = "Decide dataflow strategy for ADORA GEMM-like ops and annotate / rewrite CDFG";
   let description = [{
     This pass analyzes ADORA GEMM-like tensor ops, selects a dataflow strategy

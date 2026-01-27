@@ -40,7 +40,7 @@ using namespace mlir::affine;
 using namespace mlir::ADORA;
 using namespace mlir::ADORA::ADORATensor;
 
-#define DEBUG_TYPE "adora-tensor-gemm-strategy-decision"
+#define DEBUG_TYPE "adora-tensor-op-strategy-decision"
 
 namespace mlir
 {
