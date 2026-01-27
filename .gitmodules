@@ -4,5 +4,5 @@
 
 [submodule "frontend/adora-onnx-mlir"]
 	path = frontend/adora-onnx-mlir
-	url = https://github.com/Rosemarinus/adora-onnx-mlir.git
+	url = https://github.com/MIONkb/adora-onnx-mlir
 	branch = adora

@@ -66,4 +66,5 @@ namespace mlir
 }
 
 #include "ADORA/Dialect/ADORATensor/Interface/SystolicImplInterface.h.inc"
+
 #endif
