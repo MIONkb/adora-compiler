@@ -219,6 +219,7 @@ public:
 
     // @jhlou: pre assign delay pipe for MERGE node
     void preAssignRdu();
+    void preAssignAdditionalStartDelay();
 
     // calculate the routing latency of each edge, not inlcuding the RDU
     void calEdgeRouteLat();

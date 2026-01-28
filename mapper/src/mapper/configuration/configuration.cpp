@@ -65,15 +65,15 @@ int Configuration::addAdditionalLatencyForMERGEOp(DFGNode* dfgNode, int latency)
 
     return latency;
 }
-int Configuration::addAdditionalLatencyForAfterMERGEOutputOp(DFGNode* dfgNode, int latency){
-    if(dfgNode->operation() == "OUTPUT"){
-        if(dfgNode->inputEdges().size() == 1){
-            int srcnodeid = _mapping->getDFG()->edge(dfgNode->inputEdge(0))->srcId();
-            return addAdditionalLatencyForMERGEOp(_mapping->getDFG()->node(srcnodeid), latency);
-        }
-    }
-    return latency;
-}
+// int Configuration::addAdditionalLatencyForOpsFolloingMERGE(DFGNode* dfgNode, int latency){
+//     if(dfgNode->operation() == "OUTPUT"){
+//         if(dfgNode->inputEdges().size() == 1){
+//             int srcnodeid = _mapping->getDFG()->edge(dfgNode->inputEdge(0))->srcId();
+//             return addAdditionalLatencyForMERGEOp(_mapping->getDFG()->node(srcnodeid), latency);
+//         }
+//     }
+//     return latency;
+// }
 
 std::set<int> Configuration::getConfiguredTiles(){
     std::set<int> results;
@@ -203,7 +203,7 @@ std::map<int, CfgData> Configuration::getGpeCfgData(GPENode* node){
         int latency = dfgNodeAttr.lat - dfgNode->opLatency(); 
         int latencyId = node->cfgIdMap["Latency"];
 
-        //// @jhlou: for merge op, add additional latency(acr counting 3 more cycles) 
+        //// @jhlou: for nodes following merge op, add additional latency(acr counting 3 more cycles) 
         latency = addAdditionalLatencyForMERGEOp(dfgNode, latency);
 
         addCfgData(cfg, node->configInfo(latencyId), (uint32_t)latency);
@@ -324,8 +324,11 @@ std::map<int, CfgData> Configuration::getIobCfgData(IOBNode* node){
     int II = _mapping->II();
     int latency = dfgNodeAttr.lat - dfgNode->opLatency(); // substract load/store latency
     
-    //// @jhlou: for merge op, add additional latency(acr counting 3 more cycles) 
-    latency = addAdditionalLatencyForAfterMERGEOutputOp(dfgNode, latency);
+    //// @jhlou: for nodes following merge op, add additional latency(acr counting 3 more cycles) 
+    // latency = addAdditionalLatencyForOpsFolloingMERGE(dfgNode, latency);
+    if(dfgNode->additionalStartDelay() != 0){
+        latency += dfgNode->additionalStartDelay();
+    }
 
     int dataBytes = _mapping->getADG()->bitWidth() / 8;
     int baseAddr = _dfgIoSpadAddrs[dfgNode->id()];

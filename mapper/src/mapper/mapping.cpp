@@ -1104,7 +1104,7 @@ void Mapping::preAssignRdu(){
                 // _fuDelayAttr[adgnodeId].delayUsed[1] = 1;
                 // _fuDelayAttr[adgnodeId].delayUsed[2] = 2;
                 // _fuDelayAttr[adgnodeId].delayUsed[2] = 3;
-                 _fuDelayAttr[adgnodeId].totalDelayUsed = 6;
+                _fuDelayAttr[adgnodeId].totalDelayUsed = 6;
             }
             else if(dfgnode->operation() == "MERGE3" || dfgnode->operation() == "INTLV3"){
                 // _fuDelayAttr[adgnodeId].delayUsed[1] = 1;
@@ -1116,6 +1116,59 @@ void Mapping::preAssignRdu(){
                 _fuDelayAttr[adgnodeId].totalDelayUsed = 1;
             }
         }    
+    }
+}
+
+// @jhlou: pre assign additional start delay pipe for nodes following merge/intlv node
+void Mapping::preAssignAdditionalStartDelay(){
+    DFG* dfg = getDFG();
+    bool finished = false;
+    while(!finished){
+        finished = true;
+        for(auto id : dfg->topoNodes()){
+            DFGNode* dfgNode = dfg->node(id);
+            std::vector<DFGNode*> nodes_to_assign;
+            int additional_delay = 0;
+            for(auto elem : dfgNode->inputEdges()){
+                int eid = elem.second;
+                DFGEdge* edge = _dfg->edge(eid);
+                if(edge->isBackEdge()){
+                    continue;
+                }  
+                DFGNode* inNode = dfg->node(edge->srcId());
+                if(inNode->operation() == "MERGE4" || inNode->operation() == "INTLV4"){
+                    assert(additional_delay == 0 || additional_delay == 3);
+                    additional_delay = 3;
+                }
+                else if(inNode->operation() == "MERGE3" || inNode->operation() == "INTLV3"){
+                    assert(additional_delay == 0 || additional_delay == 2);
+                    additional_delay = 2;
+                }
+                else if(inNode->operation() == "MERGE2" || inNode->operation() == "INTLV2"){
+                    assert(additional_delay == 0 || additional_delay == 1);
+                    additional_delay = 1;
+                } 
+                else if(inNode->additionalStartDelay() != 0){
+                    assert(additional_delay == 0 || additional_delay == inNode->additionalStartDelay());
+                    additional_delay = inNode->additionalStartDelay();
+                }   
+                else{
+                    nodes_to_assign.push_back(inNode);
+                }
+            }
+            if(additional_delay != 0){
+                nodes_to_assign.push_back(dfgNode);
+                for(auto node : nodes_to_assign){
+                    if(node->additionalStartDelay() == 0){
+                        node->setAdditionalStartDelay(additional_delay);
+                        finished = false;
+                    }
+                    else{
+                        assert(node->additionalStartDelay() == additional_delay);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1219,6 +1272,7 @@ void Mapping::latencySchedule(){
 
     // @jhlou set pre-assigned RDU for some node: Interleave(INTLV/MERGE)
     preAssignRdu();
+    preAssignAdditionalStartDelay();
 
     // calculate the routing latency of each edge, not inlcuding the RDU
     calEdgeRouteLat();
