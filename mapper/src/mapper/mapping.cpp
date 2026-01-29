@@ -1120,6 +1120,25 @@ void Mapping::preAssignRdu(){
 }
 
 // @jhlou: pre assign additional start delay pipe for nodes following merge/intlv node
+// NOTE(optional optimization):
+// This function currently uses a fixpoint iteration (while !finished) to pre-assign
+// additionalStartDelay for nodes after MERGE/INTLV and to align other input branches.
+// The iteration is robust: it keeps propagating until convergence.
+//
+// A faster alternative is a *two-pass propagation*:
+//   (1) Forward topo pass (inputs -> outputs): propagate delay to "following" nodes.
+//   (2) Reverse topo pass (outputs -> inputs): back-propagate to fill/align other
+//       non-merge input branches.
+// This often works for simple/monotonic DFGs, but is NOT always equivalent.
+//
+// WARNING:
+// For complex graphs with multiple reconvergences / multi-level merge chains / bypass
+// paths that re-join later, the two-pass method may miss updates that require more
+// than one forward-backward sweep. In such cases, the fixpoint iteration is required
+// to guarantee convergence.
+//
+// If needed, implement it as an option, e.g. `--preassign-delay-two-pass`, and keep
+// this fixpoint version as the default for correctness.
 void Mapping::preAssignAdditionalStartDelay(){
     DFG* dfg = getDFG();
     bool finished = false;

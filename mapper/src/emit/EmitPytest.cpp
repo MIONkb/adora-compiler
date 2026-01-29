@@ -604,11 +604,11 @@ public:
         visitOp(dyn_cast<mlir::affine::AffineForOp>(op));
       }
       else if(isa<mlir::memref::CopyOp>(op)){
-        indent() << "### Pingpong DataBlockLoadOp: " << *op << "\n";
+        indent() << "### memref::CopyOp: " << *op << "\n";
         visitOp(dyn_cast<mlir::memref::CopyOp>(op));
       }
       else if(isa<mlir::memref::AllocOp>(op)){
-        indent() << "### Pingpong DataBlockLoadOp: " << *op << "\n";
+        indent() << "### memref::AllocOpp: " << *op << "\n";
         visitOp(dyn_cast<mlir::memref::AllocOp>(op));
       }
       else{
