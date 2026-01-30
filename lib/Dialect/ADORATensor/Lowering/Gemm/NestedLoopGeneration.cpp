@@ -84,6 +84,83 @@ mlir::Operation* genArithMulOpAccordingToDataType(OpBuilder &builder, Location l
 }
 
 
+mlir::Operation* initOutWithC2DLike(
+    OpBuilder &b, Location loc,
+    Value out, Value C,
+    ArrayRef<int64_t> outMN /*{M,N}*/) {
+
+  auto outTy = out.getType().dyn_cast<MemRefType>();
+  auto cTy   = C.getType().dyn_cast<MemRefType>();
+  assert(outTy && cTy && "out/C must be memref");
+  assert(outMN.size() == 2);
+
+  // Fast path: exactly same memref type => memref.copy
+  if (outTy == cTy) {
+    return b.create<memref::CopyOp>(loc, C, out).getOperation();
+  }
+
+  int64_t M = outMN[0];
+  int64_t N = outMN[1];
+
+  // affine.for m = 0..M
+  auto mFor = b.create<affine::AffineForOp>(loc, 0, M, 1);
+  OpBuilder mb(mFor.getBody(), mFor.getBody()->begin());
+  Value mIv = mFor.getInductionVar();
+
+  // affine.for n = 0..N
+  auto nFor = mb.create<affine::AffineForOp>(loc, 0, N, 1);
+  OpBuilder nb(nFor.getBody(), nFor.getBody()->begin());
+  Value nIv = nFor.getInductionVar();
+
+  // Helpers.
+  auto c0 = nb.create<arith::ConstantIndexOp>(loc, 0);
+
+  int64_t rC = cTy.getRank();
+  Value cVal;
+
+  if (rC == 0) {
+    cVal = nb.create<memref::LoadOp>(loc, C, ValueRange{}); // affine.load doesn't support rank-0 well; keep memref.load
+  } else if (rC == 1) {
+    // [N] or [1]
+    int64_t d0 = cTy.getShape()[0];
+    Value i0 = (d0 == 1) ? c0 : nIv;
+    cVal = nb.create<affine::AffineLoadOp>(loc, C, ValueRange{i0});
+  } else if (rC == 2) {
+    // [M,N] or [1,N] or [M,1] or [1,1]
+    int64_t d0 = cTy.getShape()[0];
+    int64_t d1 = cTy.getShape()[1];
+    Value i0 = (d0 == 1) ? c0 : mIv;
+    Value i1 = (d1 == 1) ? c0 : nIv;
+    cVal = nb.create<affine::AffineLoadOp>(loc, C, ValueRange{i0, i1});
+  } else if (rC == 3) {
+    // common: [1,M,N] / [1,1,N]
+    int64_t d1 = cTy.getShape()[1];
+    int64_t d2 = cTy.getShape()[2];
+    Value i0 = c0;
+    Value i1 = (d1 == 1) ? c0 : mIv;
+    Value i2 = (d2 == 1) ? c0 : nIv;
+    cVal = nb.create<affine::AffineLoadOp>(loc, C, ValueRange{i0, i1, i2});
+  } else {
+    assert(false && "Unsupported C rank for initOutWithC2DLikeAffine");
+  }
+
+  // Store into out (support out rank 2 or 3 (batch==1))
+  int64_t rO = outTy.getRank();
+  if (rO == 2) {
+    nb.create<affine::AffineStoreOp>(loc, cVal, out, ValueRange{mIv, nIv});
+  } else if (rO == 3) {
+    Value b0 = c0;
+    nb.create<affine::AffineStoreOp>(loc, cVal, out, ValueRange{b0, mIv, nIv});
+  } else {
+    assert(false && "Unsupported out rank for init");
+  }
+
+  // Important: affine.for body must end with affine.yield
+  // nb.create<affine::AffineYieldOp>(loc);
+  mb.setInsertionPointAfter(nFor);
+  // mb.create<affine::AffineYieldOp>(loc);
+  return nFor.getOperation();
+}
 
 /// @brief Generate a nested affine.for loop on device(data transfer is already done).
 ///  This function is shared by IS and WS

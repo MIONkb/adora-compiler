@@ -170,13 +170,13 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
 
           AffineVectorLoadOp vecLoadC = builder.create<affine::AffineVectorLoadOp>(
               loc, newVec, C_in[col * ((tile_row_size + 3) / 4) + row], j_it, memIVmap);
-          setPingpongAttr(vecLoadC);
+          // setPingpongAttr(vecLoadC);
 
           Value vecadd = genArithAddOpAccordingToDataType(builder, loc, interleaver, vecLoadC)->getResult(0);
 
           AffineVectorStoreOp vecStoreC = builder.create<affine::AffineVectorStoreOp>(
               loc, vecadd, C_out[col * ((tile_row_size + 3) / 4) + row], memIVmap, j_it);
-          setPingpongAttr(vecStoreC);
+          // setPingpongAttr(vecStoreC);
         }
       }
       // last several stationaries
@@ -201,13 +201,13 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
 
         AffineVectorLoadOp vecLoadC = builder.create<affine::AffineVectorLoadOp>(
             loc, newVec, C_in[col * ((tile_row_size + 3) / 4) + row], j_it, memIVmap);
-        setPingpongAttr(vecLoadC);
+        // setPingpongAttr(vecLoadC);
 
         Value vecadd = genArithAddOpAccordingToDataType(builder, loc, interleaver, vecLoadC)->getResult(0);
 
         AffineVectorStoreOp vecStoreC = builder.create<affine::AffineVectorStoreOp>(
             loc, vecadd, C_out[col * ((tile_row_size + 3) / 4) + row], memIVmap, j_it);
-        setPingpongAttr(vecStoreC);
+        // setPingpongAttr(vecStoreC);
       }   
       else if(tile_col_size % 4 == 1) {        
         /// generate vector input for C
@@ -219,13 +219,13 @@ StationaryBodyBuilderFn BodyOfTiledWithOutputStationary(
 
         AffineLoadOp LoadC = builder.create<affine::AffineLoadOp>(
             loc, C_in[col * ((tile_row_size + 3) / 4) + row], memIVmap, j_it); 
-        setPingpongAttr(LoadC);  
+        // setPingpongAttr(LoadC);  
 
         Value add = genArithAddOpAccordingToDataType(builder, loc, inner.getResult(col * tile_row_size + row * 4), LoadC)->getResult(0);
 
         AffineStoreOp StoreC = builder.create<affine::AffineStoreOp>(
             loc, add, C_out[col * ((tile_row_size + 3) / 4) + row], memIVmap, j_it); 
-        setPingpongAttr(StoreC);
+        // setPingpongAttr(StoreC);
       }  
     }
     
@@ -386,7 +386,7 @@ StationaryBodyBuilderFn TileofOutputStationary(
 
           BlockLoad.setKernelName("GEMMOS");
           BlockLoad.setId(std::to_string(BlockLoadStoreOpId++));
-          setPingpongAttr(BlockLoad);
+          // setPingpongAttr(BlockLoad);
 
           /// has stride
           if(temporal_count_dim_n != 1){
@@ -402,14 +402,14 @@ StationaryBodyBuilderFn TileofOutputStationary(
           alloc.setKernelName("GEMMOS");
           alloc.setId(std::to_string(BlockLoadStoreOpId));
           C_out.push_back(alloc);
-          setPingpongAttr(alloc); 
+          // setPingpongAttr(alloc); 
 
           ADORA::DataBlockStoreOp BlockStore = builder.create<ADORA::DataBlockStoreOp>\
                   (loc, alloc, C, memIVmap, ValueRange({vi, vj}));
           
           BlockStore.setKernelName("GEMMOS");
           BlockStore.setId(std::to_string(BlockLoadStoreOpId++));    
-          setPingpongAttr(BlockStore); 
+          // setPingpongAttr(BlockStore); 
 
           /// has stride
           if(temporal_count_dim_n != 1){
@@ -455,14 +455,14 @@ StationaryBodyBuilderFn TileofOutputStationary(
         alloc.setKernelName("GEMMOS");
         alloc.setId(std::to_string(BlockLoadStoreOpId));
         C_out.push_back(alloc);
-        setPingpongAttr(alloc); 
+        // setPingpongAttr(alloc); 
 
         ADORA::DataBlockStoreOp BlockStore = builder.create<ADORA::DataBlockStoreOp>\
                 (loc, alloc, C, memIVmap, ValueRange({vi, vj}));
         
         BlockStore.setKernelName("GEMMOS");
         BlockStore.setId(std::to_string(BlockLoadStoreOpId++));    
-        setPingpongAttr(BlockStore); 
+        // setPingpongAttr(BlockStore); 
 
         /// has stride
         if(temporal_count_dim_n != 1){
@@ -560,6 +560,12 @@ AffineForOp TiledOutputStationaryGemm(
   K_step = K_temporal_tile;
 
 
+  //==========================================================
+  // Initialize out with C (copy if same shape, else broadcast init)
+  //==========================================================
+  mlir::Operation* InitializationOp = initOutWithC2DLike(opbuilder, loc, out, op.getC(), ArrayRef<int64_t>({ShapeA[0], ShapeA[1]}));
+
+  op.getOperation()->getBlock()->dump();
   //////////////////////////////////////
   /// Generate systolic gemm
   //////////////////////////////////////
@@ -574,8 +580,8 @@ AffineForOp TiledOutputStationaryGemm(
       )
     );
   
-  op.getOperation()->getBlock()->push_back(loop);
-  loop.getOperation()->moveAfter(op);
+  // op.getOperation()->getBlock()->push_back(loop);
+  loop.getOperation()->moveAfter(InitializationOp);
   // } 
   // else{
   //   loop = GenerateTiledNestedLoopWithoutLoopCarry(

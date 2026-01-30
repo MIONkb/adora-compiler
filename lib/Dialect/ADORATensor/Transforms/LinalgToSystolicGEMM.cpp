@@ -85,7 +85,7 @@ func::FuncOp LinalgToSystolicGEMMPass::ConvertMatmulToSystolic(linalg::MatmulOp 
   //// set to a 4x4 weight stationary
   ADORATensor::SystolicImplInterface Sinterface(newGemm);
   // mlir::SmallVector<int64_t> tile = {4,4};
-  Sinterface.setStationaryKind(MatMulStrategy::WeightStationary);
+  Sinterface.setStationaryKind(DataflowStrategy::WeightStationary);
   Sinterface.setTileSize(ArrayRef<int64_t>({4,4}));
 
   matmul_idx++;

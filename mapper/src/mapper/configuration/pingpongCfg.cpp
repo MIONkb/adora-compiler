@@ -34,7 +34,10 @@ std::map<int, CfgData> Configuration::getIobPingpongCfgData(IOBNode* node, bool 
     int latency = dfgNodeAttr.lat - dfgNode->opLatency(); // substract load/store latency
     
     //// @jhlou: for merge op, add additional latency(acr counting 3 more cycles) 
-    latency = addAdditionalLatencyForAfterMERGEOutputOp(dfgNode, latency);
+    // latency = addAdditionalLatencyForOpsFolloingMERGE(dfgNode, latency);
+    if(dfgNode->additionalStartDelay() != 0){
+        latency += dfgNode->additionalStartDelay();
+    }
 
     int dataBytes = _mapping->getADG()->bitWidth() / 8;
     int baseAddr = _dfgIoSpadAddrs[dfgNode->id()];

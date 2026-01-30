@@ -2293,7 +2293,12 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
         std::string step, count;
 
         SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
-        newLinearAccess.push_back(std::pair(ElementBytes, vecnum));
+        ArrayRef<int64_t> memRefShape =  vecstoreop.getMemRefType().getShape();
+        int innermostStep = ElementBytes;
+        for(int dim = memRefShape.size() - 1; dim > dimLargerThanOne; dim--){
+          innermostStep *= memRefShape[dim];
+        }        
+        newLinearAccess.push_back(std::pair(innermostStep, vecnum));
         // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
 
         int level = 0;
@@ -2349,7 +2354,12 @@ void FixLinearAccessOfVectorNode(LLVMCDFG* CDFG, bool verbose = true){
         std::string step, count;
 
         SmallVector<std::pair<int64_t, int64_t>> newLinearAccess;
-        newLinearAccess.push_back(std::pair(ElementBytes, vecnum));
+        ArrayRef<int64_t> memRefShape =  vecloadop.getMemRefType().getShape();
+        int innermostStep = ElementBytes;
+        for(int dim = memRefShape.size() - 1; dim > dimLargerThanOne; dim--){
+          innermostStep *= memRefShape[dim];
+        }
+        newLinearAccess.push_back(std::pair(innermostStep, vecnum));
         // newLinearAccess.push_back(std::pair( -1 * ElementBytes * interleaverNum, 1));
 
         int level = 0;

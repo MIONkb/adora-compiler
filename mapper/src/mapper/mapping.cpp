@@ -1101,7 +1101,7 @@ void Mapping::preAssignRdu(){
                 // _fuDelayAttr[adgnodeId].delayUsed[1] = 1;
                 // _fuDelayAttr[adgnodeId].delayUsed[2] = 2;
                 // _fuDelayAttr[adgnodeId].delayUsed[2] = 3;
-                 _fuDelayAttr[adgnodeId].totalDelayUsed = 6;
+                _fuDelayAttr[adgnodeId].totalDelayUsed = 6;
             }
             else if(dfgnode->operation() == "MERGE3" || dfgnode->operation() == "INTLV3"){
                 // _fuDelayAttr[adgnodeId].delayUsed[1] = 1;
@@ -1113,6 +1113,78 @@ void Mapping::preAssignRdu(){
                 _fuDelayAttr[adgnodeId].totalDelayUsed = 1;
             }
         }    
+    }
+}
+
+// @jhlou: pre assign additional start delay pipe for nodes following merge/intlv node
+// NOTE(optional optimization):
+// This function currently uses a fixpoint iteration (while !finished) to pre-assign
+// additionalStartDelay for nodes after MERGE/INTLV and to align other input branches.
+// The iteration is robust: it keeps propagating until convergence.
+//
+// A faster alternative is a *two-pass propagation*:
+//   (1) Forward topo pass (inputs -> outputs): propagate delay to "following" nodes.
+//   (2) Reverse topo pass (outputs -> inputs): back-propagate to fill/align other
+//       non-merge input branches.
+// This often works for simple/monotonic DFGs, but is NOT always equivalent.
+//
+// WARNING:
+// For complex graphs with multiple reconvergences / multi-level merge chains / bypass
+// paths that re-join later, the two-pass method may miss updates that require more
+// than one forward-backward sweep. In such cases, the fixpoint iteration is required
+// to guarantee convergence.
+//
+// If needed, implement it as an option, e.g. `--preassign-delay-two-pass`, and keep
+// this fixpoint version as the default for correctness.
+void Mapping::preAssignAdditionalStartDelay(){
+    DFG* dfg = getDFG();
+    bool finished = false;
+    while(!finished){
+        finished = true;
+        for(auto id : dfg->topoNodes()){
+            DFGNode* dfgNode = dfg->node(id);
+            std::vector<DFGNode*> nodes_to_assign;
+            int additional_delay = 0;
+            for(auto elem : dfgNode->inputEdges()){
+                int eid = elem.second;
+                DFGEdge* edge = _dfg->edge(eid);
+                if(edge->isBackEdge()){
+                    continue;
+                }  
+                DFGNode* inNode = dfg->node(edge->srcId());
+                if(inNode->operation() == "MERGE4" || inNode->operation() == "INTLV4"){
+                    assert(additional_delay == 0 || additional_delay == 3);
+                    additional_delay = 3;
+                }
+                else if(inNode->operation() == "MERGE3" || inNode->operation() == "INTLV3"){
+                    assert(additional_delay == 0 || additional_delay == 2);
+                    additional_delay = 2;
+                }
+                else if(inNode->operation() == "MERGE2" || inNode->operation() == "INTLV2"){
+                    assert(additional_delay == 0 || additional_delay == 1);
+                    additional_delay = 1;
+                } 
+                else if(inNode->additionalStartDelay() != 0){
+                    assert(additional_delay == 0 || additional_delay == inNode->additionalStartDelay());
+                    additional_delay = inNode->additionalStartDelay();
+                }   
+                else{
+                    nodes_to_assign.push_back(inNode);
+                }
+            }
+            if(additional_delay != 0){
+                nodes_to_assign.push_back(dfgNode);
+                for(auto node : nodes_to_assign){
+                    if(node->additionalStartDelay() == 0){
+                        node->setAdditionalStartDelay(additional_delay);
+                        finished = false;
+                    }
+                    else{
+                        assert(node->additionalStartDelay() == additional_delay);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1216,6 +1288,7 @@ void Mapping::latencySchedule(){
 
     // @jhlou set pre-assigned RDU for some node:Merge
     preAssignRdu();
+    preAssignAdditionalStartDelay();
 
     // calculate the routing latency of each edge, not inlcuding the RDU
     calEdgeRouteLat();
@@ -1616,7 +1689,7 @@ int Mapping::evaluateII(){
         int srclat = dfgNodeAttr(srcId).lat;  //
         int routeLat = _dfgEdgeAttr[elem.first].lat ; // latNoDelay
         int iterDist = std::max(edge->iterDist(), 1); // >= 1
-        int newII = (srclat + routeLat - dstInportLat + iterDist -1) / iterDist;//向上取整
+        int newII = (srclat + routeLat - dstInportLat + iterDist -1) / iterDist; // round up
         II = std::max(newII, II);
     }
     auto& _backEdgeLoops = _dfg->backEdgeLoops();
@@ -1631,7 +1704,7 @@ int Mapping::evaluateII(){
         int srclat = dfgNodeAttr(srcId).lat;
         int routeLat = _dfgEdgeAttr[elem].lat ; // latNoDelay
         int iterDist = std::max(edge->iterDist(), 1); // >= 1
-        int newII = (srclat + routeLat - dstInportLat + iterDist -1) / iterDist;//向上取整
+        int newII = (srclat + routeLat - dstInportLat + iterDist -1) / iterDist; // round up
         II = std::max(newII, II);
 
     }

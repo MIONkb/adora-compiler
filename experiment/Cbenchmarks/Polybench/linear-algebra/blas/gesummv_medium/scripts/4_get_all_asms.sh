@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 指定文件夹路径
+# Specify the folder path
 rootfolder=$(pwd)
 srcfolder="$rootfolder/3_cgra_exes"
 tarfolder="$rootfolder/4_asms"
@@ -54,7 +54,7 @@ cp  /home/jhlou/chipyard/generators/fdra/software/tests/gemm/crt.S $tarfolder/cr
 include_line="#include \"include/ISA.h\""
 cnt=0
 for file in "$srcfolder"/*.c; do
-    # 检查文件是否为普通文件
+    # Check whether the file is a regular file
     filename=$(basename "$file" .c)
     echo "$filename"
     if [[ -f "$file" ]]; then

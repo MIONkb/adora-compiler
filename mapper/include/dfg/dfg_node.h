@@ -32,6 +32,8 @@ private:
     int _cycles;        // update number, (10-2)/2 = 2
     int _interval;      // update interval, 1
     int _repeats;       // repeat number
+
+    int _additionalStartDelay = 0; // operation additional latency before start
 public:
     DFGNode(){}
     ~DFGNode(){}
@@ -60,6 +62,8 @@ public:
     int interval(){ return _interval; }
     void setRepeats(int repeats){ _repeats = repeats; }
     int repeats(){ return _repeats; }
+    void setAdditionalStartDelay(int _){ _additionalStartDelay = _; }
+    int additionalStartDelay(){ return _additionalStartDelay; } 
 
     virtual int numInputs();
     

@@ -41,19 +41,7 @@ namespace {
       : public ADORAAutoUnrollBase<ADORAAutoUnroll> {
     unsigned NumGPE = 0;
     unsigned NumIOB = 0; 
-    explicit ADORAAutoUnroll() {
-      if(CGRAadg == "notdefined" || CGRAadg == ""){
-        LLVM_DEBUG(llvm::errs() << "CGRAadg not defined.\n");
-        NumGPE = 32;
-        NumIOB = 16;
-      }
-      else{
-        NumGPE = getInstanceNumFromADG(CGRAadg, "GPE");
-        NumIOB = getInstanceNumFromADG(CGRAadg, "IOB");
-      }
-      // if (unrollJamFactor)
-      //   this->unrollJamFactor = *unrollJamFactor;
-    }
+    explicit ADORAAutoUnroll() { }
     SmallVector<SmallVector<unsigned>> ConstructUnrollSpaceFromStrategy(SmallVector<ADORA::ForNode> ForNodes);
     LogicalResult chooseAndApplyUnrollStrategyWithDeps(ADORA::KernelOp kernel, mlir::ModuleOp& m);
     bool KernelIsInPerfectNestedLoop(ADORA::KernelOp kernel);
@@ -410,6 +398,21 @@ chooseAndApplyUnrollStrategyWithDeps(ADORA::KernelOp kernel, mlir::ModuleOp& m){
 }
 
 void ADORAAutoUnroll::runOnOperation() {
+  ////////////
+  /// get hardware info
+  ///////////
+  if(CGRAadg == "notdefined" || CGRAadg == ""){
+    LLVM_DEBUG(llvm::errs() << "CGRAadg not defined.\n");
+    NumGPE = 32;
+    NumIOB = 16;
+  }
+  else{
+    NumGPE = getInstanceNumFromADG(CGRAadg, "GPE");
+    NumIOB = getInstanceNumFromADG(CGRAadg, "IOB");
+  }
+  // if (unrollJamFactor)
+  //   this->unrollJamFactor = *unrollJamFactor;
+
   // if (getOperation().isExternal())
   //   return;
   auto m = getOperation();

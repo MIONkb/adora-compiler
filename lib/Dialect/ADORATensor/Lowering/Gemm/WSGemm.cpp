@@ -541,6 +541,22 @@ AffineForOp TiledWeightStationaryGemm(
   K_step = (tilecol * K_temporal_tile);
   M_step = M_temporal_tile;
 
+  //==========================================================
+  // Allocate output buffer (type comes from GEMM output, NOT C)
+  //==========================================================
+  Location loc = op.getLoc();
+
+  auto outTy = op.getO().getType().dyn_cast<MemRefType>();
+  assert(outTy && "Expected GemmOp to return memref as output in lowering.");
+
+  opbuilder.setInsertionPointAfter(op.getOperation());
+  Value out = opbuilder.create<memref::AllocOp>(loc, outTy);
+
+  //==========================================================
+  // Initialize out with C (copy if same shape, else broadcast init)
+  //==========================================================
+  mlir::Operation* InitializationOp = initOutWithC2DLike(opbuilder, loc, out, op.getC(), ArrayRef<int64_t>({ShapeA[0], ShapeA[1]}));
+
   //////////////////////////////////////
   /// Generate systolic gemm
   //////////////////////////////////////
@@ -555,8 +571,9 @@ AffineForOp TiledWeightStationaryGemm(
       )
     );
   
-  op.getOperation()->getBlock()->push_back(loop);
-  loop.getOperation()->moveAfter(op);
+  // op.getOperation()->getBlock()->push_back(loop);
+  // loop.getOperation()->moveAfter(op);
+  loop.getOperation()->moveAfter(InitializationOp);
   // } 
   // else{
   //   loop = GenerateTiledNestedLoopWithoutLoopCarry(

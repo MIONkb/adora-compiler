@@ -65,7 +65,7 @@ install(
     MLIRADORATransformsUtility MLIRADORALoopTransforms
     MLIRADORAKernelExtract GeneralCDFGGen
     ADORATensorInterface ADORATensorOps ADORATensorLower
-    ADORATensorTransforms ADORATensorUtility ADORATensorOpGemmLower
+    ADORATensorTransforms ADORATensorUtility ADORATensorOpGemmLower ADORATensorOpConvLower
   EXPORT ADORATargets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}       
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}      
@@ -112,7 +112,7 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
-# 3) 安装 Config/Version 到与 Targets 相同的目录
+# 3) Install Config/Version into the same directory as Targets
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/lib/cmake/ADORA/ADORAConfig.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/lib/cmake/ADORA/ADORAConfigVersion.cmake"

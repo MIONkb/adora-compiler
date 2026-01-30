@@ -17,6 +17,7 @@ add_mlir_dialect_library(ADORATensorLower
   ADORATensorOps
   MLIRTensorDialect
   ADORATensorOpGemmLower
+  ADORATensorOpConvLower
   MLIRADORATransformsUtility
 
   # GeneralCDFGGen
@@ -35,3 +36,4 @@ set(LIBS
 )
 
 add_subdirectory(Gemm)
+add_subdirectory(CONV)

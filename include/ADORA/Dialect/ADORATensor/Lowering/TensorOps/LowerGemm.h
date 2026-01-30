@@ -66,6 +66,26 @@ mlir::affine::AffineForOp TiledOutputStationaryGemm(
   OpBuilder opbuilder, ADORATensor::GemmOp op, ArrayRef<int64_t> tilesize //(K_temporal_tile, M_temporal_tile, K_spatial_tile, N_spatial_tile)
 );
 
+/// Initialize output buffer `out` with values from `C` for a logical `{M, N}`
+/// GEMM result.
+///
+/// - If `out` and `C` have the same memref type, emits `memref.copy`.
+/// - Otherwise, generates nested loops over `(m, n)` and loads `C` with
+///   simple broadcast rules (scalar / vector / matrix / batch-1),
+///   then stores into `out`.
+///
+/// Assumes:
+/// - `outMN = {M, N}`
+/// - `out` is `{M,N}` or `{1,M,N}`
+/// - `C` follows common NN broadcast patterns.
+///
+/// Used in Output-Stationary GEMM lowering to initialize the accumulator.
+mlir::Operation* initOutWithC2DLike(
+    OpBuilder &b, Location loc,
+    Value out, Value C,
+    ArrayRef<int64_t> outMN);
+
+
 /////////////////////////
 /// Tool functions
 /////////////////////////
