@@ -20,10 +20,6 @@ add_library(CGRAMapperLIB
   src/ir/dfg_ir.cpp
   src/ir/adg_ir.cpp
 
-  src/emit/EmitCGRACall.cpp 
-  src/emit/EmitPytest.cpp 
-  src/emit/EmitUtility.cpp
-
   src/graph/graph_node.cpp
   src/graph/graph.cpp
 
